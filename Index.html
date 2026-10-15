@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#173b32">
+<title>MenuMargin — Recipe Costing</title>
+<style>
+:root{--ink:#172b26;--muted:#62716c;--green:#173b32;--mint:#dcebe3;--paper:#f6f7f3;--white:#fff;--line:#dce3de;--orange:#e8a34b;--red:#a63d40}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.45 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{background:var(--green);color:#fff;padding:22px max(18px,calc((100% - 1100px)/2));display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{font-size:1.45rem;font-weight:800;letter-spacing:-.04em}.brand span{color:#bfe4cb}.tag{font-size:.8rem;color:#d8e7df}
+main{max-width:1100px;margin:26px auto;padding:0 16px 40px}.intro{display:flex;justify-content:space-between;gap:18px;align-items:end;flex-wrap:wrap;margin-bottom:18px}.intro h1{font-size:clamp(1.6rem,4vw,2.25rem);letter-spacing:-.04em;margin:0 0 5px}.intro p{margin:0;color:var(--muted);max-width:650px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}button{border:0;border-radius:10px;padding:11px 14px;font:inherit;font-weight:700;cursor:pointer;background:var(--green);color:white}button.secondary{background:#e7eee9;color:var(--green)}button.danger{background:#f7e7e6;color:var(--red)}button:focus,input:focus,select:focus{outline:3px solid #a9d8b8;outline-offset:1px}
+.layout{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,.85fr);gap:18px}.panel{background:var(--white);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 5px 18px #173b3208}.panel h2{font-size:1.05rem;margin:0 0 14px}.field{display:flex;flex-direction:column;gap:5px}.field label{font-size:.82rem;color:var(--muted);font-weight:650}.field input,.field select{width:100%;min-width:0;border:1px solid #cbd6cf;border-radius:9px;padding:10px;background:white;color:var(--ink);font:inherit}.recipe-top{display:grid;grid-template-columns:1fr 150px;gap:12px;margin-bottom:18px}.table-wrap{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:650px}th{text-align:left;font-size:.76rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding:9px 7px;border-bottom:1px solid var(--line)}td{padding:8px 7px;border-bottom:1px solid #edf0ed;vertical-align:middle}td input,td select{width:100%;min-width:70px;border:1px solid #d2dbd5;border-radius:7px;padding:8px;font:inherit}td .ingredient{min-width:135px}.cost-cell{font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}.add-row{margin-top:12px}.hint{font-size:.8rem;color:var(--muted);margin:10px 0 0}
+.summary{position:sticky;top:12px;align-self:start}.summary-top{background:var(--mint);border-radius:12px;padding:15px;margin-bottom:14px}.eyebrow{font-size:.78rem;color:#426457;font-weight:700;text-transform:uppercase;letter-spacing:.05em}.big{font-size:2rem;font-weight:850;letter-spacing:-.05em;margin:2px 0}.sub{color:#426457;font-size:.84rem}.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}.stat{border:1px solid var(--line);border-radius:11px;padding:12px}.stat .value{font-size:1.22rem;font-weight:800;font-variant-numeric:tabular-nums}.stat .label{font-size:.78rem;color:var(--muted)}.price-input{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}.divider{height:1px;background:var(--line);margin:15px 0}.target{display:grid;grid-template-columns:1fr 100px;gap:10px;align-items:end}.status{font-size:.85rem;font-weight:700;padding:9px 11px;border-radius:9px;background:#f4f0e4;margin-top:10px}.status.good{background:#e3f3e8;color:#205c37}.status.bad{background:#f9e8e7;color:#973638}.footer-note{margin:18px 2px;color:var(--muted);font-size:.8rem}.toast{margin:10px 0 0;color:#205c37;font-size:.84rem;min-height:1.2em}
+@media(max-width:780px){.layout{grid-template-columns:1fr}.summary{position:static}.recipe-top{grid-template-columns:1fr 115px}main{margin-top:18px}.panel{padding:14px}}
+@media print{body{background:white}header{background:white;color:#111;padding:0 0 15px}.tag,.actions,.add-row,.remove-row,.footer-note{display:none!important}main{margin:0;padding:0;max-width:none}.layout{display:block}.panel{box-shadow:none;margin-bottom:12px;break-inside:avoid}.summary{position:static}.table-wrap{overflow:visible}table{min-width:0}td input,td select{border:0;padding:0;appearance:none}th,td{padding:5px}}
+</style>
+</head>
+<body>
+<header><div class="brand">Menu<span>Margin</span></div><div class="tag">Practical food costing for busy kitchens</div></header>
+<main>
+  <div class="intro">
+    <div><h1>Recipe costing</h1><p>Cost a batch, understand the cost per portion and set a selling price against your target gross profit (GP).</p></div>
+    <div class="actions"><button class="secondary" id="newRecipe">New recipe</button><button class="secondary" id="saveRecipe">Save on this device</button><button type="button" id="printBtn">Print / PDF</button></div>
+  </div>
+  <div class="layout">
+    <section class="panel">
+      <h2>Recipe details</h2>
+      <div class="recipe-top">
+        <div class="field"><label for="recipeName">Dish name</label><input id="recipeName" value="Roast chicken, herb potatoes & greens" placeholder="e.g. Roast chicken"></div>
+        <div class="field"><label for="yield">Portions per batch</label><input id="yield" type="number" min="1" step="1" value="10"></div>
+      </div>
+      <h2>Ingredients</h2>
+      <div class="table-wrap">
+        <table aria-label="Recipe ingredients">
+          <thead><tr><th>Ingredient</th><th>Qty used</th><th>Pack size</th><th>Pack price (£)</th><th>Cost used</th><th></th></tr></thead>
+          <tbody id="ingredients"></tbody>
+        </table>
+      </div>
+      <div class="actions add-row"><button type="button" id="addIngredient">+ Add ingredient</button><button class="secondary" id="exportCsv">Export CSV</button></div>
+      <p class="hint">Keep units consistent within each row: for example, 250 g used from a 1,000 g pack. Use ml for liquids or each for countable items. Enter prices from your own supplier invoices.</p>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </section>
+    <aside class="panel summary">
+      <h2>Cost & pricing summary</h2>
+      <div class="summary-top"><div class="eyebrow">Total batch cost</div><div class="big" id="batchCost">£0.00</div><div class="sub" id="batchDetail">Across 10 portions</div></div>
+      <div class="stats">
+        <div class="stat"><div class="label">Cost per portion</div><div class="value" id="portionCost">£0.00</div></div>
+        <div class="stat"><div class="label">Gross profit / portion</div><div class="value" id="grossProfit">£0.00</div></div>
+        <div class="stat"><div class="label">Food cost %</div><div class="value" id="foodCostPct">—</div></div>
+        <div class="stat"><div class="label">Gross profit (GP) %</div><div class="value" id="gpPct">—</div></div>
+      </div>
+      <div class="divider"></div>
+      <h2>Selling price</h2>
+      <div class="price-input">
+        <div class="field"><label for="sellingPrice">Selling price / portion (£)</label><input id="sellingPrice" type="number" min="0" step="0.01" value="8.95"></div>
+        <div class="field"><label for="targetGp">Target GP (%)</label><input id="targetGp" type="number" min="1" max="99.9" step="0.5" value="70"></div>
+      </div>
+      <div class="target"><div><div class="eyebrow">Price needed for target GP</div><div class="big" id="targetPrice">£0.00</div></div><button class="secondary" id="useTarget">Use price</button></div>
+      <div class="status" id="status">Add ingredient costs to calculate your GP.</div>
+      <p class="hint">Calculations assume the selling price is excluding VAT. GP = (selling price − food cost) ÷ selling price × 100. This is gross profit on food cost, not net profit after labour, overheads or waste.</p>
+    </aside>
+  </div>
+  <p class="footer-note">Prototype v0.1 · Your recipes are saved only in this browser on this device. This version has no account, cloud sync or supplier price database. Export your data regularly.</p>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const money=n=>Number.isFinite(n)?n.toLocaleString('en-GB',{style:'currency',currency:'GBP'}):'—';
+const escapeCsv=s=>'"'+String(s??'').replace(/"/g,'""')+'"';
+let rowId=0;
+function addRow(data={name:'',qty:100,pack:1000,price:0}){
+  const tr=document.createElement('tr'); tr.dataset.id=++rowId;
+  tr.innerHTML=`<td><input class="ingredient" aria-label="Ingredient name" placeholder="e.g. Chicken breast" value=""></td>
+  <td><input class="qty" aria-label="Quantity used" type="number" min="0" step="any"></td>
+  <td><input class="pack" aria-label="Pack size" type="number" min="0" step="any"></td>
+  <td><input class="price" aria-label="Pack price" type="number" min="0" step="0.01"></td>
+  <td class="cost-cell">£0.00</td><td><button class="danger remove-row" aria-label="Remove ingredient" title="Remove ingredient">×</button></td>`;
+  tr.querySelector('.ingredient').value=data.name??'';
+  tr.querySelector('.qty').value=data.qty??'';
+  tr.querySelector('.pack').value=data.pack??'';
+  tr.querySelector('.price').value=data.price??'';
+  tr.querySelectorAll('input').forEach(el=>el.addEventListener('input',calculate));
+  tr.querySelector('.remove-row').addEventListener('click',()=>{tr.remove();calculate()});
+  $('ingredients').appendChild(tr);calculate();
+}
+function rows(){return [...$('ingredients').querySelectorAll('tr')].map(tr=>({name:tr.querySelector('.ingredient').value.trim(),qty:Math.max(0,Number(tr.querySelector('.qty').value)||0),pack:Math.max(0,Number(tr.querySelector('.pack').value)||0),price:Math.max(0,Number(tr.querySelector('.price').value)||0)}))}
+function calculate(){
+ const list=rows();let total=0;
+ list.forEach((r,i)=>{const cost=r.pack>0?(r.qty/r.pack)*r.price:0;total+=cost;$('ingredients').querySelectorAll('tr')[i].querySelector('.cost-cell').textContent=money(cost)});
+ const portions=Math.max(1,Math.floor(Number($('yield').value)||1)),portion=total/portions,price=Math.max(0,Number($('sellingPrice').value)||0),gp=price>0?price-portion:0,gpp=price>0?(gp/price)*100:null,food=price>0?(portion/price)*100:null,target=Math.min(99.9,Math.max(1,Number($('targetGp').value)||70)),targetPrice=portion/(1-target/100);
+ $('batchCost').textContent=money(total);$('batchDetail').textContent=`Across ${portions} portion${portions===1?'':'s'}`;$('portionCost').textContent=money(portion);$('grossProfit').textContent=price>0?money(gp):'—';$('foodCostPct').textContent=food===null?'—':food.toFixed(1)+'%';$('gpPct').textContent=gpp===null?'—':gpp.toFixed(1)+'%';$('targetPrice').textContent=money(targetPrice);
+ const status=$('status');status.className='status';
+ if(!list.some(r=>r.name&&r.qty>0&&r.pack>0&&r.price>0)){status.textContent='Add ingredient names, quantities and pack prices to calculate a meaningful GP.'}
+ else if(price<=0){status.textContent='Enter a selling price to see your GP.'}
+ else if(gpp<0){status.classList.add('bad');status.textContent='Warning: your food cost is higher than your selling price.'}
+ else if(gpp<target){status.classList.add('bad');status.textContent=`Below your ${target}% GP target by ${(target-gpp).toFixed(1)} percentage points.`}
+ else{status.classList.add('good');status.textContent=`On or above your ${target}% GP target. Check labour, waste and overheads separately.`}
+}
+function recipeData(){return {name:$('recipeName').value,yield:Math.max(1,Number($('yield').value)||1),sellingPrice:Number($('sellingPrice').value)||0,targetGp:Number($('targetGp').value)||70,ingredients:rows()}}
+function loadRecipe(d){$('recipeName').value=d.name||'';$('yield').value=d.yield||1;$('sellingPrice').value=d.sellingPrice??0;$('targetGp').value=d.targetGp??70;$('ingredients').innerHTML='';(d.ingredients||[]).forEach(addRow);if(!(d.ingredients||[]).length)addRow();calculate()}
+document.addEventListener('click',event=>{
+ if(event.target && event.target.closest && event.target.closest('#addIngredient')){
+   event.preventDefault();
+   addRow({name:'',qty:'',pack:'',price:''});
+ }
+});
+['yield','sellingPrice','targetGp','recipeName'].forEach(id=>$(id).addEventListener('input',calculate));
+$('useTarget').addEventListener('click',()=>{$('sellingPrice').value=(Number($('targetPrice').textContent.replace(/[£,]/g,''))||0).toFixed(2);calculate()});
+$('saveRecipe').addEventListener('click',()=>{try{localStorage.setItem('menumargin-recipe',JSON.stringify(recipeData()));$('toast').textContent='Recipe saved on this device in this browser.'}catch(e){$('toast').textContent='Could not save here. Use Export CSV or Print / PDF instead.'}});
+$('newRecipe').addEventListener('click',()=>{if(confirm('Start a new recipe? Save or export this recipe first if you want to keep it.'))loadRecipe({name:'',yield:10,sellingPrice:0,targetGp:70,ingredients:[{name:'',qty:'',pack:'',price:''}]})});
+$('printBtn').addEventListener('click',()=>window.print());
+$('exportCsv').addEventListener('click',()=>{const d=recipeData();const lines=[['Recipe',d.name],['Portions',d.yield],[],['Ingredient','Quantity used','Pack size','Pack price (£)','Cost used (£)'],...d.ingredients.map(r=>[r.name,r.qty,r.pack,r.price,r.pack>0?(r.qty/r.pack)*r.price:0]),[],['Total batch cost (£)',d.ingredients.reduce((s,r)=>s+(r.pack>0?(r.qty/r.pack)*r.price:0),0)],['Cost per portion (£)',d.ingredients.reduce((s,r)=>s+(r.pack>0?(r.qty/r.pack)*r.price:0),0)/d.yield],['Selling price (£)',d.sellingPrice],['Target GP (%)',d.targetGp]];
+ const csv=lines.map(row=>row.map(escapeCsv).join(',')).join('\r\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(d.name||'menumargin-recipe').toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.csv';a.click();URL.revokeObjectURL(url);});
+try{const saved=localStorage.getItem('menumargin-recipe');if(saved)loadRecipe(JSON.parse(saved));else{addRow({name:'Chicken breast',qty:180,pack:2000,price:16.00});addRow({name:'Potatoes',qty:250,pack:2500,price:3.25});addRow({name:'Seasonal greens',qty:80,pack:1000,price:4.50});addRow({name:'Butter',qty:15,pack:250,price:2.20});}}catch(e){addRow({name:'Chicken breast',qty:180,pack:2000,price:16});addRow({name:'Potatoes',qty:250,pack:2500,price:3.25})}
+</script>
+</body>
+</html>
