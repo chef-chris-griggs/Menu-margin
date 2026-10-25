@@ -238,9 +238,9 @@ main { width: min(var(--page-width), calc(100% - 40px)); margin: 0 auto; padding
 .field textarea { min-height: 150px; resize: vertical; }
 .field input::placeholder, .field textarea::placeholder, .pricebook-search input::placeholder { color: #91a099; opacity: 1; }
 .table-wrap { width: 100%; overflow-x: auto; }
-#ingredients { width: 100%; border-collapse: collapse; }
-#ingredients th, #ingredients td { padding: 9px 6px; border-bottom: 1px solid #e8eeea; text-align: left; vertical-align: middle; }
-#ingredients th { color: var(--muted); font-size: .72rem; font-weight: 800; letter-spacing: .025em; text-transform: uppercase; }
+.ingredient-table { width: 100%; border-collapse: collapse; }
+.ingredient-table th, .ingredient-table td { padding: 9px 6px; border-bottom: 1px solid #e8eeea; text-align: left; vertical-align: middle; }
+.ingredient-table th { color: var(--muted); font-size: .72rem; font-weight: 800; letter-spacing: .025em; text-transform: uppercase; }
 #ingredients td:first-child { min-width: 170px; }
 #ingredients td:nth-child(2), #ingredients td:nth-child(4), #ingredients td:nth-child(6) { min-width: 105px; }
 #ingredients input, #ingredients select { width: 100%; min-width: 74px; min-height: 43px; padding: 8px 9px; border: 1px solid #d3dfd7; border-radius: 10px; background: #fff; color: var(--ink); }
@@ -378,9 +378,9 @@ main { width: min(var(--page-width), calc(100% - 40px)); margin: 0 auto; padding
   .field input, .field select, .field textarea { min-height: 49px; padding: 11px 12px; font-size: 1rem; }
 
   .table-wrap { min-width: 0; overflow: visible; }
-  #ingredients { display: block; width: 100%; table-layout: fixed; }
-  #ingredients tbody { display: grid; width: 100%; gap: 10px; }
-  #ingredients thead { display: none !important; }
+  .ingredient-table { display: block; width: 100%; border-collapse: separate; }
+  .ingredient-table > thead { display: none !important; }
+  .ingredient-table > tbody#ingredients { display: grid; width: 100%; gap: 10px; }
   #ingredients tr { display: grid; width: 100%; min-width: 0; box-sizing: border-box; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 9px; margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 15px; background: #fff; box-shadow: 0 2px 6px rgba(23, 59, 50, .04); }
   #ingredients td { display: block; min-width: 0; box-sizing: border-box; padding: 0; border: 0; }
   #ingredients td:nth-child(1) { grid-column: 1 / -1; grid-row: 1; }

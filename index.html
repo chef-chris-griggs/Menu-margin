@@ -13,7 +13,7 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icons/icon-180.png">
-<link rel="stylesheet" href="./styles.css?v=1.0.1">
+<link rel="stylesheet" href="./styles.css?v=1.0.2">
 <script src="./vendor/supabase/supabase.js"></script>
 </head>
 <body data-active-view="costing">
@@ -101,7 +101,7 @@
       </section>
       <section class="panel ingredients-panel" aria-labelledby="ingredientsTitle">
         <div class="section-heading"><div><h2 id="ingredientsTitle">Ingredients</h2><p class="section-help">Amount used, and the price of the pack you buy it in.</p></div><span class="step-pill">Step 2</span></div>
-        <div class="table-wrap"><table aria-label="Recipe ingredients"><thead><tr><th>Ingredient</th><th>Qty used</th><th>Qty unit</th><th>Pack size</th><th>Pack unit</th><th>Pack price (£)</th><th>Cost used</th><th>Remove</th></tr></thead><tbody id="ingredients"></tbody></table></div>
+        <div class="table-wrap"><table class="ingredient-table" aria-label="Recipe ingredients"><thead><tr><th>Ingredient</th><th>Qty used</th><th>Qty unit</th><th>Pack size</th><th>Pack unit</th><th>Pack price (£)</th><th>Cost used</th><th>Remove</th></tr></thead><tbody id="ingredients"></tbody></table></div>
         <div class="actions add-row"><button type="button" id="addIngredient"><svg><use href="#icon-add"/></svg> Add ingredient</button></div>
       </section>
       <aside class="panel summary" id="summary" aria-labelledby="summaryTitle">
