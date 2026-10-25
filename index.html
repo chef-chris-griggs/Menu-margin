@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#153e35">
+<meta name="description" content="Recipe costing and supplier price book for busy kitchens.">
+<meta name="apple-mobile-web-app-title" content="MenuMargin">
+<meta name="color-scheme" content="light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>MenuMargin — Recipe Costing</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icons/icon-180.png">
+<link rel="stylesheet" href="./styles.css">
+<script src="./vendor/supabase/supabase.js"></script>
+</head>
+<body data-active-view="costing">
+<svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <symbol id="icon-add" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></symbol>
+  <symbol id="icon-recipe" viewBox="0 0 24 24"><path d="M7 4.5h12a1 1 0 0 1 1 1v15H7a3 3 0 0 1-3-3v-10a3 3 0 0 1 3-3Z"/><path d="M8 8h8M8 12h8M8 16h5M4 8h2M4 12h2M4 16h2"/></symbol>
+  <symbol id="icon-book" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H12v17H6.5A2.5 2.5 0 0 0 4 22V5.5ZM20 5.5A2.5 2.5 0 0 0 17.5 3H12v17h5.5A2.5 2.5 0 0 1 20 22V5.5Z"/></symbol>
+  <symbol id="icon-scan" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M3 16v3a2 2 0 0 0 2 2h3M7 12h10"/></symbol>
+  <symbol id="icon-logout" viewBox="0 0 24 24"><path d="M10 17l5-5-5-5M15 12H3M13 3h5a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3h-5"/></symbol>
+  <symbol id="icon-file" viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M14 3v6h5M8 13h8M8 17h8"/></symbol>
+  <symbol id="icon-save" viewBox="0 0 24 24"><path d="M4 3h13l3 3v15H4z"/><path d="M8 3v6h8V3M8 21v-8h8v8"/></symbol>
+  <symbol id="icon-print" viewBox="0 0 24 24"><path d="M7 8V3h10v5M6 18H4a2 2 0 0 1-2-2v-5a3 3 0 0 1 3-3h14a3 3 0 0 1 3 3v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6zM18 11h.01"/></symbol>
+  <symbol id="icon-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 19v2h14v-2"/></symbol>
+  <symbol id="icon-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14M10 11v6M14 11v6"/></symbol>
+  <symbol id="icon-search-empty" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7"/><path d="m16 16 5 5M8 8l5 5M13 8l-5 5"/></symbol>
+  <symbol id="icon-shield" viewBox="0 0 24 24"><path d="m12 3 8 3v5c0 5-3.4 8.3-8 10-4.6-1.7-8-5-8-10V6l8-3Z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></symbol>
+</svg>
+
+<section id="mmAuthGate" aria-labelledby="mmAuthTitle">
+  <div class="brand auth-brand">Menu<span>Margin</span></div>
+  <h1 id="mmAuthTitle">Your recipes, wherever you work</h1>
+  <p>Sign in to open your private recipe library and supplier price book.</p>
+  <form id="mmAuthForm">
+    <div class="mm-field"><label for="mmEmail">Email address</label><input id="mmEmail" type="email" autocomplete="email" required placeholder="you@example.com"></div>
+    <div class="mm-field"><label for="mmPassword">Password</label><input id="mmPassword" type="password" autocomplete="current-password" minlength="8" required placeholder="At least 8 characters"></div>
+    <div class="mm-actions"><button type="submit" id="mmSignIn">Sign in</button><button type="button" class="secondary" id="mmSignUp">Create account</button><button type="button" class="text-button" id="mmReset">Forgot password?</button></div>
+  </form>
+  <form id="mmPasswordRecoveryForm" hidden>
+    <h2>Choose a new password</h2>
+    <div class="mm-field"><label for="mmNewPassword">New password</label><input id="mmNewPassword" type="password" autocomplete="new-password" minlength="8" required placeholder="At least 8 characters"></div>
+    <div class="mm-actions"><button type="submit">Update password</button><button type="button" class="secondary" id="mmCancelPasswordRecovery">Cancel</button></div>
+  </form>
+  <div id="mmAuthMessage" role="status" aria-live="polite">Connecting to your account…</div>
+  <button type="button" id="mmRetryStartup" class="secondary" hidden>Retry opening MenuMargin</button>
+</section>
+
+<section id="mmSubscriptionGate" aria-labelledby="mmSubscriptionTitle" hidden>
+  <div class="brand auth-brand">Menu<span>Margin</span></div>
+  <h1 id="mmSubscriptionTitle">Start your MenuMargin trial</h1>
+  <p id="mmBillingWelcome">Signed in to your account.</p>
+  <p><strong>14 days free, then £9.99 per month.</strong> Cancel any time from Manage billing.</p>
+  <div class="mm-actions"><button type="button" id="mmStartTrial">Start free trial</button><button type="button" class="secondary" id="mmManageBilling">Manage billing</button><button type="button" class="secondary" id="mmCheckBilling">Check access</button><button type="button" class="secondary" id="mmBillingSignOut">Sign out</button></div>
+  <div id="mmBillingMessage" role="status" aria-live="polite">Your account is ready. Start the trial to access your recipes and price book.</div>
+</section>
+
+<header class="app-header">
+  <div class="brand">Menu<span>Margin</span></div>
+  <div id="mmAccountBar" aria-label="Account controls">
+    <span id="mmAccountLabel" class="account-label">Signed in</span>
+    <span id="mmCloudStatus" class="cloud-status" role="status">Checking sync…</span>
+    <button type="button" id="mmInstallApp" class="header-action secondary" hidden>Install app</button>
+    <button type="button" id="mmManageBillingAccount" class="header-action secondary" hidden>Manage billing</button>
+    <button type="button" id="mmSignOut" class="signout-button"><svg><use href="#icon-logout"/></svg><span>Sign out</span></button>
+  </div>
+</header>
+<div id="mmMigrationNotice" class="mm-notice" role="status" hidden></div>
+<div id="mmGlobalError" class="mm-global-error" role="alert" hidden></div>
+
+<nav class="app-nav" aria-label="Main menu" role="tablist">
+  <button type="button" class="nav-tab active" role="tab" aria-selected="true" aria-controls="view-costing" id="tab-costing" data-view="costing"><svg><use href="#icon-add"/></svg><span>Cost</span></button>
+  <button type="button" class="nav-tab" role="tab" aria-selected="false" aria-controls="view-recipes" id="tab-recipes" data-view="recipes"><svg><use href="#icon-recipe"/></svg><span>Recipes</span></button>
+  <button type="button" class="nav-tab" role="tab" aria-selected="false" aria-controls="view-pricebook" id="tab-pricebook" data-view="pricebook"><svg><use href="#icon-book"/></svg><span>Prices</span></button>
+  <button type="button" class="nav-tab" role="tab" aria-selected="false" aria-controls="view-invoices" id="tab-invoices" data-view="invoices"><svg><use href="#icon-scan"/></svg><span>Scan</span></button>
+</nav>
+
+<main id="appMain">
+  <section id="view-costing" class="app-view" role="tabpanel" aria-labelledby="tab-costing">
+    <div class="page-heading recipe-page-heading">
+      <div><h1 id="recipeHeading">New recipe</h1><p id="recipeStateCaption" class="page-subtitle">Not saved yet</p></div>
+    </div>
+    <div class="recipe-toolbar">
+      <button type="button" class="secondary" id="newRecipe"><span class="button-icon">↺</span> New</button>
+      <button type="button" class="secondary" id="exportCsv"><svg><use href="#icon-download"/></svg> CSV</button>
+      <button type="button" class="secondary" id="printBtn"><svg><use href="#icon-print"/></svg> Print</button>
+      <button type="button" id="saveRecipe"><svg><use href="#icon-save"/></svg> Save recipe</button>
+    </div>
+    <div id="toast" class="toast app-toast" role="status" aria-live="polite" hidden></div>
+    <div class="costing-layout" id="costingLayout">
+      <section class="panel recipe-details-panel" aria-labelledby="recipeDetailsTitle">
+        <div class="section-heading"><div><h2 id="recipeDetailsTitle">Recipe details</h2><p class="section-help">The dish, and how many portions it makes.</p></div><span class="step-pill">Step 1</span></div>
+        <div class="recipe-top">
+          <div class="field"><label for="recipeName">Dish name</label><input id="recipeName" placeholder="e.g. Roast chicken, herb potatoes & greens" autocomplete="off"></div>
+          <div class="field"><label for="yield">Portions per batch</label><input id="yield" type="number" inputmode="numeric" min="1" step="1" value="10"></div>
+        </div>
+      </section>
+      <section class="panel ingredients-panel" aria-labelledby="ingredientsTitle">
+        <div class="section-heading"><div><h2 id="ingredientsTitle">Ingredients</h2><p class="section-help">Amount used, and the price of the pack you buy it in.</p></div><span class="step-pill">Step 2</span></div>
+        <div class="table-wrap"><table aria-label="Recipe ingredients"><thead><tr><th>Ingredient</th><th>Qty used</th><th>Qty unit</th><th>Pack size</th><th>Pack unit</th><th>Pack price (£)</th><th>Cost used</th><th>Remove</th></tr></thead><tbody id="ingredients"></tbody></table></div>
+        <div class="actions add-row"><button type="button" id="addIngredient"><svg><use href="#icon-add"/></svg> Add ingredient</button></div>
+      </section>
+      <aside class="panel summary" id="summary" aria-labelledby="summaryTitle">
+        <h2 id="summaryTitle">Your numbers</h2>
+        <div class="summary-top"><div class="eyebrow">Total batch cost</div><div class="big" id="batchCost">£0.00</div><div class="sub" id="batchDetail">Across 10 portions</div></div>
+        <div class="stats">
+          <div class="stat"><div class="label">Cost per portion</div><div class="value" id="portionCost">£0.00</div></div>
+          <div class="stat"><div class="label">Gross profit / portion</div><div class="value" id="grossProfit">£0.00</div></div>
+          <div class="stat"><div class="label">Food cost %</div><div class="value" id="foodCostPct">—</div></div>
+          <div class="stat"><div class="label">Gross profit (GP) %</div><div class="value" id="gpPct">—</div></div>
+        </div>
+        <div class="divider"></div>
+        <h2>Selling price</h2>
+        <div class="price-input">
+          <div class="field"><label for="sellingPrice">Selling price / portion (£)</label><input id="sellingPrice" type="number" inputmode="decimal" min="0" step="0.01" value="0"></div>
+          <div class="field"><label for="targetGp">Target GP (%)</label><input id="targetGp" type="number" inputmode="decimal" min="1" max="99.9" step="0.5" value="70"></div>
+        </div>
+        <div class="target"><div><div class="eyebrow">Price for target GP</div><div class="big" id="targetPrice">£0.00</div></div><button type="button" class="secondary" id="useTarget">Use price</button></div>
+        <div class="status" id="status">Add ingredients to see your GP.</div>
+        <p class="hint">Selling price is excluding VAT. GP is after food cost, before labour, overheads and waste.</p>
+      </aside>
+    </div>
+    <p class="footer-note">MenuMargin 1.0.0 · Check supplier prices before service.</p>
+  </section>
+
+  <section id="view-recipes" class="app-view" role="tabpanel" aria-labelledby="tab-recipes" hidden>
+    <div class="page-heading"><div><h1>Saved recipes</h1><p class="page-subtitle">Everything you cost is saved to your account.</p></div></div>
+    <div class="page-action-row"><button type="button" id="recipesNew"><svg><use href="#icon-add"/></svg> New recipe</button><button type="button" class="secondary" id="exportBackup"><svg><use href="#icon-download"/></svg> Download backup</button><button type="button" class="secondary" id="importBackup"><svg><use href="#icon-file"/></svg> Restore backup</button><input id="backupFile" type="file" accept="application/json,.json" hidden></div>
+    <div id="recipesToast" class="toast" role="status" aria-live="polite"></div>
+    <div id="recipeEmpty" class="empty-state">
+      <svg class="empty-icon"><use href="#icon-search-empty"/></svg>
+      <h2>No saved recipes yet</h2>
+      <p>Cost your first dish, then save it — it will appear here on every device you sign in to.</p>
+      <button type="button" id="recipeEmptyStart">Cost a recipe</button>
+    </div>
+    <div id="recipeCards" class="recipe-cards" hidden></div>
+    <div class="legacy-recipe-controls" hidden>
+      <select id="recipeSelect"><option value="">No saved recipes yet</option></select>
+      <button type="button" id="openRecipe">Open</button><button type="button" id="renameRecipe">Rename</button><button type="button" id="deleteRecipe">Delete</button>
+    </div>
+  </section>
+
+  <section id="view-pricebook" class="app-view" role="tabpanel" aria-labelledby="tab-pricebook" hidden>
+    <div class="page-heading"><div><h1>Ingredient price book</h1><p class="page-subtitle">Your buying prices. Add rows straight to a recipe from the Cost screen.</p></div></div>
+    <section class="panel pricebook-panel" aria-labelledby="pricebookTitle">
+      <div class="section-heading"><div><h2 id="pricebookTitle">Add a supplier price</h2><p class="section-help">The pack you actually buy: cases, the size of each item, and the case price.</p></div></div>
+      <form id="pricebookForm" class="pricebook-form">
+        <div class="field"><label for="pbName">Ingredient</label><input id="pbName" placeholder="e.g. Chicken breast" autocomplete="off" required></div>
+        <div class="field"><label for="pbSupplier">Supplier</label><input id="pbSupplier" placeholder="e.g. Brakes" autocomplete="organization" required></div>
+        <details class="optional-code"><summary>Supplier product code (optional)</summary><div class="field"><label for="pbCode">Product code</label><input id="pbCode" placeholder="From supplier invoice" autocomplete="off"></div></details>
+        <div class="field"><label for="pbCaseQty">Items per case</label><input id="pbCaseQty" type="number" inputmode="numeric" min="1" step="1" value="1" required></div>
+        <div class="field"><label for="pbPack">Size per item</label><input id="pbPack" type="number" inputmode="decimal" min="0.001" step="any" placeholder="e.g. 850" required></div>
+        <div class="field"><label for="pbUnit">Item unit</label><select id="pbUnit"><option value="g">g</option><option value="kg">kg</option><option value="ml">ml</option><option value="l">litres</option><option value="each">each</option></select></div>
+        <div class="field"><label for="pbPrice">Case price (£)</label><input id="pbPrice" type="number" inputmode="decimal" min="0" step="0.01" placeholder="e.g. 24.00" required></div>
+        <button type="submit" id="pbSave">Save price</button>
+      </form>
+      <p class="unit-note">Enter the total price for the full case. MenuMargin divides it across the case contents when costing a recipe.</p>
+    </section>
+    <section class="pricebook-results" aria-labelledby="pricebookListTitle">
+    <div class="list-heading"><h2 id="pricebookListTitle">Your supplier prices</h2><div class="pricebook-toolbar"><div class="pricebook-search"><label class="visually-hidden" for="pbSearch">Search ingredients or suppliers</label><input id="pbSearch" placeholder="Search ingredients or suppliers…" autocomplete="off"><button type="button" class="secondary" id="pbClear">Clear</button></div><button type="button" class="secondary" id="pbExport">Export CSV</button></div></div>
+      <div id="pricebookList" class="pricebook-list" aria-live="polite"></div>
+      <div class="toast" id="pbToast" role="status" aria-live="polite"></div>
+    </section>
+  </section>
+
+  <section id="view-invoices" class="app-view" role="tabpanel" aria-labelledby="tab-invoices" hidden>
+    <div class="page-heading"><div><h1>Invoice scan</h1><p class="page-subtitle">Read a supplier invoice, check it line by line, then update your price book.</p></div></div>
+    <section class="panel invoice-panel" aria-labelledby="invoiceTitle">
+      <div class="field invoice-file-field">
+        <label>Invoice PDF or photo</label>
+        <label for="invoiceFile" class="invoice-file-picker"><svg><use href="#icon-file"/></svg><span class="file-instructions">Choose a PDF, JPG, PNG or HEIC</span><strong>Browse</strong></label>
+        <input id="invoiceFile" type="file" accept="application/pdf,image/*,.heic,.heif" aria-label="Choose an invoice PDF or image">
+        <span id="invoiceFileName" class="file-name" aria-live="polite">No invoice selected</span>
+      </div>
+      <div class="field supplier-field"><label for="invoiceSupplier">Supplier</label><input id="invoiceSupplier" placeholder="Read from the invoice" autocomplete="organization"></div>
+      <div class="invoice-actions"><button type="button" id="scanInvoice"><svg><use href="#icon-scan"/></svg> Read invoice</button><button type="button" class="secondary" id="clearInvoice">Clear</button></div>
+      <p class="privacy-note"><svg><use href="#icon-shield"/></svg><span>Your invoice is read on this device. Only prices you choose to import are saved to your account.</span></p>
+      <div id="invoiceProgress" class="invoice-progress" role="status" aria-live="polite">Choose a supplier invoice to read its prices.</div>
+      <details class="invoice-references"><summary>Invoice and order numbers</summary><div class="invoice-reference-fields">
+        <div class="field"><label for="invoiceNumber">Invoice number</label><input id="invoiceNumber" placeholder="Read from invoice text" autocomplete="off"></div>
+        <div class="field"><label for="invoiceOrderNumber">Order number / reference</label><input id="invoiceOrderNumber" placeholder="Read from order text" autocomplete="off"></div>
+      </div></details>
+      <details class="ocr-details"><summary>View or correct the recognised text</summary>
+        <div class="field"><label for="invoiceText">Recognised invoice text</label><textarea id="invoiceText" rows="10" placeholder="Text from the selected invoice appears here. You can correct it before building the review list."></textarea></div>
+        <div class="invoice-actions"><button type="button" class="secondary" id="buildInvoiceReview">Build review list from text</button></div>
+      </details>
+      <div id="invoiceReviewArea" class="invoice-review-area" hidden>
+        <div class="section-heading"><div><h2>Check detected products</h2><p class="section-help">Edit names, pack sizes, units, and prices. Amber fields need your attention.</p></div></div>
+        <div class="invoice-review-wrap"><table class="invoice-review"><thead><tr><th>Import</th><th>Supplier code</th><th>Ingredient / description</th><th>Items / case</th><th>Size / item</th><th>Unit</th><th>Total size</th><th>Case price (£)</th></tr></thead><tbody id="invoiceReviewRows"></tbody></table></div>
+        <div class="invoice-actions invoice-import-actions"><button type="button" class="secondary" id="selectInvoiceRows">Select all rows</button><button type="button" class="secondary" id="clearInvoiceSelection">Clear selection</button><button type="button" id="importInvoiceRows">Import selected prices</button></div>
+      </div>
+      <div class="toast" id="invoiceToast" role="status" aria-live="polite"></div>
+    </section>
+  </section>
+</main>
+
+<div class="mobile-summary" aria-label="Quick recipe summary"><div><div class="mini-label">Cost / portion</div><div class="mini-value" id="mobilePortion">£0.00</div></div><div class="mini-right"><div class="mini-label">GP</div><div class="mini-value" id="mobileGp">—</div></div><button type="button" id="viewSummary">View cost</button></div>
+<script>
+window.addEventListener('error',event=>{const box=document.getElementById('mmGlobalError');if(!box)return;box.hidden=false;box.textContent='MenuMargin could not load part of the app. Reload this page; your saved device data is unchanged. Details: '+(event.message||'A script could not start.');},true);
+window.addEventListener('unhandledrejection',event=>{const box=document.getElementById('mmGlobalError');if(!box)return;box.hidden=false;box.textContent='A MenuMargin operation failed. Your local changes are kept. Details: '+String(event.reason?.message||event.reason||'unknown error');});
+</script>
+<script src="./js/auth.js"></script>
+<script src="./js/recipe.js"></script>
+<script src="./js/pricebook.js"></script>
+<script src="./js/invoice.js"></script>
+<script src="./js/startup.js"></script>
+</body>
+</html>
