@@ -377,11 +377,12 @@ main { width: min(var(--page-width), calc(100% - 40px)); margin: 0 auto; padding
   .field label { font-size: .72rem; }
   .field input, .field select, .field textarea { min-height: 49px; padding: 11px 12px; font-size: 1rem; }
 
-  .table-wrap { overflow: visible; }
-  #ingredients, #ingredients tbody { display: block; width: 100%; }
-  #ingredients thead { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-  #ingredients tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 9px; margin: 0 0 10px; padding: 12px; border: 1px solid var(--line); border-radius: 15px; background: #fff; box-shadow: 0 2px 6px rgba(23, 59, 50, .04); }
-  #ingredients td { display: block; min-width: 0; padding: 0; border: 0; }
+  .table-wrap { min-width: 0; overflow: visible; }
+  #ingredients { display: block; width: 100%; table-layout: fixed; }
+  #ingredients tbody { display: grid; width: 100%; gap: 10px; }
+  #ingredients thead { display: none !important; }
+  #ingredients tr { display: grid; width: 100%; min-width: 0; box-sizing: border-box; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 9px; margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 15px; background: #fff; box-shadow: 0 2px 6px rgba(23, 59, 50, .04); }
+  #ingredients td { display: block; min-width: 0; box-sizing: border-box; padding: 0; border: 0; }
   #ingredients td:nth-child(1) { grid-column: 1 / -1; grid-row: 1; }
   #ingredients td:nth-child(2) { grid-column: 1; grid-row: 2; }
   #ingredients td:nth-child(3) { grid-column: 2; grid-row: 2; align-self: end; }
@@ -405,7 +406,7 @@ main { width: min(var(--page-width), calc(100% - 40px)); margin: 0 auto; padding
     text-transform: uppercase;
   }
   #ingredients td:nth-child(1) input { font-weight: 650; }
-  #ingredients td:nth-child(3) select, #ingredients td:nth-child(5) select, #ingredients td:nth-child(6) input { width: 100%; min-height: 43px; }
+  #ingredients input, #ingredients select { width: 100%; min-width: 0; max-width: 100%; min-height: 43px; font-size: 16px; }
   #ingredients td:nth-child(7)::before { margin-right: 7px; color: var(--muted); content: "Cost used"; font-size: .68rem; font-weight: 800; text-transform: uppercase; }
   #ingredients .cost-cell { min-width: 0; font-size: .94rem; }
   #ingredients td:nth-child(8) button { min-width: 42px; min-height: 42px; }
