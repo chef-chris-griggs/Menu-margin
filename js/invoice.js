@@ -54,10 +54,17 @@ function loadScriptOnce(src,test){
  return new Promise((resolve,reject)=>{
   if(test()){resolve();return}
   const absolute=new URL(src,document.baseURI).href;
-  const existing=[...document.scripts].find(script=>script.src===absolute);
-  if(existing){existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',()=>reject(new Error('A local invoice scanning library could not be loaded. Reload MenuMargin and try again.')),{once:true});return}
+  let existing=[...document.scripts].find(script=>script.src===absolute);
+  if(existing&&(existing.dataset.mmLoadState==='failed'||existing.dataset.mmLoadState==='loaded')){existing.remove();existing=null}
+  if(existing){
+   existing.addEventListener('load',()=>test()?resolve():reject(new Error('An invoice scanning library loaded but did not start. Reload MenuMargin and try again.')),{once:true});
+   existing.addEventListener('error',()=>reject(new Error('A local invoice scanning library could not be loaded. Reload MenuMargin and try again.')),{once:true});
+   return;
+  }
   const script=document.createElement('script');script.src=absolute;script.async=true;
-  script.onload=resolve;script.onerror=()=>reject(new Error('A local invoice scanning library could not be loaded. Reload MenuMargin and try again.'));
+  script.dataset.mmLoadState='loading';
+  script.onload=()=>{script.dataset.mmLoadState='loaded';if(test())resolve();else reject(new Error('An invoice scanning library loaded but did not start. Reload MenuMargin and try again.'))};
+  script.onerror=()=>{script.dataset.mmLoadState='failed';script.remove();reject(new Error('A local invoice scanning library could not be loaded. Reload MenuMargin and try again.'))};
   document.head.appendChild(script);
  });
 }
@@ -125,7 +132,12 @@ function invoiceRowsFromTsv(tsv){
   const c=row.split('\t');if(c.length<12||c[0]!=='5')continue;
   const left=Number(c[6]),top=Number(c[7]),width=Number(c[8]),height=Number(c[9]),confidence=Number(c[10]),word=(c[11]||'').trim();
   if(!word||!Number.isFinite(left)||!Number.isFinite(top)||!(height>0)||confidence<0)continue;
-  tokens.push({left,centerX:left+width/2,center:top+height/2,width,height,confidence,word});
+  const embeddedCode=word.match(/^(.+?)[\[(](\d{4,8})[\])]$/);
+  if(embeddedCode&&/[A-Za-z]{2}/.test(embeddedCode[1])){
+   const description=embeddedCode[1].replace(/[\])]+$/,'').trim(),code=`[${embeddedCode[2]}]`,descriptionWidth=width*description.length/word.length,codeWidth=Math.max(1,width-descriptionWidth);
+   if(description)tokens.push({left,centerX:left+descriptionWidth/2,center:top+height/2,width:descriptionWidth,height,confidence,word:description});
+   tokens.push({left:left+descriptionWidth,centerX:left+descriptionWidth+codeWidth/2,center:top+height/2,width:codeWidth,height,confidence,word:code});
+  }else tokens.push({left,centerX:left+width/2,center:top+height/2,width,height,confidence,word});
  }
  if(!tokens.length)return {text:'',records:[],quality:0};
  const heights=tokens.map(t=>t.height).sort((a,b)=>a-b),median=heights[Math.floor(heights.length/2)],tolerance=Math.max(7,median*.72);
@@ -137,17 +149,57 @@ function invoiceRowsFromTsv(tsv){
  });
  const positioned=bands.map(b=>b.tokens.sort((a,c)=>a.left-c.left).map(t=>t.word).join(' ')).join('\n');
  const maxY=Math.max(...tokens.map(t=>t.center+t.height/2)),minY=Math.min(...tokens.map(t=>t.center));
- const codeWord=/^(?:[A-Za-z]{1,4}\d{4,8}|\d{4,8})$/;
- const candidates=tokens.filter(t=>t.center>minY+(maxY-minY)*.2&&codeWord.test(t.word));
- if(candidates.length<3)return {text:positioned,records:[],quality:0};
- const xTolerance=Math.max(24,median*2.2);
- const cluster=candidates.map(candidate=>({x:candidate.left,count:candidates.filter(t=>Math.abs(t.left-candidate.left)<=xTolerance).length})).sort((a,b)=>b.count-a.count)[0];
- let anchorX=cluster.x;
- const clusteredCodeCandidates=candidates.filter(t=>Math.abs(t.left-cluster.x)<=xTolerance);
- const firstCodeY=Math.min(...clusteredCodeCandidates.map(t=>t.center));
- const headerBand=tokens.filter(t=>t.center<firstCodeY&&t.center>firstCodeY-median*12);
  const pageLeft=Math.min(...tokens.map(t=>t.left)),pageRight=Math.max(...tokens.map(t=>t.left+t.width));
  const normalizeHeader=value=>String(value||'').toLowerCase().replace(/[^a-z]/g,'');
+ const codeWord=/^(?:[\[(]?(?:[A-Za-z]{1,5}\d{3,10}|\d{3,10}[A-Za-z]{1,5}|\d{3,12})[\])]?)$/;
+ const candidates=tokens.filter(t=>t.center>minY+(maxY-minY)*.08&&codeWord.test(t.word));
+ const xTolerance=Math.max(24,median*2.2);
+ const clusterAt=items=>items.map(candidate=>({x:candidate.left,count:items.filter(t=>Math.abs(t.left-candidate.left)<=xTolerance).length})).sort((a,b)=>b.count-a.count)[0]||null;
+ let cluster=clusterAt(candidates),clusteredCodeCandidates=cluster?candidates.filter(t=>Math.abs(t.left-cluster.x)<=xTolerance):[];
+ let firstClusterCodeY=clusteredCodeCandidates.length?Math.min(...clusteredCodeCandidates.map(t=>t.center)):null;
+ const headerType=word=>{
+  const h=normalizeHeader(word);
+  if(/^(?:description|descriptio|desc|product|item|goods|ingredient|details|name)$/.test(h))return 'description';
+  if(/^(?:code|productcode|itemcode|stockcode|sku|plu)$/.test(h))return 'code';
+  if(/^(?:qty|quantity|quantit|ordered|items|cases|orderqty)$/.test(h))return 'quantity';
+  if(/^(?:pack|packsize|case|casepack|itemsize|casesize|size|sizeunit|weight|weightno|measure|measur)$/.test(h))return 'pack';
+  if(/^(?:category|department|route)$/.test(h))return 'category';
+  if(h==='unit')return 'unit';
+  if(/^(?:price|unitprice|itemprice|caseprice|cost|costprice|rate)$/.test(h))return 'price';
+  if(/^(?:total|subtotal|net|nett|extended|line|lineamount|linevalue|amount|value)$/.test(h))return 'total';
+  if(h==='vat'||h==='tax')return 'tax';
+  return '';
+ };
+ const headingGroups=[];
+ for(let start=0;start<bands.length;start++){
+  const first=bands[start],group=[];
+  for(let j=start;j<bands.length&&bands[j].center-first.center<=median*3.5;j++)group.push(...bands[j].tokens);
+  const types=new Set(group.map(t=>headerType(t.word)).filter(Boolean));
+  const headingTokens=group.filter(t=>headerType(t.word));
+  const score=types.size+(types.has('description')?2:0)+(types.has('price')||types.has('total')?2:0);
+  if(score>=4)headingGroups.push({center:first.center,bottom:Math.max(...headingTokens.map(t=>t.center+t.height/2)),tokens:headingTokens,types,score});
+ }
+ // Table headings are a much safer starting point than a cluster of numbers:
+ // invoices contain account numbers, telephone numbers, and product codes
+ // above the actual line-item table.
+ const heading=headingGroups.sort((a,b)=>b.score-a.score||a.center-b.center)[0]||null;
+ let headerBand,firstCodeY;
+ if(heading){
+  headerBand=heading.tokens;
+  const belowHeading=candidates.filter(t=>t.center>heading.bottom+median*.25);
+  cluster=clusterAt(belowHeading);
+  clusteredCodeCandidates=cluster?belowHeading.filter(t=>Math.abs(t.left-cluster.x)<=xTolerance):[];
+  firstClusterCodeY=clusteredCodeCandidates.length?Math.min(...clusteredCodeCandidates.map(t=>t.center)):null;
+  firstCodeY=firstClusterCodeY??heading.bottom+median*.75;
+ }else if(firstClusterCodeY!==null&&clusteredCodeCandidates.length>=3){
+  firstCodeY=firstClusterCodeY;
+  headerBand=tokens.filter(t=>t.center<firstCodeY&&t.center>firstCodeY-median*12);
+ }else{
+  if(firstClusterCodeY===null)return {text:positioned,records:[],quality:0};
+  firstCodeY=firstClusterCodeY;
+  headerBand=tokens.filter(t=>t.center<firstCodeY&&t.center>firstCodeY-median*12);
+ }
+ let anchorX=cluster?.x??pageRight;
  const centerOf=word=>{
   const hits=headerBand.filter(t=>word.test(normalizeHeader(t.word))).sort((a,b)=>b.center-a.center);
   return hits.length?hits[0].centerX:null;
@@ -156,70 +208,112 @@ function invoiceRowsFromTsv(tsv){
   const firsts=headerBand.filter(t=>firstRx.test(normalizeHeader(t.word)));
   const pairs=[];
   for(const first of firsts){
-   for(const second of headerBand.filter(t=>secondRx.test(normalizeHeader(t.word))&&Math.abs(t.center-first.center)<median*2&&Math.abs(t.centerX-first.centerX)<Math.max(median*4,(pageRight-pageLeft)*.08))){
+   for(const second of headerBand.filter(t=>secondRx.test(normalizeHeader(t.word))&&Math.abs(t.center-first.center)<median*2&&Math.abs(t.centerX-first.centerX)<Math.max(median*4,(pageRight-pageLeft)*.035))){
     pairs.push({first,second,score:Math.abs(second.center-first.center)+Math.abs(second.centerX-first.centerX)});
    }
   }
   pairs.sort((a,b)=>a.score-b.score);
   return pairs.length?(pairs[0].first.centerX+pairs[0].second.centerX)/2:null;
  };
- const header={
-  code:nearestPair(/^product$|^prod$/, /^code$/)??centerOf(/^productcode$/)??centerOf(/^code$/),
-  description:centerOf(/^description$|^descriptio/),brand:centerOf(/^brand$/),
-  pack:nearestPair(/^pack$/, /^size$/)??centerOf(/^packsize$|^pack$/),
-  measure:centerOf(/^measure$|^measur/),unit:centerOf(/^unit$/),
-  quantity:centerOf(/^quantity$|^quantit/),ordered:centerOf(/^ordered$/),
-  unitPrice:nearestPair(/^unit$/, /^price$/)??centerOf(/^unitprice$/),price:null,vat:centerOf(/^vat$/),total:centerOf(/^total$/)
- };
  const priceHeaders=headerBand.filter(t=>/^price$/.test(normalizeHeader(t.word))).sort((a,b)=>a.centerX-b.centerX);
+ const combinedPackHeading=headerBand.some(t=>normalizeHeader(t.word)==='sizeunit');
+ const packHeaderTokens=headerBand.filter(t=>/^(?:packsize|casepack|itemsize|casesize|pack|size|sizeunit|weight|weightno|measure|measur)$/.test(normalizeHeader(t.word)));
+ const quantityHeaderTokens=headerBand.filter(t=>/^(?:quantity|quantit|qty|ordered|items|orderqty)$/.test(normalizeHeader(t.word)));
+ const quantityHeaderX=quantityHeaderTokens.length?quantityHeaderTokens[0].centerX:null;
+ const packHeaderX=packHeaderTokens.length?packHeaderTokens[0].centerX:null;
+ const unitHeaderTokens=headerBand.filter(t=>/^unit$/.test(normalizeHeader(t.word)));
+ const unitBeforeQuantity=Number.isFinite(quantityHeaderX)?unitHeaderTokens.filter(t=>t.centerX<quantityHeaderX):[];
+ const unitAfterPack=Number.isFinite(packHeaderX)?unitHeaderTokens.filter(t=>t.centerX>packHeaderX):[];
+ const selectedUnit=unitBeforeQuantity.sort((a,b)=>a.centerX-b.centerX)[0]||unitAfterPack.sort((a,b)=>a.centerX-b.centerX)[0]||unitHeaderTokens.sort((a,b)=>a.centerX-b.centerX)[0]||null;
+ const netPriceCenter=nearestPair(/^net$|^nett$|^sub$|^subtotal$|^line$|^extended$|^amount$/, /^price$|^total$|^value$|^amount$/);
+ const header={
+  code:nearestPair(/^product$|^prod$|^item$|^stock$/, /^code$/)??centerOf(/^productcode$|^itemcode$|^stockcode$|^sku$|^plu$|^code$/),
+  description:centerOf(/^description$|^descriptio|^ingredient$|^goods$|^details$|^name$|^item$|^product$/),brand:centerOf(/^brand$/),
+  category:centerOf(/^category$|^department$/),route:centerOf(/^route$/),
+  pack:nearestPair(/^pack$|^case$|^item$/, /^size$|^weight$/)??centerOf(/^packsize$|^casepack$|^itemsize$|^casesize$|^sizeunit$|^weightno$|^pack$|^size$|^weight$|^measure$|^measur/),
+  measure:centerOf(/^measure$|^measur/)??(packHeaderTokens.some(t=>/^(?:weight|weightno|measure|measur)$/.test(normalizeHeader(t.word)))&&selectedUnit?.centerX>packHeaderX?selectedUnit.centerX:null),unit:selectedUnit?.centerX??null,
+  quantity:quantityHeaderX,ordered:centerOf(/^ordered$/),
+  unitPrice:priceHeaders.find(t=>!netPriceCenter||t.centerX<netPriceCenter)?.centerX??centerOf(/^unitprice$|^itemprice$|^caseprice$|^unitcost$|^price$|^rate$|^costprice$/),
+  price:null,vat:centerOf(/^vat$|^tax$/),
+  total:netPriceCenter??centerOf(/^total$|^subtotal$|^net$|^nett$|^amount$|^lineamount$|^extended$|^linevalue$|^value$/)
+ };
+ if(header.code!==null&&header.description!==null&&Math.abs(header.code-header.description)<(pageRight-pageLeft)*.035){
+  const explicitDescription=centerOf(/^description$|^descriptio|^ingredient$|^goods$/);
+  if(explicitDescription!==null)header.description=explicitDescription;
+ }
  const nextPriceHeader=priceHeaders.find(t=>header.unitPrice===null||t.centerX>header.unitPrice+Math.max(median*1.5,(pageRight-pageLeft)*.02));
  header.price=nextPriceHeader?.centerX??null;
  if(header.code!==null)anchorX=header.code;
  const anchorWindow=Math.max(xTolerance, (pageRight-pageLeft)*.045);
- const codeTokens=candidates.filter(t=>Math.abs(t.left-anchorX)<=anchorWindow).sort((a,b)=>a.center-b.center);
+ const headerCodeTokens=header.code!==null?candidates.filter(t=>Math.abs(t.left-header.code)<=anchorWindow):[];
+ const embeddedProductCodes=header.code===null&&heading?.types.has('description')?candidates.filter(t=>{
+  const digits=String(t.word||'').replace(/[\[\]()]/g,'');
+  const rightNeighbors=[header.pack,header.measure,header.unit,header.quantity,header.unitPrice,header.price,header.total].filter(x=>Number.isFinite(x)&&x>=(header.description??pageLeft));
+  const descriptionRight=rightNeighbors.length?Math.min(...rightNeighbors)-Math.max(median*1.2,(pageRight-pageLeft)*.012):pageRight;
+  return /^\d{4,8}$/.test(digits)&&t.center>heading.bottom+median*.25&&t.centerX>pageLeft+(pageRight-pageLeft)*.025&&t.centerX<descriptionRight;
+ }):[];
+ const embeddedDescriptionLayout=Boolean(heading&&heading.types.has('description')&&header.code===null);
+ const competingColumns=[header.pack,header.measure,header.unit,header.quantity,header.unitPrice,header.price,header.vat,header.total].filter(Number.isFinite);
+ const repeatedClusterIsCode=clusteredCodeCandidates.length>=3&&(!heading||heading.types.has('code'))&&!competingColumns.some(x=>Math.abs(x-cluster.x)<Math.max(median*2,xTolerance*.75));
+ const codeTokens=(headerCodeTokens.length?headerCodeTokens:(repeatedClusterIsCode?clusteredCodeCandidates:embeddedProductCodes)).sort((a,b)=>a.center-b.center);
+ if(codeTokens.length)firstCodeY=Math.min(...codeTokens.map(t=>t.center));
  const uniqueAnchors=[];
  for(const token of codeTokens){
   const previous=uniqueAnchors[uniqueAnchors.length-1];
-  if(previous&&Math.abs(token.center-previous.center)<=median*1.2){if(token.confidence>previous.confidence)uniqueAnchors[uniqueAnchors.length-1]=token;continue}
+  const tokenCode=String(token.word||'').replace(/[\[\]()]/g,''),previousCode=String(previous?.word||'').replace(/[\[\]()]/g,'');
+  const sameCode=previous&&(tokenCode===previousCode||tokenCode.endsWith(previousCode)||previousCode.endsWith(tokenCode));
+  if(sameCode&&Math.abs(token.center-previous.center)<=median*.5&&Math.abs(token.left-previous.left)<=xTolerance){if(tokenCode.length>previousCode.length||token.confidence>previous.confidence)uniqueAnchors[uniqueAnchors.length-1]=token;continue}
   uniqueAnchors.push(token);
  }
- if(uniqueAnchors.length<3)return {text:positioned,records:[],quality:0};
  const anchorCenters=uniqueAnchors.map(t=>t.center),minAnchorY=Math.min(...anchorCenters),maxAnchorY=Math.max(...anchorCenters);
- const headerBaseline=headerBand.filter(t=>/^(?:description|brand|vat|total)$/.test(normalizeHeader(t.word))&&t.center>firstCodeY-median*8);
+ const headerBaseline=headerBand.filter(t=>['description','code','pack','quantity','unit','price','total','tax','category'].includes(headerType(t.word))&&(heading||t.center>firstCodeY-median*8));
  let bestSlope=0;
+ let headingSlope=0;
  if(headerBaseline.length>=3){
   const meanX=headerBaseline.reduce((sum,t)=>sum+t.centerX,0)/headerBaseline.length,meanY=headerBaseline.reduce((sum,t)=>sum+t.center,0)/headerBaseline.length;
   const variance=headerBaseline.reduce((sum,t)=>sum+(t.centerX-meanX)**2,0),covariance=headerBaseline.reduce((sum,t)=>sum+(t.centerX-meanX)*(t.center-meanY),0);
   const estimated=variance?covariance/variance:0;
-  if(Math.abs(estimated)<=.25&&Math.max(...headerBaseline.map(t=>t.centerX))-Math.min(...headerBaseline.map(t=>t.centerX))>(pageRight-pageLeft)*.35)bestSlope=estimated;
+  if(Math.abs(estimated)<=.25&&Math.max(...headerBaseline.map(t=>t.centerX))-Math.min(...headerBaseline.map(t=>t.centerX))>(pageRight-pageLeft)*.35)headingSlope=estimated;
  }
- if(!bestSlope){
+ if(header.code===null){
+  // Embedded product codes move horizontally with description length; don't
+  // fit page skew to those variable code positions.
+  bestSlope=0;
+ }else if(anchorCenters.length>=3){
   const scoreSlope=slope=>{
+   const correctedCenters=uniqueAnchors.map(anchor=>anchor.center-slope*(anchor.left-anchorX));
+   const minCorrected=Math.min(...correctedCenters),maxCorrected=Math.max(...correctedCenters);
    let score=0;
    for(const token of tokens){
     const rowY=token.center-slope*(token.left-anchorX);
-    if(rowY<minAnchorY-median*2||rowY>maxAnchorY+median*2)continue;
+    if(rowY<minCorrected-median*2||rowY>maxCorrected+median*2)continue;
     let nearest=Infinity;
-    for(const center of anchorCenters)nearest=Math.min(nearest,Math.abs(rowY-center));
+    for(const center of correctedCenters)nearest=Math.min(nearest,Math.abs(rowY-center));
     if(nearest<tolerance*1.8)score+=1-nearest/(tolerance*1.8);
    }
    return score;
   };
-  const flatScore=scoreSlope(0);let bestScore=flatScore;
+  const flatScore=scoreSlope(0);let bestScore=flatScore,bestDataSlope=0;
   for(let slope=-.25;slope<=.2501;slope+=.0025){
    const score=scoreSlope(slope);
-   if(score>bestScore+.05||(Math.abs(score-bestScore)<=.05&&Math.abs(slope)<Math.abs(bestSlope))){bestScore=score;bestSlope=slope}
+   if(score>bestScore+.05||(Math.abs(score-bestScore)<=.05&&Math.abs(slope)<Math.abs(bestDataSlope))){bestScore=score;bestDataSlope=slope}
   }
-  if(bestScore<flatScore*1.025)bestSlope=0;
+  bestSlope=bestScore>=flatScore*1.01?bestDataSlope:headingSlope;
+ }else{
+  bestSlope=headingSlope;
  }
- let rowAnchors=uniqueAnchors.map(t=>({...t,rowCenter:t.center-bestSlope*(t.left-anchorX),code:t.word,anchorKind:'code'})).sort((a,b)=>a.rowCenter-b.rowCenter);
+ let rowAnchors=uniqueAnchors.map(t=>({...t,rowCenter:t.center-bestSlope*(t.left-anchorX),code:String(t.word||'').replace(/[\[\]()]/g,''),anchorKind:'code'})).sort((a,b)=>a.rowCenter-b.rowCenter);
  const rowTokens=tokens.map(t=>({...t,rowCenter:t.center-bestSlope*(t.left-anchorX)}));
  const mid=(a,b)=>Number.isFinite(a)&&Number.isFinite(b)?(a+b)/2:null;
+ const inferredUnitPack=header.unit!==null&&header.quantity!==null&&header.unit<header.quantity&&
+  (header.unitPrice===null||header.unit<header.unitPrice-(pageRight-pageLeft)*.035)?header.unit:null;
  const column={
   code:header.code,
   description:header.description,
   brand:header.brand,
-  pack:header.pack,
+  category:header.category,
+  route:header.route,
+  pack:header.pack??inferredUnitPack,
   measure:header.measure,
   unit:header.unit,
   quantity:header.quantity,
@@ -228,27 +322,94 @@ function invoiceRowsFromTsv(tsv){
   vat:header.vat,
   total:header.total
  };
- const descLeft=mid(column.code,column.description),descRight=column.brand!==null?mid(column.description,column.brand)+(pageRight-pageLeft)*.012:mid(column.description,column.pack);
- const packLeft=column.brand!==null?mid(column.brand,column.pack):mid(column.description,column.pack),packRight=column.measure!==null?mid(column.pack,column.measure):mid(column.pack,column.quantity);
- const measureLeft=column.measure!==null?mid(column.pack,column.measure):mid(column.pack,column.unit),measureRight=column.quantity!==null?mid(column.measure??column.unit,column.quantity):null;
- const qtyLeft=column.quantity!==null?mid(column.unit??column.measure,column.quantity):null,qtyRight=mid(column.quantity,column.unitPrice);
- const priceLeft=mid(column.quantity,column.unitPrice),priceRight=column.price!==null?mid(column.unitPrice,column.price):mid(column.unitPrice,column.vat??column.total);
- const linePriceLeft=column.price!==null?mid(column.unitPrice,column.price):null,linePriceRight=column.vat!==null?mid(column.price,column.vat):mid(column.price,column.total);
- const totalLeft=column.total!==null?mid(column.vat??column.price,column.total):null,totalRight=pageRight+median;
+ // Some supplier photos lose the small PRICE/SUBTOTAL headings even when the
+ // amounts themselves are clear. Recover those columns from repeated currency
+ // tokens below the table heading, never from bare decimals or pack weights.
+ if(heading&&(!Number.isFinite(column.unitPrice)||!Number.isFinite(column.total))){
+  const amountTokens=tokens.filter(t=>t.center>heading.bottom+median*.35&&/[£€$]\s*\d/.test(t.word));
+  const amountGroups=[];
+  for(const token of amountTokens.sort((a,b)=>a.centerX-b.centerX)){
+   let group=amountGroups.find(g=>Math.abs(g.center-token.centerX)<=Math.max(median*2.2,(pageRight-pageLeft)*.025));
+   if(group){group.tokens.push(token);group.center=group.tokens.reduce((sum,t)=>sum+t.centerX,0)/group.tokens.length}
+   else amountGroups.push({center:token.centerX,tokens:[token]});
+  }
+  const reliableAmountColumns=amountGroups.filter(g=>g.tokens.length>=3).sort((a,b)=>a.center-b.center);
+  if(reliableAmountColumns.length){
+   const rightOfDescription=reliableAmountColumns.filter(g=>g.center>(column.pack??column.quantity??column.description??pageLeft));
+   const moneyColumns=rightOfDescription.length?rightOfDescription:reliableAmountColumns;
+   if(!Number.isFinite(column.unitPrice))column.unitPrice=moneyColumns[0].center;
+   if(moneyColumns.length>=2)column.total=moneyColumns[moneyColumns.length-1].center;
+   else if(!Number.isFinite(column.total))column.total=moneyColumns[0].center;
+  }
+ }
+ const centers=[column.code,column.description,column.brand,column.category,column.route,column.pack,column.measure,column.unit,column.quantity,column.unitPrice,column.price,column.vat,column.total]
+  .filter(value=>Number.isFinite(value)).sort((a,b)=>a-b).filter((value,index,array)=>index===0||Math.abs(value-array[index-1])>median*.6);
+ const cellBounds=center=>{
+  if(!Number.isFinite(center))return [null,null];
+  let index=centers.findIndex(value=>Math.abs(value-center)<=median*.6);
+  if(index<0){index=centers.findIndex(value=>value>center);if(index<0)index=centers.length;}
+  const left=index===0?pageLeft:mid(centers[index-1],centers[index]??center);
+  const right=index>=centers.length?pageRight:mid(centers[index],centers[index+1]??pageRight);
+  return [left,right];
+ };
+ let [descLeft,descRight]=cellBounds(column.description);
+ const descriptionNeighbors=[['code',column.code],['brand',column.brand],['category',column.category],['pack',column.pack],['measure',column.measure],['unit',column.unit],['quantity',column.quantity],['unitPrice',column.unitPrice],['price',column.price],['vat',column.vat],['total',column.total]]
+  .filter(([,x])=>Number.isFinite(x)&&Number.isFinite(column.description)&&Math.abs(x-column.description)>median*.6)
+  .sort((a,b)=>a[1]-b[1]);
+ const previousDescriptionColumn=descriptionNeighbors.filter(([,x])=>x<column.description).at(-1)||null;
+ const nextDescriptionColumn=descriptionNeighbors.find(([,x])=>x>column.description)||null;
+ const descriptionGap=Math.max(median*1.5,(pageRight-pageLeft)*.018);
+ if(previousDescriptionColumn?.[0]==='code')descLeft=previousDescriptionColumn[1]+descriptionGap;
+ if(nextDescriptionColumn?.[0]==='code')descRight=nextDescriptionColumn[1]-descriptionGap;
+ else if(!previousDescriptionColumn&&nextDescriptionColumn&&nextDescriptionColumn[0]==='pack'&&combinedPackHeading)descRight=nextDescriptionColumn[1]-descriptionGap;
+ else if(previousDescriptionColumn?.[0]==='code'&&nextDescriptionColumn)descRight=mid(column.description,nextDescriptionColumn[1]);
+ const [codeLeft,codeRight]=cellBounds(column.code),
+       packBounds=cellBounds(column.pack),[packLeftRaw,packRight]=packBounds,
+       packLeft=!column.code&&combinedPackHeading&&column.pack!==null&&column.description!==null&&column.category===null?Math.max(packLeftRaw,column.pack-descriptionGap):packLeftRaw,
+       [measureLeft,measureRight]=cellBounds(column.measure),
+       [qtyLeft,qtyRight]=cellBounds(column.quantity),[priceLeft,priceRight]=cellBounds(column.unitPrice),
+       [linePriceLeft,linePriceRight]=cellBounds(column.price),[totalLeft,totalRightRaw]=cellBounds(column.total),totalRight=totalRightRaw??pageRight+median;
  const within=(token,left,right)=>left!==null&&right!==null&&token.centerX>=Math.min(left,right)&&token.centerX<Math.max(left,right);
- const fieldText=(row, left, right)=>row.filter(t=>within(t,left,right)).sort((a,b)=>a.rowCenter-b.rowCenter||a.left-b.left).map(t=>t.word).join(' ').replace(/\s+/g,' ').trim();
- const layoutReady=column.code!==null&&column.description!==null&&column.pack!==null&&column.unitPrice!==null;
+ const orderedRowTokens=row=>{
+  const lines=[];
+  for(const token of row.slice().sort((a,b)=>a.rowCenter-b.rowCenter||a.left-b.left)){
+   const line=lines.find(candidate=>Math.abs(candidate.center-token.rowCenter)<=Math.max(6,median*.78));
+   if(line){line.tokens.push(token);line.center=line.tokens.reduce((sum,t)=>sum+t.rowCenter,0)/line.tokens.length}
+   else lines.push({center:token.rowCenter,tokens:[token]});
+  }
+  return lines.sort((a,b)=>a.center-b.center).flatMap(line=>line.tokens.sort((a,b)=>a.left-b.left));
+ };
+ const fieldText=(row,left,right)=>orderedRowTokens(row.filter(t=>within(t,left,right))).map(t=>t.word).join(' ').replace(/\s+/g,' ').trim();
+ const layoutReady=column.description!==null&&(column.unitPrice!==null||column.price!==null||column.total!==null);
  if(layoutReady){
-  const alternateAnchors=rowTokens.filter(t=>within(t,packLeft,packRight)&&/\d.*[-x].*\d/i.test(t.word)||within(t,priceLeft,priceRight)&&/(?:[.,]\d{2}|[£€$]\s*\d)/i.test(t.word));
+  // Anchor on one per-line amount column so unit price and line total do not
+  // create two rows for the same product. Pack-size tokens can still recover
+  // a row whose preferred amount is missing.
+  const rowPriceColumn=column.total??column.price??column.unitPrice;
+  const priceBounds=[cellBounds(rowPriceColumn)].filter(([left,right])=>Number.isFinite(left)&&Number.isFinite(right));
+  const isPriceToken=token=>/^(?:[£€$]|\d{1,5}(?:[.,]\d{2})?)$/i.test(String(token.word||'').trim())||/\d+[.,]\d{2}\b/.test(token.word)||/[£€$]\s*\d/.test(token.word);
+  const alternateAnchorTop=heading?heading.bottom+median*.35:firstCodeY-median*.5;
+  const isPackAnchor=token=>within(token,packLeft,packRight)&&(/\d.*[-x].*\d/i.test(token.word)||/^\d+(?:[.,]\d+)?\s*(?:kilograms?|kgs?|kg|grams?|grammes?|gms?|gm|gr|g|litres?|liters?|ltr|litre|liter|millilitres?|milliliters?|ml|dzn|dozen|each|ea|pieces?|pcs?)\b/i.test(token.word));
+  const packAnchors=rowTokens.filter(isPackAnchor);
+  const amountAnchors=rowTokens.filter(t=>t.rowCenter>alternateAnchorTop&&priceBounds.some(([left,right])=>within(t,left,right))&&isPriceToken(t));
+  // When code OCR is weak, use pack sizes and one amount column to recover a
+  // missing row without treating subtotal and total as separate products.
+  const alternateAnchors=[...packAnchors,...amountAnchors];
   for(const token of alternateAnchors){
-   if(rowAnchors.some(anchor=>Math.abs(anchor.rowCenter-token.rowCenter)<median*1.25))continue;
+   if(rowAnchors.some(anchor=>Math.abs(anchor.rowCenter-token.rowCenter)<median*1.6))continue;
    rowAnchors.push({...token,code:'',anchorKind:'field'});
   }
   rowAnchors.sort((a,b)=>a.rowCenter-b.rowCenter);
   const distinctAnchors=[];
   for(const anchor of rowAnchors){
    const previous=distinctAnchors[distinctAnchors.length-1];
-   if(previous&&Math.abs(anchor.rowCenter-previous.rowCenter)<median*1.1){if(anchor.anchorKind==='code'&&previous.anchorKind!=='code')distinctAnchors[distinctAnchors.length-1]=anchor;continue}
+   if(previous&&Math.abs(anchor.rowCenter-previous.rowCenter)<median*1.8){
+    if(anchor.anchorKind==='code'&&previous.anchorKind==='code'){
+     if(anchor.code===previous.code&&Math.abs(anchor.rowCenter-previous.rowCenter)<median*.5){if(anchor.confidence>previous.confidence)distinctAnchors[distinctAnchors.length-1]=anchor;continue}
+    }else if(anchor.anchorKind==='code'&&previous.anchorKind!=='code'){distinctAnchors[distinctAnchors.length-1]=anchor;continue}
+    else if(anchor.anchorKind!=='code'&&previous.anchorKind==='code')continue;
+    else if(anchor.anchorKind!=='code'&&previous.anchorKind!=='code')continue;
+   }
    distinctAnchors.push(anchor);
   }
   rowAnchors=distinctAnchors;
@@ -258,10 +419,10 @@ function invoiceRowsFromTsv(tsv){
   if(!found)return null;
   const value=parseMoney(found[1]);return Number.isFinite(value)&&value>=0?value:null;
  };
-  const moneyNear=(row,x)=>{
+ const moneyNear=(row,x,left,right)=>{
   if(!Number.isFinite(x))return null;
   const radius=Math.max(median*6,(pageRight-pageLeft)*.07);
-  const candidates=row.map(token=>{
+  const candidates=row.filter(token=>!Number.isFinite(left)||!Number.isFinite(right)||within(token,left,right)).map(token=>{
    const word=String(token.word||'').trim();
    // Restrict this fallback to visible amounts: decimals, currency-marked values,
    // or whole-pence OCR such as £6427. This keeps quantities and pack counts out.
@@ -273,13 +434,25 @@ function invoiceRowsFromTsv(tsv){
   return candidates.length?candidates[0].value:null;
  };
  const records=rowAnchors.map((anchor,i)=>{
-  const prev=rowAnchors[i-1],next=rowAnchors[i+1],top=anchor.rowCenter-median*.4;
+  const prev=rowAnchors[i-1],next=rowAnchors[i+1];
+  const tableTop=heading?.bottom??firstCodeY-median*.35;
+  const rowEdge=median*1.2;
+  const top=embeddedDescriptionLayout
+   ?prev?anchor.rowCenter-rowEdge:Math.max(tableTop+median*.12,anchor.rowCenter-median*3)
+   :prev?(prev.rowCenter+anchor.rowCenter)/2:Math.max(tableTop+median*.12,anchor.rowCenter-median*3);
   // Bidfood codes sit at the start of a variable-height product row. The next code starts the next row;
   // splitting at the midpoint cut off wrapped descriptions and made brands look like new products.
-  const bottom=next?next.rowCenter-median*.4:anchor.rowCenter+Math.max(median*3,(anchor.rowCenter-(prev?.rowCenter??anchor.rowCenter-median*3))*.82);
+  const bottom=embeddedDescriptionLayout&&next
+   ?next.rowCenter-rowEdge
+   :next?(anchor.rowCenter+next.rowCenter)/2:anchor.rowCenter+Math.max(median*3,(anchor.rowCenter-(prev?.rowCenter??anchor.rowCenter-median*3))*.82);
   const row=rowTokens.filter(t=>t.rowCenter>=top&&t.rowCenter<bottom);
-  const code=anchor.code||'';
+  let code=anchor.code||'';
   let description=fieldText(row,descLeft,descRight);
+  if(heading&&!heading.types.has('code')){
+   const trailingCode=description.match(/(?:\[|\()?([0-9]{4,8})(?:\]|\))?\s*$/);
+   if(trailingCode){if(!code)code=trailingCode[1];description=description.slice(0,trailingCode.index).trim()}
+   else if(code){const escaped=code.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const ending=new RegExp('(?:\\[|\\()?'+escaped+'(?:\\]|\\))?\\s*$');description=description.replace(ending,'').trim()}
+  }
   let packText=fieldText(row,packLeft,packRight),measureText=fieldText(row,measureLeft,measureRight);
   let quantityText=fieldText(row,qtyLeft,qtyRight),unitPriceText=fieldText(row,priceLeft,priceRight),linePriceText=fieldText(row,linePriceLeft,linePriceRight);
   const totalText=column.total!==null?fieldText(row,totalLeft,totalRight):'';
@@ -287,21 +460,31 @@ function invoiceRowsFromTsv(tsv){
   const descriptionLayout=descLeft!==null&&descRight!==null&&descRight>descLeft;
   const packLayout=packLeft!==null&&packRight!==null&&packRight>packLeft;
   const priceLayout=priceLeft!==null&&priceRight!==null&&priceRight>priceLeft;
-  if(!descriptionLayout||!packLayout||!priceLayout){
+  if(!description){
+  const afterDescription=[column.code,column.brand,column.category,column.route,column.pack,column.measure,column.unit,column.quantity,column.unitPrice,column.price,column.vat,column.total]
+    .filter(value=>Number.isFinite(value)&&value>column.description+median*.5);
+   const rightEdge=afterDescription.length?Math.min(...afterDescription):pageRight+median;
+   const leftEdge=descLeft??pageLeft;
+   description=orderedRowTokens(row.filter(t=>t.centerX>=leftEdge&&t.centerX<rightEdge)).map(t=>t.word).join(' ').replace(/\s+/g,' ').trim();
+  }
+  if(!description||!descriptionLayout||!packLayout||!priceLayout){
    const sorted=row.slice().sort((a,b)=>a.left-b.left||a.rowCenter-b.rowCenter);
-   const codeIndex=sorted.findIndex(t=>t===anchor),packIndex=sorted.findIndex(t=>/\d+(?:[.,]\d+)?\s*[-x]\s*\d/i.test(t.word));
-   if(!description&&codeIndex>=0){description=sorted.slice(codeIndex+1,packIndex>codeIndex?packIndex:undefined).map(t=>t.word).join(' ')}
+   const codeIndex=sorted.findIndex(t=>t.word===anchor.word&&Math.abs(t.left-anchor.left)<median&&Math.abs(t.center-anchor.center)<median),packIndex=sorted.findIndex(t=>/\d+(?:[.,]\d+)?\s*[-x]\s*\d/i.test(t.word));
+   if(!description&&codeIndex>=0){
+    if(column.description!==null&&column.code!==null&&column.description<column.code)description=sorted.filter(t=>t.centerX<anchor.centerX).map(t=>t.word).join(' ');
+    else description=sorted.slice(codeIndex+1,packIndex>codeIndex?packIndex:undefined).map(t=>t.word).join(' ');
+   }
    if(!packText&&packIndex>=0)packText=sorted.slice(packIndex,packIndex+3).map(t=>t.word).join(' ');
    if(!unitPriceText){const tail=sorted.slice(Math.max(0,packIndex+1)).map(t=>t.word).join(' ');unitPriceText=tail}
   }
   const quantityMatch=quantityText.match(/\b\d+(?:[.,]\d+)?\b/),quantity=quantityMatch?parseAmount(quantityMatch[0]):0;
-  const unitPrice=moneyIn(unitPriceText)??moneyNear(row,column.unitPrice),
-        linePriceValue=moneyIn(linePriceText)??moneyNear(row,column.price),
-        totalValue=moneyIn(totalText)??moneyNear(row,column.total),
+  const unitPrice=moneyIn(unitPriceText)??moneyNear(row,column.unitPrice,priceLeft,priceRight),
+        linePriceValue=moneyIn(linePriceText)??moneyNear(row,column.price,linePriceLeft,linePriceRight),
+        totalValue=moneyIn(totalText)??moneyNear(row,column.total,totalLeft,totalRight),
         linePrice=linePriceValue===null?totalValue:linePriceValue;
   return {code,description,pack:packText,measure:measureText,quantity,unitPrice,linePrice,rowCenter:anchor.rowCenter,raw,codeConfidence:anchor.confidence};
  });
- const tableRecords=layoutReady?records.filter(r=>r.code||r.description||r.pack||r.unitPrice!==null):[];
+ const tableRecords=layoutReady?records.filter(r=>r.code||((r.description||r.pack||r.measure||r.quantity>0)&&!/^\s*(?:sub\s*)?total\b|^\s*(?:amount due|vat|balance due)\b/i.test(r.description))):[];
  const recordText=tableRecords.map(r=>[r.code,r.description,r.pack,r.measure,r.quantity||'',r.unitPrice===null?'':r.unitPrice.toFixed(2),r.linePrice===null?'':r.linePrice.toFixed(2)].join('\t')).join('\n');
  const legacyLines=rowAnchors.map((anchor,i)=>{
   const next=rowAnchors[i+1],prev=rowAnchors[i-1],top=anchor.rowCenter-median*.4;
@@ -311,7 +494,7 @@ function invoiceRowsFromTsv(tsv){
  const structuredText=tableRecords.length?`\n--- MenuMargin positioned invoice rows: code | description | pack size | unit of measure | quantity | unit price | line total (tab-separated) ---\n${recordText}`:'';
  const text=`${positioned}\n--- Product rows grouped by item code ---\n${legacyLines.join('\n')}${structuredText}`;
  const completeness=tableRecords.reduce((sum,r)=>sum+1+(r.description?1:0)+(r.pack?1:0)+(r.unitPrice!==null?1:0)+(r.quantity?1:0),0);
- return {text,records:tableRecords,quality:tableRecords.length*10+completeness};
+ return {text,records:tableRecords,quality:tableRecords.length*10+completeness,skew:bestSlope};
 }
 function invoiceProductCodeMatches(line){
  const text=String(line||'');
@@ -319,19 +502,59 @@ function invoiceProductCodeMatches(line){
 }
 function invoiceTablePassScore(candidate){
  const structured=candidate?.records||[];
- if(structured.length)return structured.length*10+structured.reduce((sum,r)=>sum+(r.description?1:0)+(r.pack?1:0)+(r.unitPrice!==null?1:0),0);
+ if(structured.length){
+  const quality=structured.reduce((score,r)=>{
+   const hasName=/[A-Za-z]{3}/.test(String(r.description||''));
+   const pack=String(r.pack||'')+' '+String(r.measure||'');
+   const hasPack=/\d+(?:[.,]\d+)?\s*[-x×]\s*\d+(?:[.,]\d+)?/i.test(pack)||/\d+(?:[.,]\d+)?\s*(?:kg|kgs?|kilograms?|g|gm|gms?|grams?|litres?|liters?|ltr|ml|dzn|dozen|each|ea|pcs?)\b/i.test(pack);
+   const quantity=Number(r.quantity),hasQuantity=Number.isFinite(quantity)&&quantity>0&&quantity<=999;
+   const prices=[r.unitPrice,r.linePrice].filter(value=>value!==null&&value!==undefined&&value!=='').map(Number).filter(Number.isFinite);
+   const hasPrice=prices.some(price=>price>=0&&price<=100000);
+   return score+(hasName ? .25 : 0)+(hasPack ? .25 : 0)+(hasQuantity ? .15 : 0)+(hasPrice ? .35 : 0);
+  },0);
+  return quality/structured.length*60+Math.min(structured.length,8)*.5;
+ }
  const rowsText=String(candidate?.rows||'');
- let inRows=false,score=0,rowCount=0;
+ let inRows=false,rowCount=0,complete=0;
  for(const raw of String(rowsText||'').split(/\r?\n/)){
   const line=raw.trim();
   if(/^---\s*product rows grouped by item code\s*---$/i.test(line)){inRows=true;continue}
   if(/^---/.test(line)){inRows=false;continue}
   if(!inRows||!line)continue;
+  if(!/[A-Za-z]{3,}/.test(line)&&!invoiceProductCodeMatches(line).length)continue;
   rowCount++;
-  const codes=invoiceProductCodeMatches(line);
-  score+=1+(codes.length?6:0)+(/\d\s*[-x]\s*\d/.test(line)?2:0)+(/[£€$]\s*\d|\b\d+[.,]\d{2}\b/.test(line)?2:0)+(/[A-Za-z]{3,}/.test(line)?2:0);
+  complete+=(/[A-Za-z]{3,}/.test(line)?1:0)+(/\d\s*[-x]\s*\d/i.test(line)?1:0)+(/[£€$]\s*\d|\b\d+[.,]\d{2}\b/.test(line)?1:0);
  }
- return rowCount?score:-1;
+ return rowCount?complete/(rowCount*3)*60+Math.min(rowCount,8)*.5:-1;
+}
+function invoiceTablePassesDisagree(candidates){
+ const passes=(candidates||[]).map(candidate=>{
+  const byCode=new Map();
+  for(const row of candidate?.records||[]){
+   const code=String(row.code||'').trim().toLowerCase();if(!code)continue;
+   byCode.set(code,(byCode.get(code)||[]).concat(row));
+  }
+  return byCode;
+ }).filter(byCode=>byCode.size);
+ const codes=new Set(passes.flatMap(byCode=>[...byCode.keys()]));
+ const normalise=value=>String(value||'').toLowerCase().replace(/[^a-z0-9.,]/g,'');
+ for(const code of codes){
+  const matching=passes.map(byCode=>byCode.get(code)).filter(rows=>rows?.length===1).map(rows=>rows[0]);
+  if(matching.length<2)continue;
+  for(const field of ['pack','measure']){
+   const values=matching.map(row=>normalise(row[field])).filter(Boolean);
+   if(new Set(values).size>1)return true;
+  }
+  for(const field of ['quantity','unitPrice','linePrice']){
+   const values=matching.map(row=>Number(row[field])).filter(value=>Number.isFinite(value)&&value>0);
+   if(values.length>1&&Math.max(...values)-Math.min(...values)>.01)return true;
+  }
+ }
+ return false;
+}
+function invoiceChooseBestTablePass(candidates){
+ const all=candidates||[],structured=all.filter(candidate=>candidate?.records?.length),choices=structured.length?structured:all;
+ return choices.reduce((chosen,candidate)=>invoiceTablePassScore(candidate)>invoiceTablePassScore(chosen)?candidate:chosen,choices[0]);
 }
 async function scanInvoiceFile(){
  const file=$('invoiceFile').files[0];if(!file){invoiceToast('Choose a PDF or photo first.');return}
@@ -346,7 +569,7 @@ async function scanInvoiceFile(){
    langPath:new URL('./vendor/tesseract/lang-data/',document.baseURI).href,
    logger:message=>{if(message.status==='recognizing text')invoiceStatus(`Reading invoice… ${Math.round((message.progress||0)*100)}%`);}
   });
-  const chunks=[];
+  const chunks=[],lowConfidencePages=[];
   try{
    await worker.setParameters({preserve_interword_spaces:'1'});
    for await(const page of invoiceFilePages(file)){
@@ -356,18 +579,31 @@ async function scanInvoiceFile(){
     const first=await worker.recognize(page.canvas,{}, {text:true,tsv:true});
     const firstTable=invoiceRowsFromTsv(first.data.tsv||'');
     candidates.push({modeName:'automatic',text:first.data.text||'',rows:firstTable.text,records:firstTable.records,quality:firstTable.quality});
-    if(invoiceTablePassScore(candidates[0])<32){
-     invoiceStatus(`Checking page ${page.pageNo} with a second layout pass…`);
-     await worker.setParameters({tessedit_pageseg_mode:window.Tesseract.PSM.SPARSE_TEXT,preserve_interword_spaces:'1'});
+    if(invoiceTablePassScore(candidates[0])<60){
+     invoiceStatus(`Checking page ${page.pageNo} with another table layout…`);
      const target=page.isPhoto?invoiceEnhancePhoto(page.canvas):page.canvas;
-     const second=await worker.recognize(target,{}, {text:true,tsv:true});
-     const secondTable=invoiceRowsFromTsv(second.data.tsv||'');
-     candidates.push({modeName:page.isPhoto?'high-contrast photo':'sparse',text:second.data.text||'',rows:secondTable.text,records:secondTable.records,quality:secondTable.quality});
+     await worker.setParameters({tessedit_pageseg_mode:window.Tesseract.PSM.SINGLE_BLOCK,preserve_interword_spaces:'1'});
+     const block=await worker.recognize(target,{}, {text:true,tsv:true});
+     const blockTable=invoiceRowsFromTsv(block.data.tsv||'');
+     candidates.push({modeName:page.isPhoto?'high-contrast table':'single block',text:block.data.text||'',rows:blockTable.text,records:blockTable.records,quality:blockTable.quality});
+     if(invoiceTablePassScore(invoiceChooseBestTablePass(candidates))<56){
+      invoiceStatus(`Checking page ${page.pageNo} with a sparse text pass…`);
+      await worker.setParameters({tessedit_pageseg_mode:window.Tesseract.PSM.SPARSE_TEXT,preserve_interword_spaces:'1'});
+      const sparse=await worker.recognize(target,{}, {text:true,tsv:true});
+      const sparseTable=invoiceRowsFromTsv(sparse.data.tsv||'');
+      candidates.push({modeName:page.isPhoto?'high-contrast sparse':'sparse',text:sparse.data.text||'',rows:sparseTable.text,records:sparseTable.records,quality:sparseTable.quality});
+     }
      if(target!==page.canvas){target.width=0;target.height=0;}
     }
-    const best=candidates.reduce((chosen,candidate)=>invoiceTablePassScore(candidate)>invoiceTablePassScore(chosen)?candidate:chosen,candidates[0]);
-    const rawPasses=candidates.map(candidate=>`--- OCR text · ${candidate.modeName} ---\n${candidate.text}`).join('\n');
-    chunks.push(`--- Page ${page.pageNo} ---\n${rawPasses}${best?.rows?`\n--- Selected table reconstruction · ${best.modeName} ---\n${best.rows}`:''}`);
+    const best=invoiceChooseBestTablePass(candidates);
+    const pageScore=invoiceTablePassScore(best);
+    const passDisagreement=invoiceTablePassesDisagree(candidates);
+    const pageNeedsReview=pageScore<56||passDisagreement;
+    if(pageNeedsReview)lowConfidencePages.push(page.pageNo);
+    const reviewPasses=candidates.some(candidate=>candidate.records?.length)?candidates:[best];
+    const rawPasses=reviewPasses.map(candidate=>`--- OCR text · ${candidate.modeName} ---\n${candidate.text}`).join('\n');
+    const reviewWarning=pageScore<56?'low confidence':passDisagreement?'OCR layouts disagree; verify every field':'';
+    chunks.push((pageNeedsReview?'--- MenuMargin OCR quality warning: '+reviewWarning+' ---\n':'')+'--- Page '+page.pageNo+' ---\n'+rawPasses+(best?.rows?'\n--- Selected table reconstruction · '+best.modeName+' ---\n'+best.rows:''));
     page.canvas.width=0;page.canvas.height=0;
     await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
    }
@@ -376,16 +612,20 @@ async function scanInvoiceFile(){
   const references=syncInvoiceReferences($('invoiceText').value);
   if(references.invoice||references.order)$('invoiceNumber').closest('.invoice-references').open=true;
   syncInvoiceSupplier($('invoiceText').value);
-  invoiceStatus('Scan complete. Check each detected product and price against the invoice below.');
+  const lowConfidenceScan=lowConfidencePages.length>0;
+  invoiceStatus(lowConfidenceScan
+   ?'Scan finished with fields needing extra review on page(s) '+lowConfidencePages.join(', ')+'. Check every product, pack and highlighted price against the invoice.'
+   :'Scan complete. Check each detected product and price against the invoice below.');
   buildInvoiceReview();
   if(!$('invoiceReviewArea').hidden)requestAnimationFrame(()=>$('invoiceReviewArea').scrollIntoView({behavior:'smooth',block:'start'}));
-  if(!$('invoiceSupplier').value.trim())invoiceStatus('Scan complete. Enter the supplier name, then check each detected product below.');
+  if(!$('invoiceSupplier').value.trim())invoiceStatus((lowConfidenceScan?'Low-confidence scan. Check every product and highlighted price. ':'Scan complete. ')+'Enter the supplier name before importing.');
  }catch(error){invoiceStatus('Could not scan this file.');invoiceToast(error.message||'The scan failed. Try a clearer image or PDF.');}
  finally{$('scanInvoice').disabled=false;}
 }
 function buildInvoiceReview(){
  const text=$('invoiceText').value.trim();
  if(!text){invoiceToast('Scan an invoice or paste extracted text first.');return}
+ const lowConfidenceScan=/^---\s*MenuMargin OCR quality warning:/im.test(text);
  const invoiceRefs=syncInvoiceReferences(text),referenceValues=[invoiceRefs.invoice,invoiceRefs.order].filter(Boolean).map(value=>value.toLowerCase());
  const allLines=text.split(/\r?\n/).map(s=>s.replace(/ +/g,' ').trim()).filter(Boolean);
  const tableRows=[],structuredRows=[];let collectingTableRows=false,collectingStructuredRows=false;
@@ -397,8 +637,10 @@ function buildInvoiceReview(){
   if(collectingTableRows&&line)tableRows.push(line);
  }
  const distinctTableCodes=new Set(tableRows.flatMap(line=>invoiceProductCodeMatches(line).map(match=>match[0])));
- const structuredCodeCount=new Set(structuredRows.map(row=>(row[0]||'').trim()).filter(Boolean)).size;
- const usingStructuredInvoiceRows=structuredRows.length>=4&&structuredCodeCount>=3;
+ const usableStructuredRows=structuredRows.filter(row=>row.some(value=>String(value||'').trim()));
+ // The positioned parser has already separated table headers and totals, so
+ // preserve even a one-product invoice instead of sending it to noisier OCR text.
+ const usingStructuredInvoiceRows=usableStructuredRows.length>0;
  const usingPositionedTableRows=usingStructuredInvoiceRows||(tableRows.length>=6&&distinctTableCodes.size>=4);
  const lines=usingStructuredInvoiceRows?[]:usingPositionedTableRows?tableRows:allLines;
  const invoiceIsBidfood=/\b(?:bid\s*food|everyday\s+favourites|millhouse|new\s+york\s+bakery\s+company)\b/i.test(($('invoiceSupplier').value||'')+' '+text);
@@ -412,7 +654,7 @@ function buildInvoiceReview(){
   for(const brand of bidfoodBrands){const escaped=brand.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),tail=new RegExp('\\s+'+escaped+'\\s*$','i'),head=new RegExp('^'+escaped+'\\s+','i'),trimmed=name.replace(tail,'').replace(head,'').trim();if(trimmed!==name&&nameScore(trimmed)>3)return trimmed}
   return name;
  };
- const skip=/^(?:---\s*(?:page|product rows grouped by item code|(?:alternate\s+)?(?:table rows reconstructed|sparse layout)|enhanced photo(?: table rows reconstructed)?)|description\b|product\s+code|code\s+description|order date|delivery date|web\/order ref|your order ref|(?:tax\s+)?invoice(?:\s*(?:no\.?|number|#|ref(?:erence)?))?\b|(?:web\s*\/\s*)?order\s*(?:no\.?|number|#|ref(?:erence)?)\b|customer\s+(?:account\s+)?(?:no\.?|number|code)\b|page\s+\d+|[-_=]{4,}|total order value|order lines|item code|category\b|product\s+unit\s+of)/i;
+ const skip=/^(?:---\s*(?:MenuMargin OCR quality warning|page|product rows grouped by item code|(?:alternate\s+)?(?:table rows reconstructed|sparse layout)|enhanced photo(?: table rows reconstructed)?)|description\b|product\s+code|code\s+description|order date|delivery date|web\/order ref|your order ref|(?:tax\s+)?invoice(?:\s*(?:no\.?|number|#|ref(?:erence)?))?\b|(?:web\s*\/\s*)?order\s*(?:no\.?|number|#|ref(?:erence)?)\b|customer\s+(?:account\s+)?(?:no\.?|number|code)\b|page\s+\d+|[-_=]{4,}|total order value|order lines|item code|category\b|product\s+unit\s+of)/i;
  const codeRx=/\b([A-Za-z]{1,4}\d{4,8}|\d{4,8})\b/;
  const unitRx='(kilograms?|kgs?|kg|grams?|grammes?|gms?|gm|gr|g|litres?|liters?|ltr|litre|liter|millilitres?|milliliters?|ml|dzn|dozen|each|ea|pieces?|pcs?)';
  const categoryText='Dairy\\s+Eggs\\s+Juices|Herbs\\s+Spices\\s+Nuts|Meat\\s+Fish\\s+Poultry|Vegetables|Salad|Bakery|Frozen|Ambient';
@@ -456,11 +698,21 @@ function buildInvoiceReview(){
    // The description cell already excludes Bidfood's separate Brand cell.
    // Keep the wording printed in Description, including a brand when it is part of the product name.
    const name=cleanDescription(rawName);
-   const parsedPack=parseStructuredPack(packValue,measureValue),caseCount=parsedPack.caseCount,eachSize=parsedPack.eachSize,unit=parsedPack.unit,packMissing=parsedPack.packMissing;
-   const quantity=parseAmount(String(quantityValue).replace(/[^\d.,]/g,''))||0;
+   const parsedPack=parseStructuredPack(packValue,measureValue);
+   let caseCount=parsedPack.caseCount,eachSize=parsedPack.eachSize,unit=parsedPack.unit,packMissing=parsedPack.packMissing;
+   let quantity=parseAmount(String(quantityValue).replace(/[^\d.,]/g,''))||0;
    const unitPriceText=String(unitPriceValue).trim(),lineTotalText=String(lineTotalValue).trim();
+   if(!quantity)quantity=invoiceInferQuantity(unitPriceText,lineTotalText)||0;
    if(!code&&!rawName&&!packValue&&!measureValue&&!quantityValue&&!unitPriceText&&!lineTotalText)continue;
-   const selectedPrice=invoiceSelectPrice(unitPriceText,lineTotalText,quantity);
+   let selectedPrice=invoiceSelectPrice(unitPriceText,lineTotalText,quantity);
+   // Meat invoices often price each kilogram but print the actual weighed
+   // quantity and its extended line value. Store the weighed amount as the
+   // pack size and the extended value as the case price, which preserves the
+   // correct per-kg cost in the price book. This also repairs OCR that drops
+   // a decimal in a weight such as 0.50 when the printed amount confirms it.
+   const confirmedWeight=invoiceConfirmWeighedPack(packValue,measureValue,unitPriceText,lineTotalText);
+   if(confirmedWeight){caseCount=1;eachSize=confirmedWeight.size;unit=confirmedWeight.unit;packMissing=false;selectedPrice={value:confirmedWeight.price,inferred:confirmedWeight.inferred}}
+   if(lowConfidenceScan&&selectedPrice)selectedPrice={...selectedPrice,inferred:true};
    const price=selectedPrice?.value??null,priceInferred=selectedPrice?.inferred??false;
    const nameMissing=nameScore(name)<3||isBidfoodBrandOnly(name);
    const displayName=nameMissing?(code?`Item ${code} — name not read`:rawName?`Possible product — name needs review`:'Possible product — name not read'):name;
@@ -532,6 +784,7 @@ function buildInvoiceReview(){
    const first=moneyMatches[0];selectedPrice={value:first.value,inferred:Boolean(first.inferred)};
    if(invoiceIsBidfood&&orderedQty>1)selectedPrice.inferred=true;
   }
+  if(lowConfidenceScan&&selectedPrice)selectedPrice={...selectedPrice,inferred:true};
   const price=selectedPrice?.value??null,priceInferred=selectedPrice?.inferred??false;
   // Fresh Direct puts its product description before the item code; using that
   // column boundary avoids copying OCR-corrupted category and quantity text.
@@ -584,14 +837,14 @@ function buildInvoiceReview(){
   const tr=document.createElement('tr');
   const tdCheck=document.createElement('td'),check=document.createElement('input');check.type='checkbox';check.checked=false;check.setAttribute('aria-label','Import '+item.name);tdCheck.appendChild(check);
   const tdCode=document.createElement('td'),code=document.createElement('input');code.className='invoice-product-code';code.type='text';code.value=item.code||'';code.placeholder='Optional';code.setAttribute('aria-label','Supplier product code');tdCode.appendChild(code);
-  const tdName=document.createElement('td'),name=document.createElement('textarea');name.className='invoice-item-name';name.rows=2;name.value=item.name;name.setAttribute('aria-label','Ingredient name');name.title=item.nameMissing?'OCR did not find the product description. Enter it from the invoice.':item.name; if(item.nameMissing){name.style.borderColor='#c47a12';name.style.background='#fff8e8'}tdName.appendChild(name);
+  const tdName=document.createElement('td'),name=document.createElement('textarea');name.className='invoice-item-name';name.rows=2;name.value=item.name;name.setAttribute('aria-label','Ingredient name');name.title=lowConfidenceScan?'This invoice page was read with low confidence. Check the product name against the original.':item.nameMissing?'OCR did not find the product description. Enter it from the invoice.':item.name; if(item.nameMissing||lowConfidenceScan){name.style.borderColor='#c47a12';name.style.background='#fff8e8'}tdName.appendChild(name);
   if(item.raw){const source=document.createElement('details');source.className='invoice-source';const summary=document.createElement('summary');summary.textContent='OCR source';const pre=document.createElement('pre');pre.textContent=item.raw;source.append(summary,pre);tdName.appendChild(source)}
-  const tdCase=document.createElement('td'),caseQty=document.createElement('input');caseQty.className='invoice-case-qty';caseQty.type='number';caseQty.min='1';caseQty.step='1';caseQty.value=item.packMissing?'':item.caseCount;caseQty.setAttribute('aria-label','Items in this case');if(item.packMissing||item.packConflict){caseQty.title='OCR did not find a reliable number of items per case. Enter it from the invoice.';caseQty.style.borderColor='#c47a12';caseQty.style.background='#fff8e8'}tdCase.appendChild(caseQty);
-  const tdEach=document.createElement('td'),eachSize=document.createElement('input');eachSize.className='invoice-item-size';eachSize.type='number';eachSize.min='0.001';eachSize.step='any';eachSize.value=item.packMissing?'':item.eachSize;eachSize.setAttribute('aria-label','Size of each item in the case');if(item.packMissing||item.packConflict){eachSize.title=item.packMissing?'OCR did not find the pack size. Enter it from the invoice before importing.':'OCR passes disagreed on this pack size. Check it against the invoice.';eachSize.style.borderColor='#c47a12';eachSize.style.background='#fff8e8'}tdEach.appendChild(eachSize);
-  const tdUnit=document.createElement('td'),unit=document.createElement('select');[['kg','kg'],['g','g'],['l','litres'],['ml','ml'],['each','each']].forEach(([v,label])=>{const o=document.createElement('option');o.value=v;o.textContent=label;unit.appendChild(o)});unit.value=item.unit;unit.setAttribute('aria-label','Unit');if(item.packMissing||item.packConflict){unit.title='Check the unit against the invoice.';unit.style.borderColor='#c47a12';unit.style.background='#fff8e8'}tdUnit.appendChild(unit);
+  const tdCase=document.createElement('td'),caseQty=document.createElement('input');caseQty.className='invoice-case-qty';caseQty.type='number';caseQty.min='1';caseQty.step='1';caseQty.value=item.packMissing?'':item.caseCount;caseQty.setAttribute('aria-label','Items in this case');if(item.packMissing||item.packConflict||lowConfidenceScan){caseQty.title=lowConfidenceScan?'This invoice page was read with low confidence. Check the case count against the original.':'OCR did not find a reliable number of items per case. Enter it from the invoice.';caseQty.style.borderColor='#c47a12';caseQty.style.background='#fff8e8'}tdCase.appendChild(caseQty);
+  const tdEach=document.createElement('td'),eachSize=document.createElement('input');eachSize.className='invoice-item-size';eachSize.type='number';eachSize.min='0.001';eachSize.step='any';eachSize.value=item.packMissing?'':item.eachSize;eachSize.setAttribute('aria-label','Size of each item in the case');if(item.packMissing||item.packConflict||lowConfidenceScan){eachSize.title=lowConfidenceScan?'This invoice page was read with low confidence. Check the pack size against the original.':item.packMissing?'OCR did not find the pack size. Enter it from the invoice before importing.':'OCR passes disagreed on this pack size. Check it against the invoice.';eachSize.style.borderColor='#c47a12';eachSize.style.background='#fff8e8'}tdEach.appendChild(eachSize);
+  const tdUnit=document.createElement('td'),unit=document.createElement('select');[['kg','kg'],['g','g'],['l','litres'],['ml','ml'],['each','each']].forEach(([v,label])=>{const o=document.createElement('option');o.value=v;o.textContent=label;unit.appendChild(o)});unit.value=item.unit;unit.setAttribute('aria-label','Unit');if(item.packMissing||item.packConflict||lowConfidenceScan){unit.title='Check the unit against the invoice.';unit.style.borderColor='#c47a12';unit.style.background='#fff8e8'}tdUnit.appendChild(unit);
   const tdTotal=document.createElement('td'),total=document.createElement('output');const updateTotal=()=>{const count=Number(caseQty.value),size=Number(eachSize.value);total.textContent=count>0&&size>0?((count*size).toLocaleString('en-GB',{maximumFractionDigits:3})+' '+unit.value):'Enter pack size'};updateTotal();tdTotal.appendChild(total);caseQty.addEventListener('input',updateTotal);eachSize.addEventListener('input',updateTotal);unit.addEventListener('change',updateTotal);
-  const tdPrice=document.createElement('td'),price=document.createElement('input');price.className='invoice-price';price.type='number';price.min='0';price.step='0.01';price.value=item.price===null?'':item.price.toFixed(2);price.setAttribute('aria-label','Total price for case');if(item.price===null||item.priceInferred||item.priceConflict){price.title=item.priceConflict?'OCR passes found different prices. Enter the correct one from the invoice.':item.price===null?'OCR did not find a reliable price. Enter it from the invoice.':'OCR found an ambiguous whole-number amount. Check whether it is a full-pound price or whether OCR dropped the decimal point.';price.style.borderColor='#c47a12';price.style.background='#fff8e8'}tdPrice.appendChild(price);
-  if(item.price===null||item.priceInferred||item.priceConflict){
+  const tdPrice=document.createElement('td'),price=document.createElement('input');price.className='invoice-price';price.type='number';price.min='0';price.step='0.01';price.value=item.price===null?'':item.price.toFixed(2);price.setAttribute('aria-label','Total price for case');if(item.price===null||item.priceInferred||item.priceConflict||lowConfidenceScan){price.title=lowConfidenceScan?'This invoice page was read with low confidence. Check the price against the original before importing.':item.priceConflict?'OCR passes found different prices. Enter the correct one from the invoice.':item.price===null?'OCR did not find a reliable price. Enter it from the invoice.':'OCR found an ambiguous whole-number amount. Check whether it is a full-pound price or whether OCR dropped the decimal point.';price.style.borderColor='#c47a12';price.style.background='#fff8e8'}tdPrice.appendChild(price);
+  if(item.price===null||item.priceInferred||item.priceConflict||lowConfidenceScan){
    tr.dataset.priceNeedsConfirm='true';const verifyLabel=document.createElement('label');verifyLabel.className='invoice-price-verify';
    const verify=document.createElement('input');verify.type='checkbox';verify.className='invoice-price-confirm';verify.setAttribute('aria-label','I checked this case price against the invoice');
    verifyLabel.append(verify,document.createTextNode('I checked this price'));tdPrice.appendChild(verifyLabel);
@@ -600,7 +853,7 @@ function buildInvoiceReview(){
  });
  $('invoiceReviewArea').hidden=false;
  const inferred=unique.filter(r=>r.priceInferred).length,missing=unique.filter(r=>r.price===null).length,missingPack=unique.filter(r=>r.packMissing).length,missingName=unique.filter(r=>r.nameMissing).length,conflicts=unique.filter(r=>r.priceConflict||r.packConflict).length;
- invoiceToast(`Built ${unique.length} review rows ${usingPositionedTableRows?'from the clearest reconstructed table layout':'from the available OCR text'}. Rows combine only when the same supplier code and product name match; ambiguous rows stay separate. All start unchecked. ${missingName} name(s), ${missing} price(s) and ${missingPack} pack size(s) need entry; ${inferred} inferred price(s) and ${conflicts} OCR conflict(s) are highlighted. Open “OCR source” under a name to inspect the recognized row.`);
+ invoiceToast(`Built ${unique.length} review rows ${usingPositionedTableRows?'from the clearest reconstructed table layout':'from the available OCR text'}. Rows combine only when the same supplier code and product name match; ambiguous rows stay separate. All start unchecked. ${missingName} name(s), ${missing} price(s) and ${missingPack} pack size(s) need entry; ${inferred} inferred price(s) and ${conflicts} OCR conflict(s) are highlighted.${lowConfidenceScan?' OCR confidence is low: check every highlighted product, pack and price against the invoice.':''} Open “OCR source” under a name to inspect the recognized row.`);
 }
 function parseAmount(value){
  const text=String(value).replace(/\s/g,'');
@@ -655,6 +908,47 @@ function invoiceSelectPrice(unitRaw,totalRaw,quantity){
  }
  const literal=units.find(option=>!option.decimalHypothesis)||units[0];
  return {value:literal.value,inferred:Boolean(literal.inferred||units.length>1)};
+}
+function invoiceInferQuantity(unitPriceText,lineTotalText){
+ const units=invoiceMoneyOptions(unitPriceText),totals=invoiceMoneyOptions(lineTotalText),matches=new Set();
+ for(const unit of units)for(const total of totals){
+  if(!(unit.value>0)||!(total.value>0))continue;
+  const quantity=Math.round(total.value/unit.value);
+  if(quantity>=1&&quantity<=1000&&Math.abs(unit.value*quantity-total.value)<=Math.max(.025,total.value*.0005))matches.add(quantity);
+ }
+ return matches.size===1?[...matches][0]:null;
+}
+function invoiceConfirmWeighedPack(packText,measureText,unitPriceText,lineTotalText){
+ const unitMatch=String(measureText||'').match(/^\s*(kilograms?|kgs?|kg|grams?|grammes?|gms?|gm|gr|g|litres?|liters?|ltr|litre|liter|millilitres?|milliliters?|ml)\s*$/i);
+ const rawWeight=String(packText||'').match(/^\s*[:(]?\s*(\d+(?:[.,]\d+)?)\s*[)]?\s*$/);
+ if(!unitMatch||!rawWeight)return null;
+ const rawUnit=unitMatch[1].toLowerCase();
+ const unit=/^(?:kg|kgs|kilogram)/.test(rawUnit)?'kg':/^(?:g|gr|gram|gm)/.test(rawUnit)?'g':/^(?:l|ltr|litre|liter)/.test(rawUnit)?'l':'ml';
+ const printedSize=Number(rawWeight[1].replace(',','.'));
+ const massOrVolume=unit==='kg'||unit==='l',minSize=massOrVolume ? 0.05 : 0.5,maxSize=massOrVolume ? 500 : 100000;
+ const unitOptions=invoiceMoneyOptions(unitPriceText),totalOptions=invoiceMoneyOptions(lineTotalText);
+ const toleranceFor=total=>Math.max(.03,total*.001);
+ for(const total of totalOptions){
+  if(!(total.value>0))continue;
+  // A normal printed weight is accepted only when the amount per unit
+  // independently confirms it to normal invoice rounding tolerance.
+  if(printedSize>=minSize&&printedSize<maxSize){
+   const match=unitOptions.find(option=>option.value>0&&Math.abs(option.value*printedSize-total.value)<=toleranceFor(total.value));
+   if(match)return {size:printedSize,unit,price:total.value,inferred:Boolean(total.inferred||match.inferred)};
+   continue;
+  }
+  // Decimal OCR loss such as 0.50 -> 20050 is repaired only when one
+  // plausible unit-rate/weight pair exactly explains the printed line total.
+  const printedDigits=rawWeight[1].replace(/\D/g,'');
+  const candidates=unitOptions.map(option=>({option,size:total.value/option.value})).filter(candidate=>{
+   const impliedDigits=candidate.size.toFixed(2).replace(/\D/g,'');
+   return candidate.option.value>=.01&&candidate.option.value<=500&&candidate.size>=minSize&&candidate.size<maxSize&&
+    impliedDigits.length>=3&&printedDigits.includes(impliedDigits)&&
+    Math.abs(candidate.option.value*candidate.size-total.value)<=toleranceFor(total.value);
+  });
+  if(candidates.length)return {size:Number(candidates[0].size.toFixed(2)),unit,price:total.value,inferred:true};
+ }
+ return null;
 }
 function importInvoiceReview(){
  const supplier=$('invoiceSupplier').value.trim();if(!supplier){invoiceToast('Enter the supplier name before importing.');return}

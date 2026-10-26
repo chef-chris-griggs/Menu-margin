@@ -73,12 +73,12 @@ function mmReadManifest(userId){
   const value=mmRawJson(mmManifestKey(userId),{});
   return {recipes:new Set(Object.keys(value.recipes||{})),prices:new Set(Object.keys(value.prices||{}))};
 }
-function mmSaveCloudManifest(){
-  if(!mmUser)return;
+function mmSaveCloudManifest(userId=mmUser?.id,recipeVersions=mmCloudVersionsRecipes,priceVersions=mmCloudVersionsPrices){
+  if(!userId)return;
   const manifest={recipes:{},prices:{}};
-  for(const [id,version] of mmCloudVersionsRecipes)manifest.recipes[id]=version||true;
-  for(const [id,version] of mmCloudVersionsPrices)manifest.prices[id]=version||true;
-  localStorage.setItem(mmManifestKey(mmUser.id),JSON.stringify(manifest));
+  for(const [id,version] of recipeVersions)manifest.recipes[id]=version||true;
+  for(const [id,version] of priceVersions)manifest.prices[id]=version||true;
+  localStorage.setItem(mmManifestKey(userId),JSON.stringify(manifest));
 }
 function mmApplyPending(kind,records,queue){
   const map=new Map((records||[]).map(record=>[record.id,record]));
@@ -91,6 +91,9 @@ function mmApplyPending(kind,records,queue){
 function mmTryMigrateLegacy(userId,recipes,prices){
   const owner=localStorage.getItem(MM_LEGACY_CLAIM_KEY);
   if(owner&&owner!==userId)return {recipes,prices,migrated:false};
+  // The owner key is also the completed-migration marker. Leave the legacy
+  // keys intact for recovery, but never import them again for the same user.
+  if(owner===userId)return {recipes,prices,migrated:false};
   const recipeValue=mmParseJson(localStorage.getItem(MM_LIBRARY_KEY),[]);
   const priceValue=mmParseJson(localStorage.getItem(MM_PRICEBOOK_KEY),[]);
   const legacyRecipes=Array.isArray(recipeValue)?recipeValue:[];
@@ -109,7 +112,6 @@ function mmTryMigrateLegacy(userId,recipes,prices){
     const migrated={...item,id:item.id&&!priceIds.has(item.id)?item.id:mmNewUuid(),updatedAt:item.updatedAt||new Date().toISOString()};
     migratedPrices.push(migrated);priceIds.add(migrated.id);mmQueueMutation('prices','upsert',migrated.id,migrated,userId);
   }
-  localStorage.setItem(MM_LEGACY_CLAIM_KEY,userId);
   return {recipes:migratedRecipes,prices:migratedPrices,migrated:true};
 }
 function mmPreferCachedRecord(local,cloud,knownOnPriorCloud){
@@ -162,6 +164,9 @@ async function mmLoadCloud(userId=mmUser?.id){
     localStorage.setItem(mmManifestKey(userId),JSON.stringify({
       recipes:Object.fromEntries(mmCloudVersionsRecipes),prices:Object.fromEntries(mmCloudVersionsPrices)
     }));
+    // Claim the one-time migration only after the migrated caches and cloud
+    // manifest have been written successfully. Keep the source keys for recovery.
+    if(merged.migrated)localStorage.setItem(MM_LEGACY_CLAIM_KEY,userId);
     mmCloudReady=true;mmCloudOffline=false;
     if(merged.migrated){
       const note=document.getElementById('mmMigrationNotice');
@@ -173,16 +178,23 @@ async function mmLoadCloud(userId=mmUser?.id){
 }
 function mmScheduleSync(){
   if(!mmUser||!mmCloudReady||!navigator.onLine)return;
+  const userId=mmUser.id;
   clearTimeout(mmSyncTimer);
-  mmSyncTimer=setTimeout(()=>mmSyncCloud().catch(error=>{
-    console.error(error);mmCloudReady=false;mmCloudOffline=true;
+  mmSyncTimer=setTimeout(()=>{
+    if(mmUser?.id!==userId)return;
+    mmSyncCloud().catch(error=>{
+    console.error(error);
+    if(mmUser?.id!==userId)return;
+    mmCloudReady=false;mmCloudOffline=true;
     mmAuthMessage('Offline — your changes are saved on this device and will sync when the connection returns.');
-  }),MM_SYNC_DEBOUNCE_MS);
+    });
+  },MM_SYNC_DEBOUNCE_MS);
 }
 function mmSyncCloud(){
   clearTimeout(mmSyncTimer);
-  if(!mmUser||!mmCloudReady||!navigator.onLine)return Promise.resolve({offline:true});
-  const run=mmSyncChain.catch(()=>{}).then(mmSyncCloudInner);
+  const userId=mmUser?.id;
+  if(!userId||!mmCloudReady||!navigator.onLine)return Promise.resolve({offline:true});
+  const run=mmSyncChain.catch(()=>{}).then(()=>mmSyncCloudInner(userId));
   mmSyncChain=run;return run;
 }
 function mmRemoveSyncedPending(snapshot,userId){
@@ -190,15 +202,16 @@ function mmRemoveSyncedPending(snapshot,userId){
   const remaining=current.filter(item=>sent.get(item.kind+':'+item.id)!==JSON.stringify(item));
   mmWritePending(remaining,userId);
 }
-async function mmPushOne(kind,rec,versions){
+async function mmPushOne(kind,rec,versions,userId=mmUser?.id){
+  if(!userId)throw new Error('Sign in is required to sync account data.');
   const table=kind==='recipes'?'recipes':'price_book',stamp=new Date().toISOString();
-  const body=kind==='recipes'?{name:rec.name||'Untitled recipe',recipe_data:rec,user_id:mmUser.id,updated_at:stamp}:{item_data:rec,user_id:mmUser.id,updated_at:stamp};
+  const body=kind==='recipes'?{name:rec.name||'Untitled recipe',recipe_data:rec,user_id:userId,updated_at:stamp}:{item_data:rec,user_id:userId,updated_at:stamp};
   const known=versions.get(rec.id);
   if(known){
-    const {data,error}=await mmSupabase.from(table).update(body).eq('id',rec.id).eq('user_id',mmUser.id).eq('updated_at',known).select('id,updated_at');
+    const {data,error}=await mmSupabase.from(table).update(body).eq('id',rec.id).eq('user_id',userId).eq('updated_at',known).select('id,updated_at');
     if(error)throw error;
     if(data&&data.length){versions.set(rec.id,data[0].updated_at);return {ok:true};}
-    const {data:current,error:readError}=await mmSupabase.from(table).select('*').eq('id',rec.id).eq('user_id',mmUser.id);
+    const {data:current,error:readError}=await mmSupabase.from(table).select('*').eq('id',rec.id).eq('user_id',userId);
     if(readError)throw readError;
     if(current&&current.length)return {conflict:current[0]};
   }
@@ -206,66 +219,80 @@ async function mmPushOne(kind,rec,versions){
   if(error)throw error;if(data&&data[0])versions.set(rec.id,data[0].updated_at);return {ok:true};
 }
 async function mmResolveConflict(c){
-  const {kind,key,rec,cloud,baseline,versions}=c;
+  const {kind,key,rec,cloud,baseline,versions,userId}=c;
   const cloudRec=kind==='recipes'
     ?{...cloud.recipe_data,id:cloud.id,name:cloud.name||cloud.recipe_data?.name||'Untitled recipe',updatedAt:cloud.updated_at}
     :{...cloud.item_data,id:cloud.id,updatedAt:cloud.updated_at};
   const label=rec.name||'Untitled',copy={...rec,id:mmNewUuid(),name:label+' (conflict copy)',updatedAt:new Date().toISOString()};
-  await mmPushOne(kind,copy,versions);
+  await mmPushOne(kind,copy,versions,userId);
   baseline.set(cloudRec.id,JSON.stringify(cloudRec));versions.set(cloudRec.id,cloud.updated_at);baseline.set(copy.id,JSON.stringify(copy));
-  const fresh=mmReadUserCache(key,mmUser.id).filter(x=>x.id!==rec.id&&x.id!==copy.id);
-  fresh.push(cloudRec,copy);mmWriteUserCache(key,fresh,mmUser.id,{track:false});
+  const fresh=mmReadUserCache(key,userId).filter(x=>x.id!==rec.id&&x.id!==copy.id);
+  fresh.push(cloudRec,copy);mmWriteUserCache(key,fresh,userId,{track:false});
   const msg=`“${label}” changed on another device. Both versions were kept; yours is “${copy.name}”. Review both and delete the one you do not need.`;
+  if(mmUser?.id!==userId)return;
   mmAuthMessage(msg);
   if(kind==='recipes'){
     if(currentRecipeId===rec.id&&!hasUnsavedChanges)loadRecipe(copy);else if(currentRecipeId===rec.id)currentRecipeId=copy.id;
     refreshLibrary(currentRecipeId);showToast(msg);
   }else{renderPriceBook();const toast=document.getElementById('pbToast');if(toast)toast.textContent=msg;}
 }
-async function mmSyncCloudInner(){
-  if(!mmCloudReady||!mmUser||!navigator.onLine)return {offline:true};
-  mmSyncing=true;const userId=mmUser.id,pendingSnapshot=mmReadPending(userId),conflicts=[];
+async function mmSyncCloudInner(userId){
+  if(!userId||mmUser?.id!==userId||!mmCloudReady||!navigator.onLine)return {offline:true};
+  mmSyncing=true;const pendingSnapshot=mmReadPending(userId),conflicts=[];
   try{
-    const sets=[['recipes',MM_LIBRARY_KEY,mmCloudBaselineRecipes,mmCloudVersionsRecipes],['prices',MM_PRICEBOOK_KEY,mmCloudBaselinePrices,mmCloudVersionsPrices]];
+    const recipeVersions=mmCloudVersionsRecipes,priceVersions=mmCloudVersionsPrices;
+    const sets=[['recipes',MM_LIBRARY_KEY,mmCloudBaselineRecipes,recipeVersions],['prices',MM_PRICEBOOK_KEY,mmCloudBaselinePrices,priceVersions]];
     for(const [kind,key,baseline,versions] of sets){
+      if(mmUser?.id!==userId)return {stale:true};
       const list=mmReadUserCache(key,userId),ids=new Set(list.map(r=>r.id));
       for(const rec of list){
+        if(mmUser?.id!==userId)return {stale:true};
         const json=JSON.stringify(rec);if(baseline.get(rec.id)===json)continue;
-        const result=await mmPushOne(kind,rec,versions);
-        if(result.conflict)conflicts.push({kind,key,rec,cloud:result.conflict,baseline,versions});
+        const result=await mmPushOne(kind,rec,versions,userId);
+        if(mmUser?.id!==userId)return {stale:true};
+        if(result.conflict)conflicts.push({kind,key,rec,cloud:result.conflict,baseline,versions,userId});
         else baseline.set(rec.id,json);
       }
       const removed=[...baseline.keys()].filter(id=>!ids.has(id));
       for(const id of removed){
+        if(mmUser?.id!==userId)return {stale:true};
         const knownVersion=versions.get(id);if(!knownVersion){baseline.delete(id);continue;}
         const {data:deleted,error}=await mmSupabase.from(kind==='recipes'?'recipes':'price_book').delete().eq('user_id',userId).eq('id',id).eq('updated_at',knownVersion).select('id');
         if(error)throw error;
+        if(mmUser?.id!==userId)return {stale:true};
         if(deleted?.length){baseline.delete(id);versions.delete(id);}
         else{
           const {data:current,error:readError}=await mmSupabase.from(kind==='recipes'?'recipes':'price_book').select('id,updated_at').eq('user_id',userId).eq('id',id);
           if(readError)throw readError;
+          if(mmUser?.id!==userId)return {stale:true};
           if(current?.[0]){
             versions.set(id,current[0].updated_at);
             const table=kind==='recipes'?'recipes':'price_book';
             const {data:record,error:recordError}=await mmSupabase.from(table).select(kind==='recipes'?'id,name,recipe_data,updated_at':'id,item_data,updated_at').eq('user_id',userId).eq('id',id).maybeSingle();
             if(recordError)throw recordError;
+            if(mmUser?.id!==userId)return {stale:true};
             if(record){
               const restored=kind==='recipes'
                 ?{...record.recipe_data,id:record.id,name:record.name||record.recipe_data?.name||'Untitled recipe',updatedAt:record.updated_at}
                 :{...record.item_data,id:record.id,updatedAt:record.updated_at};
               const latest=mmReadUserCache(key,userId).filter(item=>item.id!==id);latest.push(restored);
               mmWriteUserCache(key,latest,userId,{track:false});baseline.set(id,JSON.stringify(restored));
-              mmAuthMessage('A delete was paused because this item changed on another device. The latest version was restored here.');
+              if(mmUser?.id===userId)mmAuthMessage('A delete was paused because this item changed on another device. The latest version was restored here.');
             }
           }
           else{baseline.delete(id);versions.delete(id);}
         }
       }
     }
-    for(const conflict of conflicts)await mmResolveConflict(conflict);
-    mmRemoveSyncedPending(pendingSnapshot,userId);mmSaveCloudManifest();
-    mmCloudOffline=false;
-    if(!conflicts.length)mmAuthMessage('Cloud sync is up to date.');
+    for(const conflict of conflicts){
+      if(mmUser?.id!==userId)return {stale:true};
+      await mmResolveConflict(conflict);
+    }
+    mmRemoveSyncedPending(pendingSnapshot,userId);mmSaveCloudManifest(userId,recipeVersions,priceVersions);
+    if(mmUser?.id===userId){
+      mmCloudOffline=false;
+      if(!conflicts.length)mmAuthMessage('Cloud sync is up to date.');
+    }
     return {conflicts:conflicts.length};
   }finally{mmSyncing=false;}
 }
@@ -373,6 +400,7 @@ function mmEnterApp(user,force=false){
     if(offlineAccess||mmCloudOffline)mmAuthMessage('Offline mode — local changes are safe here and will sync when the connection returns.');
     else mmAuthMessage('Signed in. Cloud sync is working.');
   })().catch(error=>{
+    if(mmUser?.id!==user.id)return;
     console.error('MenuMargin startup error:',error);
     mmCloudReady=false;document.body.classList.remove('mm-authenticated');
     mmAuthMessage('Could not open your account. Your device copy has not been cleared. Check the connection, then choose retry.');
@@ -389,6 +417,9 @@ function mmSaveRecipeDraft(){
 function mmClearRecipeDraft(){if(mmUser)localStorage.setItem(mmDraftKey(mmUser.id),'');}
 function mmSaveRecipeDraftSoon(){clearTimeout(mmDraftTimer);mmDraftTimer=setTimeout(mmSaveRecipeDraft,180);}
 function mmClearPrivateUi(){
+  clearTimeout(mmDraftTimer);mmDraftTimer=null;
+  const passwordField=document.getElementById('mmPassword');if(passwordField)passwordField.value='';
+  const recoveryPassword=document.getElementById('mmNewPassword');if(recoveryPassword)recoveryPassword.value='';
   const ids=['recipeName','yield','sellingPrice','targetGp','invoiceSupplier','invoiceNumber','invoiceOrderNumber','invoiceText'];
   ids.forEach(id=>{const node=document.getElementById(id);if(node)node.value='';});
   ['ingredients','pricebookList','invoiceReviewRows'].forEach(id=>document.getElementById(id)?.replaceChildren());

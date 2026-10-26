@@ -37,8 +37,9 @@ function exportPriceBookCsv(){
 function mmNormalizeProductKey(value){return String(value||'').normalize('NFKC').trim().toLocaleLowerCase('en-GB').replace(/\s+/g,' ')}
 function savePriceEntry(event){
  event.preventDefault();const name=$('pbName').value.trim(),supplier=$('pbSupplier').value.trim(),code=$('pbCode').value.trim(),eachSize=Number($('pbPack').value),caseCount=Math.floor(Number($('pbCaseQty').value)),unit=$('pbUnit').value,price=Number($('pbPrice').value);
- if(!name||!supplier||!(eachSize>0)||!(caseCount>0)||!(price>=0)||!Number.isFinite(price)){pbToast('Enter an ingredient, supplier, valid case quantity, item size and case price.');return}
- const totalSize=eachSize*caseCount,items=readPriceBook();
+ if(!name||!supplier||!Number.isFinite(eachSize)||!(eachSize>0)||!Number.isInteger(caseCount)||!(caseCount>0)||!Number.isFinite(price)||!(price>=0)){pbToast('Enter an ingredient, supplier, valid case quantity, item size and case price.');return}
+ const totalSize=eachSize*caseCount;if(!Number.isFinite(totalSize)){pbToast('That case size is too large. Check the quantity and item size.');return}
+ const items=readPriceBook();
  let idx=editingPriceId?items.findIndex(i=>i.id===editingPriceId):-1;
  if(idx<0&&code)idx=items.findIndex(i=>mmNormalizeProductKey(i.supplier)===mmNormalizeProductKey(supplier)&&mmNormalizeProductKey(i.code)===mmNormalizeProductKey(code));
  if(idx<0)idx=items.findIndex(i=>mmNormalizeProductKey(i.supplier)===mmNormalizeProductKey(supplier)&&mmNormalizeProductKey(i.name)===mmNormalizeProductKey(name)&&(!code||!mmNormalizeProductKey(i.code)));

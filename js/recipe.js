@@ -16,7 +16,11 @@ function setActiveView(name){
 document.querySelectorAll('.nav-tab').forEach(tab=>tab.addEventListener('click',()=>setActiveView(tab.dataset.view)));
 
 const money=n=>Number.isFinite(n)?n.toLocaleString('en-GB',{style:'currency',currency:'GBP'}):'—';
-const escapeCsv=s=>'"'+String(s??'').replace(/"/g,'""')+'"';
+const escapeCsv=s=>{
+  const value=String(s??'');
+  const formulaLike=/^[\t\r\n ]*[=+\-@]/.test(value)&&!/^\s*-?\d+(?:[.,]\d+)?$/.test(value);
+  return '"'+(formulaLike?"'"+value:value).replace(/"/g,'""')+'"';
+};
 const LEGACY_KEY='menumargin-recipe';
 let rowId=0;
 let currentRecipeId=null;
@@ -97,7 +101,7 @@ function mmBackupRecipe(value){
   const ingredients=Array.isArray(value.ingredients)?value.ingredients.slice(0,1000).map(item=>({
     name:String(item?.name||'').slice(0,300),qty:Math.max(0,Number(item?.qty)||0),qtyUnit:['g','kg','ml','l','each'].includes(item?.qtyUnit)?item.qtyUnit:'g',
     pack:Math.max(0,Number(item?.pack)||0),packUnit:['g','kg','ml','l','each'].includes(item?.packUnit)?item.packUnit:'g',
-    price:Math.max(0,Number(item?.price)||0),priceEntered:item?.priceEntered!==false
+    price:Math.max(0,Number(item?.price)||0),priceEntered:item?.priceEntered===true||(item?.priceEntered==null&&item?.price!==undefined&&item?.price!==null&&item?.price!=='')
   })):[];
   return {id:mmBackupUuid(value.id),name:String(value.name||'Untitled recipe').slice(0,300),yield:Math.max(1,Math.floor(Number(value.yield)||1)),sellingPrice:Math.max(0,Number(value.sellingPrice)||0),targetGp:Math.min(99.9,Math.max(1,Number(value.targetGp)||70)),ingredients,updatedAt:new Date(Date.parse(value.updatedAt)||Date.now()).toISOString()};
 }
@@ -191,37 +195,40 @@ function addRow(data={name:'',qty:100,pack:1000,price:0}){
 function rows(){
   return [...$('ingredients').querySelectorAll('tr')].map(tr=>({
     name:tr.querySelector('.ingredient').value.trim(),
-    qty:Math.max(0,Number(tr.querySelector('.qty').value)||0),
+    qty:Number(tr.querySelector('.qty').value)||0,
     qtyUnit:tr.querySelector('.qty-unit').value,
-    pack:Math.max(0,Number(tr.querySelector('.pack').value)||0),
+    pack:Number(tr.querySelector('.pack').value)||0,
     packUnit:tr.querySelector('.pack-unit').value,
-    price:Math.max(0,Number(tr.querySelector('.price').value)||0),
+    price:Number(tr.querySelector('.price').value)||0,
     priceEntered:tr.querySelector('.price').value.trim()!==''
   }));
 }
 function mmUnitKind(u){return u==='kg'||u==='g'?'mass':u==='l'||u==='ml'?'volume':'count'}
 function mmToBase(value,unit){const factor={g:1,kg:1000,ml:1,l:1000,each:1};return Number(value||0)*(factor[unit]||1)}
-function mmIngredientTouched(r){return Boolean(String(r.name||'').trim()||Number(r.qty)>0||Number(r.pack)>0||r.priceEntered===true||Number(r.price)>0)}
+function mmIngredientTouched(r){return Boolean(String(r.name||'').trim()||Number(r.qty)!==0||Number(r.pack)!==0||r.priceEntered===true||Number(r.price)!==0)}
 function mmIngredientCost(r){
   const qty=Number(r.qty)||0,pack=Number(r.pack)||0,price=Number(r.price)||0;
+  const invalid=[qty,pack,price].some(value=>!Number.isFinite(value)||value<0);
   const incompatible=qty>0&&pack>0&&mmUnitKind(r.qtyUnit||'g')!==mmUnitKind(r.packUnit||'g');
-  const complete=Boolean(String(r.name||'').trim()&&qty>0&&pack>0&&r.priceEntered!==false&&Number.isFinite(price));
+  const complete=Boolean(!invalid&&String(r.name||'').trim()&&qty>0&&pack>0&&r.priceEntered!==false);
   const cost=complete&&!incompatible?(mmToBase(qty,r.qtyUnit||'g')/mmToBase(pack,r.packUnit||'g'))*price:0;
-  return {cost,incompatible,complete};
+  return {cost,incompatible,complete,invalid};
 }
 
 function calculate(){
- const list=rows();let total=0,mismatch=0,incomplete=0;
+ const list=rows();let total=0,mismatch=0,incomplete=0,invalid=0;
  list.forEach((r,i)=>{
   const result=mmIngredientCost(r),touched=mmIngredientTouched(r);
   if(result.incompatible)mismatch++;
+  if(result.invalid)invalid++;
   if(touched&&!result.complete)incomplete++;
   total+=result.cost;
   const tr=$('ingredients').querySelectorAll('tr')[i];
   if(tr){
    const cc=tr.querySelector('.cost-cell');
-   cc.textContent=result.incompatible?'Check units':touched&&!result.complete?'Incomplete':money(result.cost);
-   cc.style.color=result.incompatible||touched&&!result.complete?'#a63d40':'';
+   cc.textContent=result.incompatible?'Check units':result.invalid?'Check values':touched&&!result.complete?'Incomplete':money(result.cost);
+   cc.style.color=result.incompatible||result.invalid||touched&&!result.complete?'#a63d40':'';
+   tr.querySelectorAll('.qty,.pack,.price').forEach(el=>{const value=Number(el.value);const bad=el.value.trim()!==''&&(!Number.isFinite(value)||value<0);el.style.borderColor=bad?'#a63d40':'';el.setAttribute('aria-invalid',bad?'true':'false')});
    tr.querySelectorAll('.qty-unit,.pack-unit').forEach(el=>{el.style.borderColor=result.incompatible?'#a63d40':'';el.setAttribute('aria-invalid',result.incompatible?'true':'false')});
   }
  });
@@ -235,6 +242,7 @@ function calculate(){
  else if(gpp<target){status.classList.add('bad');status.textContent=`Below your ${target}% GP target by ${(target-gpp).toFixed(1)} percentage points.`}
  else{status.classList.add('good');status.textContent=`On or above your ${target}% GP target. Check labour, waste and overheads separately.`}
  const warnings=[];
+ if(invalid)warnings.push(`${invalid} ingredient line${invalid===1?' contains':'s contain'} a negative or invalid quantity or price and is excluded from the total.`);
  if(incomplete)warnings.push(`${incomplete} incomplete ingredient line${incomplete===1?' is':'s are'} excluded from the total.`);
  if(mismatch)warnings.push(`${mismatch} ingredient line${mismatch===1?' has':'s have'} incompatible units and is excluded. Check the highlighted units.`);
  if(warnings.length){status.className='status bad';status.textContent=warnings.join(' ')+' '+status.textContent}
