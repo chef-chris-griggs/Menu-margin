@@ -254,7 +254,7 @@ function invoiceRowsFromTsv(tsv){
   rowAnchors=distinctAnchors;
  }
  const moneyIn=text=>{
-  const found=String(text||'').match(/(?:[£€$]|\bE\s*)?\s*(\d{1,4}(?:,\d{3})*(?:[.,]\d{2})?)\b/);
+  const found=normaliseInvoiceMoneyText(text).match(/(?:[£€$]|\bE\s*)?\s*(\d{1,4}(?:,\d{3})*(?:[.,]\d{2})?)\b/);
   if(!found)return null;
   const value=parseMoney(found[1]);return Number.isFinite(value)&&value>=0?value:null;
  };
@@ -419,36 +419,53 @@ function buildInvoiceReview(){
  const categoryRx=new RegExp('\\b(?:'+categoryText+')\\b','i'),categoryGlobalRx=new RegExp('\\b(?:'+categoryText+')\\b','ig');
  const nameScore=value=>{const words=String(value||'').match(/[A-Za-z][A-Za-z']*/g)||[],generic=/^(?:item|name|not|read|description|code|unknown)$/i;return words.filter(w=>!generic.test(w)).reduce((score,w)=>score+w.length+2,0)};
  const toUnit=u=>/^(kg|kgs|kilogram)/i.test(u)?'kg':/^(g|gr|gram|gm)/i.test(u)?'g':/^(l|ltr|litre|liter)/i.test(u)?'l':/^(ml|millil)/i.test(u)?'ml':'each';
+ const cleanDescription=value=>{
+  let name=String(value||'').replace(/\s+/g,' ').trim();
+  // Bidfood often appends its range in brackets and OCR leaves a dangling
+  // bracket behind. Keep the actual product name, remove only that suffix.
+  name=name.replace(/[\[\]]+\s*$/,'').trim();
+  name=name.replace(/\s*[\[(]\s*(?:everyday\s+favourites|everyday|new\s+york\s+bakery(?:\s+company)?|millhouse|da\s*vinci(?:\s+gourmet)?)\s*[\])]\s*$/i,'').trim();
+  name=name.replace(/[\[\]{}]+/g,' ').replace(/\s*[\[(]\s*$/,'').replace(/[|:;,.-]+$/,'').replace(/\s+/g,' ').trim();
+  return stripBidfoodBrand(name);
+ };
+ const parseStructuredPack=(packValue,measureValue)=>{
+  const packText=String(packValue||'').replace(/[×％]/g,'x').replace(/\b(\d+(?:[.,]\d+)?)\s*gm\b/ig,'$1g').trim();
+  const measureText=String(measureValue||'').replace(/[×％]/g,'x').replace(/\b(\d+(?:[.,]\d+)?)\s*gm\b/ig,'$1g').trim();
+  const combined=[packText,measureText].filter(Boolean).join(' ');
+  const packRe=new RegExp('(?:^|\\s)(\\d+(?:[.,]\\d+)?)\\s*[-x]\\s*(?:(\\d+(?:[.,]\\d+)?)\\s*x\\s*)?(\\d+(?:[.,]\\d+)?)\\s*'+unitRx+'\\b','i');
+  let match=packRe.exec(combined);
+  if(!match)match=/\b(\d+(?:[.,]\d+)?)\s*x\s*(\d+(?:[.,]\d+)?)(?:\s*)(kilograms?|kgs?|kg|grams?|grammes?|gms?|gm|gr|g|litres?|liters?|ltr|litre|liter|millilitres?|milliliters?|ml|dzn|dozen|each|ea|pieces?|pcs?)\b/i.exec(combined);
+  if(match){
+   const sizeToken=match.length===5?match[3]:match[2],unitToken=match.length===5?match[4]:match[3];
+   let caseCount=parseAmount(match[1])*(match.length===5&&match[2]?parseAmount(match[2]):1),eachSize=parseAmount(sizeToken),unit=toUnit(unitToken);
+   if(/^dzn|dozen$/i.test(unitToken)){eachSize*=12;unit='each'}
+   if(unit==='each'&&match.length===5&&!match[2]&&caseCount===1&&eachSize>1){caseCount=eachSize;eachSize=1}
+   return {caseCount,eachSize,unit,packMissing:false};
+  }
+  const values=[...combined.matchAll(/\b\d+(?:[.,]\d+)?\b/g)].map(m=>parseAmount(m[0])).filter(Number.isFinite);
+  const unitMatch=combined.match(new RegExp(unitRx,'i'));
+  if(values.length>=2)return {caseCount:values[0],eachSize:values[1],unit:unitMatch?toUnit(unitMatch[0]):'each',packMissing:false};
+  if(values.length===1&&unitMatch)return {caseCount:1,eachSize:values[0],unit:toUnit(unitMatch[0]),packMissing:false};
+  return {caseCount:0,eachSize:0,unit:unitMatch?toUnit(unitMatch[0]):'each',packMissing:true};
+ };
  const rows=[];
  if(usingStructuredInvoiceRows){
-  const structuredNumber='(?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:[.,]\\d+)?';
-  const structuredPackRe=new RegExp('(?:^|\\s)('+structuredNumber+')\\s*[-x]\\s*(?:('+structuredNumber+')\\s*x\\s*)?('+structuredNumber+')\\s*'+unitRx+'\\b','i');
   for(const fields of structuredRows){
    const [codeValue='',descriptionValue='',packValue='',measureValue='',quantityValue='',unitPriceValue='',lineTotalValue='']=fields;
    const code=String(codeValue).trim(),rawName=String(descriptionValue).replace(/\s+/g,' ').trim();
    // The description cell already excludes Bidfood's separate Brand cell.
    // Keep the wording printed in Description, including a brand when it is part of the product name.
-   let name=rawName.replace(/\s+/g,' ').trim();
-   let caseCount=0,eachSize=0,unit='each';
-   const packMatch=structuredPackRe.exec(String(packValue).replace(/[×％]/g,'x').replace(/\b(\d+(?:[.,]\d+)?)\s*gm\b/ig,'$1g').trim());
-   if(packMatch){
-    caseCount=parseAmount(packMatch[1])*(packMatch[2]?parseAmount(packMatch[2]):1);eachSize=parseAmount(packMatch[3]);unit=toUnit(packMatch[4]);
-    if(/^dzn|dozen$/i.test(packMatch[4])){eachSize*=12;unit='each'}
-    if(unit==='each'&&!packMatch[2]&&caseCount===1&&eachSize>1){caseCount=eachSize;eachSize=1}
-   }else{
-    const countPack=new RegExp('\\b('+structuredNumber+')\\s*x\\s*('+structuredNumber+')\\b','i').exec(String(packValue));
-    if(countPack){caseCount=parseAmount(countPack[1]);eachSize=parseAmount(countPack[2]);unit='each'}
-   }
-   const packMissing=!(caseCount>0&&eachSize>0);if(packMissing){caseCount=1;eachSize=0;unit='each'}
+   const name=cleanDescription(rawName);
+   const parsedPack=parseStructuredPack(packValue,measureValue),caseCount=parsedPack.caseCount,eachSize=parsedPack.eachSize,unit=parsedPack.unit,packMissing=parsedPack.packMissing;
    const quantity=parseAmount(String(quantityValue).replace(/[^\d.,]/g,''))||0;
    const unitPriceText=String(unitPriceValue).trim(),lineTotalText=String(lineTotalValue).trim();
    if(!code&&!rawName&&!packValue&&!measureValue&&!quantityValue&&!unitPriceText&&!lineTotalText)continue;
    const selectedPrice=invoiceSelectPrice(unitPriceText,lineTotalText,quantity);
    const price=selectedPrice?.value??null,priceInferred=selectedPrice?.inferred??false;
    const nameMissing=nameScore(name)<3||isBidfoodBrandOnly(name);
-   if(nameMissing)name=code?`Item ${code} — name not read`:rawName?`Possible product — name needs review`:'Possible product — name not read';
-   if(!name&&!code&&price===null&&!rawName&&!packValue&&!quantityValue)continue;
-   rows.push({code,name,nameMissing,caseCount,eachSize,unit,price:Number.isFinite(price)?price:null,priceInferred,packMissing,raw:`${code} | ${rawName} | ${packValue} | ${measureValue} | qty ${quantityValue} | unit ${unitPriceValue} | total ${lineTotalValue}`});
+   const displayName=nameMissing?(code?`Item ${code} — name not read`:rawName?`Possible product — name needs review`:'Possible product — name not read'):name;
+   if(!displayName&&!code&&price===null&&!rawName&&!packValue&&!quantityValue)continue;
+   rows.push({code,name:displayName,nameMissing,caseCount,eachSize,unit,price:Number.isFinite(price)?price:null,priceInferred,packMissing,raw:`${code} | ${rawName} | ${packValue} | ${measureValue} | qty ${quantityValue} | unit ${unitPriceValue} | total ${lineTotalValue}`});
   }
  }
  if(!usingStructuredInvoiceRows)for(const rawLine of lines){
@@ -529,8 +546,7 @@ function buildInvoiceReview(){
   }
   if(!codeMatch&&packIndex>=0)name=line.slice(0,packIndex);
   else if(!codeMatch&&packIndex<0&&hasCurrencyPrice){const moneyAt=line.search(/[£€$]/),prefix=line.slice(0,moneyAt);name=prefix.replace(/\s+\d{1,3}\s*$/,'').trim()}
-  name=name.replace(codeMatch?codeMatch[0]:'',' ').replace(categoryGlobalRx,' ').replace(/[|:;,.-]+/g,' ').replace(/\s+/g,' ').trim();
-  name=stripBidfoodBrand(name);
+  name=cleanDescription(name.replace(codeMatch?codeMatch[0]:'',' ').replace(categoryGlobalRx,' '));
   const nameMissing=nameScore(name)<3||isBidfoodBrandOnly(name);
   if(nameMissing)name=code?`Item ${code} — name not read`:usingPositionedTableRows?'Possible product — name needs review':'';
   if(!name&&code)name=`Item ${code} — name not read`;
@@ -540,7 +556,10 @@ function buildInvoiceReview(){
  const normalizeProductName=value=>String(value||'').toLowerCase().replace(/\bitem\s+\S+\s+[—-]\s+name not read\b/g,'').replace(/[^a-z0-9]+/g,' ').trim();
  const canMergeRows=(a,b)=>{
   if(!a.code||!b.code||a.code.toLowerCase()!==b.code.toLowerCase())return false;
-  if(a.nameMissing||b.nameMissing)return true;
+  // A missing name is not proof that two OCR fragments are the same product.
+  // Keeping those rows separate prevents a second product being swallowed by
+  // a confident-looking code match.
+  if(a.nameMissing||b.nameMissing)return false;
   const nameA=normalizeProductName(a.name),nameB=normalizeProductName(b.name);
   return !!nameA&&nameA===nameB;
  };
@@ -565,19 +584,19 @@ function buildInvoiceReview(){
   const tr=document.createElement('tr');
   const tdCheck=document.createElement('td'),check=document.createElement('input');check.type='checkbox';check.checked=false;check.setAttribute('aria-label','Import '+item.name);tdCheck.appendChild(check);
   const tdCode=document.createElement('td'),code=document.createElement('input');code.className='invoice-product-code';code.type='text';code.value=item.code||'';code.placeholder='Optional';code.setAttribute('aria-label','Supplier product code');tdCode.appendChild(code);
-  const tdName=document.createElement('td'),name=document.createElement('input');name.className='invoice-item-name';name.value=item.name;name.setAttribute('aria-label','Ingredient name');if(item.nameMissing){name.title='OCR did not find the product description. Enter it from the invoice.';name.style.borderColor='#c47a12';name.style.background='#fff8e8'}tdName.appendChild(name);
+  const tdName=document.createElement('td'),name=document.createElement('textarea');name.className='invoice-item-name';name.rows=2;name.value=item.name;name.setAttribute('aria-label','Ingredient name');name.title=item.nameMissing?'OCR did not find the product description. Enter it from the invoice.':item.name; if(item.nameMissing){name.style.borderColor='#c47a12';name.style.background='#fff8e8'}tdName.appendChild(name);
   if(item.raw){const source=document.createElement('details');source.className='invoice-source';const summary=document.createElement('summary');summary.textContent='OCR source';const pre=document.createElement('pre');pre.textContent=item.raw;source.append(summary,pre);tdName.appendChild(source)}
-  const tdCase=document.createElement('td'),caseQty=document.createElement('input');caseQty.className='invoice-case-qty';caseQty.type='number';caseQty.min='1';caseQty.step='1';caseQty.value=item.caseCount;caseQty.setAttribute('aria-label','Items in this case');if(item.packMissing||item.packConflict){caseQty.title='Check the number of items in each case against the invoice.';caseQty.style.borderColor='#c47a12';caseQty.style.background='#fff8e8'}tdCase.appendChild(caseQty);
-  const tdEach=document.createElement('td'),eachSize=document.createElement('input');eachSize.className='invoice-item-size';eachSize.type='number';eachSize.min='0.001';eachSize.step='any';eachSize.value=item.eachSize||'';eachSize.setAttribute('aria-label','Size of each item in the case');if(item.packMissing||item.packConflict){eachSize.title=item.packMissing?'OCR did not find the pack size. Enter it from the invoice before importing.':'OCR passes disagreed on this pack size. Check it against the invoice.';eachSize.style.borderColor='#c47a12';eachSize.style.background='#fff8e8'}tdEach.appendChild(eachSize);
+  const tdCase=document.createElement('td'),caseQty=document.createElement('input');caseQty.className='invoice-case-qty';caseQty.type='number';caseQty.min='1';caseQty.step='1';caseQty.value=item.packMissing?'':item.caseCount;caseQty.setAttribute('aria-label','Items in this case');if(item.packMissing||item.packConflict){caseQty.title='OCR did not find a reliable number of items per case. Enter it from the invoice.';caseQty.style.borderColor='#c47a12';caseQty.style.background='#fff8e8'}tdCase.appendChild(caseQty);
+  const tdEach=document.createElement('td'),eachSize=document.createElement('input');eachSize.className='invoice-item-size';eachSize.type='number';eachSize.min='0.001';eachSize.step='any';eachSize.value=item.packMissing?'':item.eachSize;eachSize.setAttribute('aria-label','Size of each item in the case');if(item.packMissing||item.packConflict){eachSize.title=item.packMissing?'OCR did not find the pack size. Enter it from the invoice before importing.':'OCR passes disagreed on this pack size. Check it against the invoice.';eachSize.style.borderColor='#c47a12';eachSize.style.background='#fff8e8'}tdEach.appendChild(eachSize);
   const tdUnit=document.createElement('td'),unit=document.createElement('select');[['kg','kg'],['g','g'],['l','litres'],['ml','ml'],['each','each']].forEach(([v,label])=>{const o=document.createElement('option');o.value=v;o.textContent=label;unit.appendChild(o)});unit.value=item.unit;unit.setAttribute('aria-label','Unit');if(item.packMissing||item.packConflict){unit.title='Check the unit against the invoice.';unit.style.borderColor='#c47a12';unit.style.background='#fff8e8'}tdUnit.appendChild(unit);
-  const tdTotal=document.createElement('td'),total=document.createElement('output');const updateTotal=()=>{total.textContent=(Number(caseQty.value||1)*Number(eachSize.value||0)).toLocaleString('en-GB',{maximumFractionDigits:3})+' '+unit.value};updateTotal();tdTotal.appendChild(total);caseQty.addEventListener('input',updateTotal);eachSize.addEventListener('input',updateTotal);unit.addEventListener('change',updateTotal);
+  const tdTotal=document.createElement('td'),total=document.createElement('output');const updateTotal=()=>{const count=Number(caseQty.value),size=Number(eachSize.value);total.textContent=count>0&&size>0?((count*size).toLocaleString('en-GB',{maximumFractionDigits:3})+' '+unit.value):'Enter pack size'};updateTotal();tdTotal.appendChild(total);caseQty.addEventListener('input',updateTotal);eachSize.addEventListener('input',updateTotal);unit.addEventListener('change',updateTotal);
   const tdPrice=document.createElement('td'),price=document.createElement('input');price.className='invoice-price';price.type='number';price.min='0';price.step='0.01';price.value=item.price===null?'':item.price.toFixed(2);price.setAttribute('aria-label','Total price for case');if(item.price===null||item.priceInferred||item.priceConflict){price.title=item.priceConflict?'OCR passes found different prices. Enter the correct one from the invoice.':item.price===null?'OCR did not find a reliable price. Enter it from the invoice.':'OCR found an ambiguous whole-number amount. Check whether it is a full-pound price or whether OCR dropped the decimal point.';price.style.borderColor='#c47a12';price.style.background='#fff8e8'}tdPrice.appendChild(price);
-  if(item.priceInferred||item.priceConflict){
+  if(item.price===null||item.priceInferred||item.priceConflict){
    tr.dataset.priceNeedsConfirm='true';const verifyLabel=document.createElement('label');verifyLabel.className='invoice-price-verify';
    const verify=document.createElement('input');verify.type='checkbox';verify.className='invoice-price-confirm';verify.setAttribute('aria-label','I checked this case price against the invoice');
    verifyLabel.append(verify,document.createTextNode('I checked this price'));tdPrice.appendChild(verifyLabel);
   }
-  tr.append(tdCheck,tdCode,tdName,tdCase,tdEach,tdUnit,tdTotal,tdPrice);tr.dataset.raw=item.raw;tr.dataset.unitsPerCase='1';tr.dataset.nameMissing=item.nameMissing?'true':'false';name.addEventListener('input',()=>{if(name.value.trim()&&name.value.trim()!==item.name){tr.dataset.nameMissing='false';name.title='';name.style.borderColor='';name.style.background=''}});tbody.appendChild(tr);
+  tr.append(tdCheck,tdCode,tdName,tdCase,tdEach,tdUnit,tdTotal,tdPrice);tr.dataset.raw=item.raw;tr.dataset.unitsPerCase='1';tr.dataset.nameMissing=item.nameMissing?'true':'false';name.addEventListener('input',()=>{name.title=name.value.trim()||'Enter the product description from the invoice.';if(name.value.trim()&&name.value.trim()!==item.name){tr.dataset.nameMissing='false';name.style.borderColor='';name.style.background=''}});tbody.appendChild(tr);
  });
  $('invoiceReviewArea').hidden=false;
  const inferred=unique.filter(r=>r.priceInferred).length,missing=unique.filter(r=>r.price===null).length,missingPack=unique.filter(r=>r.packMissing).length,missingName=unique.filter(r=>r.nameMissing).length,conflicts=unique.filter(r=>r.priceConflict||r.packConflict).length;
@@ -589,14 +608,27 @@ function parseAmount(value){
  if(/^\d{1,3}(?:,\d{3})+$/.test(text))return Number(text.replace(/,/g,''));
  return Number(text.replace(',','.'));
 }
+function normaliseInvoiceMoneyText(value){
+ // OCR frequently separates the pence from the pounds ("20 91"). Join only
+ // a two-digit pence group; a three-digit group such as "1 250" stays a
+ // genuine whole-pound amount and is never silently divided by 100.
+ const text=String(value||'').trim();
+ const dottedPence=text.match(/^([£€$]?\s*\d{1,3})\s*[.,]\s*(\d{2})$/);
+ if(dottedPence)return `${dottedPence[1]}.${dottedPence[2]}`;
+ const pence=text.match(/^([£€$]?\s*\d{1,3})\s+(\d{2})$/);
+ if(pence)return `${pence[1]}.${pence[2]}`;
+ const wholePounds=text.match(/^([£€$]?\s*\d{1,3})\s+(\d{3})$/);
+ if(wholePounds)return `${wholePounds[1]}${wholePounds[2]}`;
+ return text;
+}
 function parseMoney(value){
- const text=String(value).replace(/\s/g,'');
+ const text=normaliseInvoiceMoneyText(value).replace(/\s/g,'');
  // A whole-number OCR result is preserved literally. The scanner must never
  // silently turn a genuine £1,250 price into £12.50.
  return parseAmount(text);
 }
 function invoiceMoneyOptions(value){
- const raw=String(value||'').replace(/[^\d.,]/g,'').trim();if(!raw)return [];
+ const raw=normaliseInvoiceMoneyText(value).replace(/[^\d.,]/g,'').trim();if(!raw)return [];
  const literal=parseMoney(raw);if(!Number.isFinite(literal))return [];
  if(/^\d{3,}$/.test(raw))return [
   {value:literal,inferred:true,decimalHypothesis:false},

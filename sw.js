@@ -1,6 +1,6 @@
-const CACHE_NAME = 'menumargin-shell-v1.0.2';
+const CACHE_NAME = 'menumargin-shell-v1.0.3';
 const SHELL = [
-  './', './index.html', './styles.css?v=1.0.2', './manifest.webmanifest', './icons/icon.svg',
+  './', './index.html', './styles.css?v=1.0.3', './manifest.webmanifest', './icons/icon.svg',
   './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png',
   './vendor/supabase/supabase.js',
   './js/auth.js', './js/recipe.js', './js/pricebook.js', './js/invoice.js', './js/startup.js'

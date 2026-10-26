@@ -332,9 +332,9 @@ main { width: min(var(--page-width), calc(100% - 40px)); margin: 0 auto; padding
 .invoice-review { width: 100%; min-width: 920px; border-collapse: collapse; }
 .invoice-review th, .invoice-review td { padding: 8px; border-bottom: 1px solid #e6ede8; text-align: left; vertical-align: middle; }
 .invoice-review th { background: #f7faf7; color: var(--muted); font-size: .7rem; font-weight: 800; letter-spacing: .025em; text-transform: uppercase; }
-.invoice-review input, .invoice-review select { width: 100%; min-width: 70px; min-height: 42px; padding: 7px 8px; border: 1px solid #d2ded6; border-radius: 9px; background: #fff; color: var(--ink); font-size: .88rem; }
+.invoice-review input, .invoice-review select, .invoice-review textarea { width: 100%; min-width: 70px; min-height: 42px; padding: 7px 8px; border: 1px solid #d2ded6; border-radius: 9px; background: #fff; color: var(--ink); font-size: .88rem; }
 .invoice-review input[type="checkbox"] { width: 22px; min-width: 22px; min-height: 22px; accent-color: var(--green); }
-.invoice-review .invoice-item-name { min-width: 180px; }
+.invoice-review .invoice-item-name { min-width: 180px; min-height: 46px; resize: vertical; line-height: 1.25; }
 .invoice-review td:nth-child(7) output { display: block; min-height: 42px; padding: 10px; border: 1px solid var(--line); border-radius: 9px; background: #f8faf8; font-variant-numeric: tabular-nums; }
 .invoice-price-verify { display: flex; align-items: center; gap: 6px; margin-top: 6px; color: #775014; font-size: .71rem; }
 .invoice-source { margin-top: 5px; color: var(--muted); font-size: .75rem; }
@@ -472,8 +472,8 @@ main { width: min(var(--page-width), calc(100% - 40px)); margin: 0 auto; padding
   .invoice-review td:nth-child(7)::before { content: "Total size"; }
   .invoice-review td:nth-child(8) { grid-column: 1 / -1; }
   .invoice-review td:nth-child(8)::before { content: "Total case price (£)"; }
-  .invoice-review .invoice-item-name { min-width: 0; }
-  .invoice-review input, .invoice-review select { min-width: 0; padding: 7px; font-size: .86rem; }
+  .invoice-review .invoice-item-name { min-width: 0; min-height: 58px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .invoice-review input, .invoice-review select, .invoice-review textarea { min-width: 0; padding: 7px; font-size: .86rem; }
   .invoice-review td:nth-child(7) output { min-height: 42px; padding: 10px 8px; }
   .invoice-review td:nth-child(1) { display: flex; align-items: center; gap: 6px; }
   .invoice-review td:nth-child(1)::before { display: inline; margin: 0; }
