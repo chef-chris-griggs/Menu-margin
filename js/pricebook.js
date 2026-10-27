@@ -13,6 +13,22 @@ function renderPriceBook(){
  filtered.forEach(item=>{
   const card=document.createElement('div');card.className='pricebook-item';
   const info=document.createElement('div');const name=document.createElement('strong');name.textContent=item.name;const meta=document.createElement('div');meta.className='pricebook-meta';const shownSize=item.sourcePackSize??item.packBase,shownUnit=item.sourceUnit||item.baseUnit,rateFactor=(shownUnit==='kg'||shownUnit==='g'||shownUnit==='l'||shownUnit==='ml')?1000:1,rateUnit=(shownUnit==='kg'||shownUnit==='g')?'kg':(shownUnit==='l'||shownUnit==='ml')?'litre':'each',rate=(Number(item.price)||0)/(Number(item.packBase)||1)*rateFactor,caseCount=Number(item.caseCount)||1,eachSize=Number(item.unitPackSize)||shownSize,eachUnit=item.unitPackUnit||shownUnit,packLabel=caseCount>1?`${caseCount} × ${eachSize} ${eachUnit} (${shownSize} ${shownUnit} total)`:`${shownSize} ${shownUnit} pack`,perItem=caseCount>1?` · ${pbMoney((Number(item.price)||0)/caseCount)} per item`:'';meta.textContent=`${item.supplier}${item.code?' · Code '+item.code:''} · ${packLabel} · ${pbMoney(item.price)} total case price${perItem} · ${pbMoney(rate)} per ${rateUnit}`;info.append(name,meta);
+  const basisLabel=item.priceBasis==='ex_vat'?'excluding VAT':item.priceBasis==='inc_vat'?'including VAT':'VAT basis not recorded';
+  meta.textContent+=' · '+basisLabel;
+  if(Array.isArray(item.priceHistory)&&item.priceHistory.length){
+   const history=document.createElement('details');history.className='pricebook-history';
+   const summary=document.createElement('summary');summary.textContent='Price history ('+item.priceHistory.length+')';
+   const values=document.createElement('ul');
+   item.priceHistory.slice().reverse().forEach(previous=>{
+    const li=document.createElement('li'),date=new Date(previous.updatedAt||previous.replacedAt||'');
+    const dateLabel=Number.isNaN(date.valueOf())?'Previous price':date.toLocaleString('en-GB',{dateStyle:'medium',timeStyle:'short'});
+    const historicalSize=previous.sourcePackSize??previous.packBase,historicalUnit=previous.sourceUnit||previous.baseUnit||'each';
+    const taxLabel=previous.priceBasis==='ex_vat'?'ex VAT':previous.priceBasis==='inc_vat'?'inc VAT':'VAT basis unknown';
+    li.textContent=dateLabel+' · '+pbMoney(previous.price)+' for '+historicalSize+' '+historicalUnit+' · '+taxLabel;
+    values.appendChild(li);
+   });
+   history.append(summary,values);info.appendChild(history);
+  }
   const actions=document.createElement('div');actions.className='pricebook-actions';
   const add=document.createElement('button');add.type='button';add.textContent='Add to recipe';add.addEventListener('click',()=>addPriceToRecipe(item));
   const edit=document.createElement('button');edit.type='button';edit.className='secondary';edit.textContent='Edit price';edit.addEventListener('click',()=>editPriceEntry(item.id));
@@ -35,6 +51,26 @@ function exportPriceBookCsv(){
  a.href=url;a.download=`menumargin-price-book-${new Date().toISOString().slice(0,10)}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);pbToast(`${items.length} supplier price${items.length===1?'':'s'} exported.`);
 }
 function mmNormalizeProductKey(value){return String(value||'').normalize('NFKC').trim().toLocaleLowerCase('en-GB').replace(/\s+/g,' ')}
+function mmPriceHistoryForUpdate(previous,next,source){
+ const history=Array.isArray(previous?.priceHistory)?previous.priceHistory.map(record=>({...record})):[];
+ if(!previous)return history;
+ const changed=['price','packBase','baseUnit','sourcePackSize','sourceUnit','caseCount','unitPackSize','unitPackUnit','priceBasis'].some(key=>{
+  const before=previous[key]??null,after=next[key]??null;
+  if(typeof before==='number'&&typeof after==='number')return Math.abs(before-after)>.000001;
+  return before!==after;
+ });
+ if(!changed)return history;
+ const snapshot={
+  price:Number(previous.price),packBase:previous.packBase,baseUnit:previous.baseUnit,
+  sourcePackSize:previous.sourcePackSize,sourceUnit:previous.sourceUnit,caseCount:previous.caseCount,
+  unitPackSize:previous.unitPackSize,unitPackUnit:previous.unitPackUnit,
+  priceBasis:previous.priceBasis||'unknown',updatedAt:previous.updatedAt||null,
+  replacedAt:next.updatedAt||new Date().toISOString(),changedBy:source||'manual',
+  priceSource:previous.priceSource?{...previous.priceSource}:null
+ };
+ history.push(snapshot);
+ return history;
+}
 function savePriceEntry(event){
  event.preventDefault();const name=$('pbName').value.trim(),supplier=$('pbSupplier').value.trim(),code=$('pbCode').value.trim(),eachSize=Number($('pbPack').value),caseCount=Math.floor(Number($('pbCaseQty').value)),unit=$('pbUnit').value,price=Number($('pbPrice').value);
  if(!name||!supplier||!Number.isFinite(eachSize)||!(eachSize>0)||!Number.isInteger(caseCount)||!(caseCount>0)||!Number.isFinite(price)||!(price>=0)){pbToast('Enter an ingredient, supplier, valid case quantity, item size and case price.');return}
@@ -44,7 +80,9 @@ function savePriceEntry(event){
  if(idx<0&&code)idx=items.findIndex(i=>mmNormalizeProductKey(i.supplier)===mmNormalizeProductKey(supplier)&&mmNormalizeProductKey(i.code)===mmNormalizeProductKey(code));
  if(idx<0)idx=items.findIndex(i=>mmNormalizeProductKey(i.supplier)===mmNormalizeProductKey(supplier)&&mmNormalizeProductKey(i.name)===mmNormalizeProductKey(name)&&(!code||!mmNormalizeProductKey(i.code)));
  const id=idx>=0?items[idx].id:mmNewUuid();
- const entry={id,name,supplier,code:code||(idx>=0?items[idx].code||'':''),packBase:unitBaseSize(totalSize,unit),baseUnit:baseUnit(unit),price,sourcePackSize:totalSize,sourceUnit:unit,caseCount,unitPackSize:eachSize,unitPackUnit:unit,updatedAt:new Date().toISOString()};
+ const previous=idx>=0?items[idx]:null;
+ const entry={...(previous||{}),id,name,supplier,code:code||(previous?.code||''),packBase:unitBaseSize(totalSize,unit),baseUnit:baseUnit(unit),price,priceBasis:previous?.priceBasis||'unknown',sourcePackSize:totalSize,sourceUnit:unit,caseCount,unitPackSize:eachSize,unitPackUnit:unit,updatedAt:new Date().toISOString(),priceSource:{type:'manual'}};
+ entry.priceHistory=mmPriceHistoryForUpdate(previous,entry,'manual');
  if(idx>=0)items[idx]=entry;else items.push(entry);
  try{writePriceBook(items);clearPriceForm();renderPriceBook();pbToast(idx>=0?'This supplier item already existed, so its case price was updated. Existing recipes keep their saved prices.':'Ingredient saved to your price book.');}
  catch(e){pbToast('Could not save the price book. Export important recipes and check browser storage.');}

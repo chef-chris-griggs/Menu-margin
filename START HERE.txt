@@ -1,0 +1,16 @@
+MenuMargin scanner — TEST BUILD
+
+To try this copy on your Mac, double-click “Start MenuMargin.command”.
+It opens the app in your browser. Keep the Terminal window open while testing;
+press Control+C there when you have finished.
+
+Sign in with your usual account. Importing prices updates that account's price
+book, so check the selected rows and keep an account backup before testing.
+Your live GitHub app files have not been replaced.
+
+This is not approved for public launch. Some product names/codes still need
+correction. The private validation report lists every remaining mismatch.
+
+The Mac launcher only serves preview files. OCR runs locally in the browser.
+For independent phone use, the complete app must be hosted over HTTPS.
+Opening index.html directly does not start the OCR worker reliably.

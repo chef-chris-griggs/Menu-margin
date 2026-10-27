@@ -1,6 +1,6 @@
 // The app shell loads before sign-in, but no account data is read into the page until
 // mmEnterApp has established which signed-in user's cache should be opened.
-document.body.dataset.appVersion='1.0.0';
+document.body.dataset.appVersion='2.0.0-scanner-test';
 loadRecipe({name:'',yield:10,sellingPrice:0,targetGp:70,ingredients:[]});
 hasUnsavedChanges=false;
 renderPriceBook();

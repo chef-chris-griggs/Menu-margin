@@ -1,0 +1,87 @@
+/* Positioned invoice review. Kept separate from the old table layout rules. */
+body[data-active-view="invoices"] .mobile-summary { display: none; }
+#view-invoices [hidden] { display: none !important; }
+#view-invoices .scan-review-layout { display: grid; grid-template-columns: minmax(0, .92fr) minmax(0, 1.3fr); gap: 20px; align-items: start; }
+#view-invoices .scan-result-pane, #view-invoices .scan-photo-pane { min-width: 0; }
+#view-invoices .scan-photo-pane { position: sticky; top: 18px; padding: 12px; border: 1px solid var(--line, #d9e4dd); border-radius: 16px; background: #f6f8f6; }
+#view-invoices .scan-photo-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+#view-invoices .scan-photo-scroll { overflow: auto; max-height: 72vh; border-radius: 8px; background: #e4e9e5; }
+#view-invoices .scan-photo-stage { position: relative; width: 100%; line-height: 0; }
+#view-invoices .scan-photo-stage img { display: block; width: 100%; height: auto; }
+#view-invoices .scan-photo-stage img:not([src]) { min-height: 180px; }
+#view-invoices .scan-source-highlight { position: absolute; pointer-events: none; border: 3px solid #cc7400; background: rgb(255 190 48 / 17%); box-shadow: 0 0 0 1px rgb(255 255 255 / 90%); border-radius: 3px; }
+#view-invoices .scan-source-caption { margin: 10px 0 0; font-size: .76rem; line-height: 1.45; color: var(--muted, #66766e); }
+#view-invoices .scan-debug-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+#view-invoices .scan-debug-actions button { min-height: 40px; padding: 6px 0; font-size: .75rem; text-align: left; }
+#view-invoices .scan-back-to-row, #view-invoices .scan-mobile-switch { display: none; }
+#view-invoices .scan-totals { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 16px 0; }
+#view-invoices .scan-total { display: flex; flex-direction: column; gap: 6px; padding: 11px; background: #f0f5f1; border-radius: 10px; min-width: 0; }
+#view-invoices .scan-total span { color: var(--muted, #66766e); font-size: .7rem; line-height: 1.3; }
+#view-invoices .scan-total strong { font-size: .98rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+#view-invoices .scan-document-warnings { margin: 12px 0 16px; padding: 12px 14px 12px 30px; border: 1px solid #e1bd7e; border-radius: 12px; background: #fff8e8; color: #79530e; font-size: .82rem; line-height: 1.5; }
+#view-invoices .scan-document-warnings li + li { margin-top: 5px; }
+#view-invoices .scan-reconciliation-ok { margin: 12px 0; padding: 11px 13px; border-radius: 10px; background: #edf6ed; color: #2c5a37; font-size: .82rem; }
+#view-invoices .scan-totals-confirm { display: flex; align-items: flex-start; gap: 9px; margin: 12px 0 20px; font-size: .82rem; color: #79530e; }
+#view-invoices .scan-result-rows { display: grid; gap: 16px; }
+#view-invoices .scan-row { min-width: 0; margin: 0; padding: 16px; border: 1px solid #d6e1da; border-radius: 16px; background: #fff; }
+#view-invoices .scan-row[data-needs-review="true"] { border-color: #d9ac64; }
+#view-invoices .scan-row:focus-within { box-shadow: 0 0 0 2px #c8ddd0; }
+#view-invoices .scan-row-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+#view-invoices .scan-select-row { display: flex; align-items: center; gap: 8px; margin-right: auto; font-size: .88rem; font-weight: 750; }
+#view-invoices input[type="checkbox"] { width: 23px; height: 23px; min-width: 23px; min-height: 23px; margin: 0; accent-color: var(--green, #153e35); flex-shrink: 0; }
+#view-invoices .scan-row-badge { padding: 4px 7px; border-radius: 20px; font-size: .65rem; background: #edf3ee; color: #315d41; white-space: nowrap; }
+#view-invoices .scan-row-badge[data-state="warning"] { background: #fff1d7; color: #8a5b13; }
+#view-invoices .scan-source-button { min-height: 35px; padding: 5px 8px; font-size: .7rem; }
+#view-invoices .scan-product-fields, #view-invoices .scan-numeric-fields, #view-invoices .scan-weight-fields { display: grid; gap: 10px; margin-top: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#view-invoices .scan-product-fields { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+#view-invoices .scan-product-fields .scan-field:first-child { grid-column: 1 / -1; }
+#view-invoices .scan-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; margin: 0; }
+#view-invoices .scan-field-label { font-size: .68rem; line-height: 1.3; font-weight: 750; color: var(--muted, #66766e); }
+#view-invoices .scan-field input, #view-invoices .scan-field textarea, #view-invoices .scan-field select { width: 100%; min-width: 0; min-height: 44px; box-sizing: border-box; padding: 9px 10px; border: 1px solid #ccd9d0; border-radius: 10px; background: #fff; color: var(--ink, #19392e); font: inherit; font-size: .88rem; }
+#view-invoices .scan-field textarea { min-height: 63px; resize: vertical; line-height: 1.4; overflow-wrap: anywhere; }
+#view-invoices .scan-field input:disabled, #view-invoices .scan-field select:disabled { background: #f0f3f0; color: #52655a; opacity: 1; }
+#view-invoices .scan-pack-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 16px 0 0; padding: 11px; min-width: 0; border: 1px solid #dce6df; border-radius: 12px; }
+#view-invoices .scan-pack-fields legend { padding: 0 4px; font-size: .73rem; font-weight: 750; color: #315844; }
+#view-invoices .scan-import-price { display: block; grid-column: 1 / -1; padding: 9px; border-radius: 8px; background: #eff5f0; font-size: .88rem; font-weight: 750; line-height: 1.4; font-variant-numeric: tabular-nums; }
+#view-invoices .scan-row-issues { margin: 12px 0 0; padding: 10px 10px 10px 26px; border-radius: 10px; background: #fff7e7; color: #775014; font-size: .74rem; line-height: 1.5; overflow-wrap: anywhere; }
+#view-invoices .scan-row-issues li + li { margin-top: 4px; }
+#view-invoices .scan-match-area { margin-top: 12px; padding: 10px; border-radius: 10px; background: #f4f7f4; }
+#view-invoices .scan-match-note { margin: 0; font-size: .74rem; line-height: 1.45; color: #52675a; }
+#view-invoices .scan-match-area .scan-field + .scan-match-note { margin-top: 7px; }
+#view-invoices .scan-row-verified { display: flex; align-items: flex-start; gap: 8px; margin-top: 14px; color: #254b38; font-size: .76rem; line-height: 1.45; }
+#view-invoices .scan-selection-summary { margin: 18px 0 10px; font-size: .85rem; font-weight: 650; }
+#view-invoices .invoice-import-actions { padding-top: 8px; }
+.pricebook-history { margin-top: 10px; font-size: .78rem; color: var(--muted, #66766e); }
+.pricebook-history summary { cursor: pointer; font-weight: 650; }
+.pricebook-history ul { margin: 8px 0 0; padding-left: 18px; line-height: 1.5; }
+.pricebook-history li + li { margin-top: 5px; }
+@media (max-width: 900px) {
+  #view-invoices .scan-review-layout { grid-template-columns: minmax(0, .8fr) minmax(0, 1fr); gap: 13px; }
+  #view-invoices .scan-row { padding: 12px; }
+}
+@media (max-width: 700px) {
+  #view-invoices .scan-review-layout { display: block; }
+  #view-invoices .scan-mobile-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 0; }
+  #view-invoices .scan-mobile-switch button { min-height: 44px; padding: 8px; font-size: .84rem; }
+  #view-invoices .scan-mobile-switch button[aria-pressed="true"] { color: #fff; background: #153e35; border-color: #153e35; }
+  #view-invoices .scan-review-layout[data-mobile-view="rows"] .scan-photo-pane { display: none; }
+  #view-invoices .scan-review-layout[data-mobile-view="photo"] .scan-result-pane { display: none; }
+  #view-invoices .scan-photo-pane { position: static; padding: 10px; }
+  #view-invoices .scan-photo-scroll { max-height: 66vh; }
+  #view-invoices .scan-back-to-row { display: block; width: 100%; margin-top: 11px; min-height: 44px; }
+  #view-invoices .scan-row { padding: 12px; }
+  #view-invoices .scan-totals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #view-invoices .scan-field input, #view-invoices .scan-field select, #view-invoices .scan-field textarea { font-size: 16px; }
+  #view-invoices .scan-product-fields { grid-template-columns: minmax(0, 1fr); }
+  #view-invoices .scan-product-fields .scan-field:first-child { grid-column: auto; }
+  #view-invoices .scan-source-button { min-height: 40px; }
+  #view-invoices .scan-select-row { font-size: .84rem; }
+}
+@media print {
+  #view-invoices .scan-mobile-switch, #view-invoices .scan-debug-actions, #view-invoices .scan-back-to-row { display: none !important; }
+  #view-invoices .scan-review-layout { display: block; }
+  #view-invoices .scan-photo-pane { position: static; }
+  #view-invoices .scan-photo-scroll { max-height: none; }
+  #view-invoices .scan-result-pane, #view-invoices .scan-photo-pane { display: block !important; }
+  #view-invoices .scan-row { break-inside: avoid; margin-top: 12px; }
+}

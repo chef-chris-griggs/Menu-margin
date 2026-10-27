@@ -1,0 +1,41 @@
+{
+  "engineVersion": "2.0.0-positioned-paddleocr",
+  "builtAt": "2026-10-27T18:54:46.098Z",
+  "assets": [
+    {
+      "file": "client.js",
+      "bytes": 12909,
+      "sha256": "2c289c26e88042b4a731bc3fba1720dfbdcd627f55a677fd23ddceab5228b5c5"
+    },
+    {
+      "file": "scanner.worker.js",
+      "bytes": 10572084,
+      "sha256": "dbab1c67236546718afe573199e2406438c299adcf4becde4589dca01193c8fa"
+    },
+    {
+      "file": "heic-decoder.js",
+      "bytes": 3224701,
+      "sha256": "cdc66af3ba78e829d83304c1dbcb54643dd383b77b64bbd7971cae7f52aada6f"
+    },
+    {
+      "file": "ort-wasm-simd-threaded.wasm",
+      "bytes": 11210254,
+      "sha256": "71aef04959c5c1b6de461b6538e2058e306610034a85aad2742d0c7fd4533fe4"
+    },
+    {
+      "file": "ort-wasm-simd-threaded.mjs",
+      "bytes": 20856,
+      "sha256": "30dd851d9c00622940500f71ddd2ff8820c5cb65270816080175b958705385a8"
+    },
+    {
+      "file": "models/PP-OCRv5_mobile_det_onnx_infer.tar",
+      "bytes": 4843520,
+      "sha256": "781056046c9ed77a15c94681605db6a0f62317c2e9cce6931c71da2478d4bc30"
+    },
+    {
+      "file": "models/en_PP-OCRv5_mobile_rec_onnx_infer.tar",
+      "bytes": 7874560,
+      "sha256": "4424e851309b291b00aab8191cd4314cefbd2d1b2381ff8994019d262fa95e28"
+    }
+  ]
+}

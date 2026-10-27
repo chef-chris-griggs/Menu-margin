@@ -1,0 +1,31 @@
+{
+  "name": "menumargin",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:scanner": "node scripts/build-scanner.mjs",
+    "test:scanner": "node scripts/test-invoice-samples.mjs",
+    "test:unit": "node --test tests/invoice-positioned.test.mjs tests/invoice-values.test.mjs tests/invoice-review-logic.test.mjs scanner/paddleocr/ctc.test.mjs",
+    "test:review": "node tests/invoice-review.browser.mjs",
+    "test:review:webkit": "node tests/invoice-review.browser.mjs --webkit",
+    "test:decode": "node tests/invoice-decode.browser.mjs",
+    "test:decode:webkit": "node tests/invoice-decode.browser.mjs --webkit",
+    "test:scanner:webkit": "node scripts/test-invoice-samples.mjs --webkit",
+    "test:offline": "node tests/scanner-offline.browser.mjs",
+    "test:offline:webkit": "node tests/scanner-offline.browser.mjs --webkit"
+  },
+  "dependencies": {
+    "@paddleocr/paddleocr-js": "0.4.2",
+    "@techstark/opencv-js": "4.10.0-release.1",
+    "heic-to": "1.6.7",
+    "onnxruntime-web": "1.22.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.11",
+    "playwright": "1.62.1"
+  },
+  "overrides": {
+    "@techstark/opencv-js": "4.10.0-release.1",
+    "onnxruntime-web": "1.22.0"
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "retrievedAt": "2026-10-27T17:57:05.193Z",
+  "files": [
+    {
+      "file": "licenses/onnxruntime-MIT.txt",
+      "url": "https://raw.githubusercontent.com/microsoft/onnxruntime/v1.22.0/LICENSE",
+      "bytes": 1073,
+      "sha256": "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c"
+    },
+    {
+      "file": "licenses/onnxruntime-ThirdPartyNotices.txt",
+      "url": "https://raw.githubusercontent.com/microsoft/onnxruntime/v1.22.0/ThirdPartyNotices.txt",
+      "bytes": 326866,
+      "sha256": "e9e90971a8e75a9a8ac0c6412e29c1202d079998389915aa485f46c816c3b4cc"
+    },
+    {
+      "file": "licenses/Boost-1.0.txt",
+      "url": "https://www.boost.org/LICENSE_1_0.txt",
+      "bytes": 1338,
+      "sha256": "c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566"
+    },
+    {
+      "file": "licenses/JSBN-Tom-Wu.txt",
+      "url": "https://raw.githubusercontent.com/andyperlitch/jsbn/master/LICENSE",
+      "bytes": 1544,
+      "sha256": "e0e396530fd1624126e9a7e0df94811e4062e03baeccb07bc33c934b0fd93a85"
+    },
+    {
+      "file": "licenses/GPL-3.0.txt",
+      "url": "https://raw.githubusercontent.com/gcc-mirror/gcc/master/COPYING3",
+      "bytes": 35147,
+      "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903"
+    },
+    {
+      "file": "licenses/libheif-LGPL-3.0.txt",
+      "url": "https://raw.githubusercontent.com/strukturag/libheif/v1.23.7/COPYING",
+      "bytes": 44366,
+      "sha256": "fa81ce652315b013359d6e8e4744335f31a50c7c192907176d3632f78a3b4596"
+    },
+    {
+      "file": "licenses/libde265-LGPL-3.0.txt",
+      "url": "https://raw.githubusercontent.com/strukturag/libde265/v1.0.16/COPYING",
+      "bytes": 44339,
+      "sha256": "02cc1585a20677992e0ba578fa692635dc193735f2691dc81de924b51c4e8020"
+    },
+    {
+      "file": "licenses/Emscripten-LICENSE.txt",
+      "url": "https://raw.githubusercontent.com/emscripten-core/emscripten/main/LICENSE",
+      "bytes": 5093,
+      "sha256": "620a78084fc7ca97c0b5dea9abf891f3ffcadfdbf305276f099c9c4e12fc1d86"
+    },
+    {
+      "file": "source/heic-to-1.6.7.tgz",
+      "url": "https://registry.npmjs.org/heic-to/-/heic-to-1.6.7.tgz",
+      "bytes": 6336500,
+      "sha256": "ed832bff73338b418ea9ea7882787798cd4df15429a649603c4b950e7ba06f11"
+    },
+    {
+      "file": "source/libheif-1.23.7.tar.gz",
+      "url": "https://github.com/strukturag/libheif/releases/download/v1.23.7/libheif-1.23.7.tar.gz",
+      "bytes": 2439383,
+      "sha256": "f7483e818503ea6224c8863e4a56ac02c7089021a98472c811c12aa19faf2475"
+    },
+    {
+      "file": "source/libde265-1.0.16.tar.gz",
+      "url": "https://github.com/strukturag/libde265/releases/download/v1.0.16/libde265-1.0.16.tar.gz",
+      "bytes": 835657,
+      "sha256": "b92beb6b53c346db9a8fae968d686ab706240099cdd5aff87777362d668b0de7"
+    },
+    {
+      "file": "source/libheif-build-emscripten.sh",
+      "url": "https://raw.githubusercontent.com/strukturag/libheif/v1.23.7/build-emscripten.sh",
+      "bytes": 6975,
+      "sha256": "30bb603cea13ecb9fe05883f16b85a3d22e9b418fe6b961e89042ef80a536087"
+    }
+  ]
+}

@@ -417,6 +417,7 @@ function mmSaveRecipeDraft(){
 function mmClearRecipeDraft(){if(mmUser)localStorage.setItem(mmDraftKey(mmUser.id),'');}
 function mmSaveRecipeDraftSoon(){clearTimeout(mmDraftTimer);mmDraftTimer=setTimeout(mmSaveRecipeDraft,180);}
 function mmClearPrivateUi(){
+  if(typeof clearInvoiceScanner==='function')clearInvoiceScanner();
   clearTimeout(mmDraftTimer);mmDraftTimer=null;
   const passwordField=document.getElementById('mmPassword');if(passwordField)passwordField.value='';
   const recoveryPassword=document.getElementById('mmNewPassword');if(recoveryPassword)recoveryPassword.value='';

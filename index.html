@@ -14,6 +14,7 @@
 <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icons/icon-180.png">
 <link rel="stylesheet" href="./styles.css?v=1.0.5">
+<link rel="stylesheet" href="./styles/invoice-scanner.css?v=2">
 <script src="./vendor/supabase/supabase.js"></script>
 </head>
 <body data-active-view="costing">
@@ -168,30 +169,48 @@
   </section>
 
   <section id="view-invoices" class="app-view" role="tabpanel" aria-labelledby="tab-invoices" hidden>
-    <div class="page-heading"><div><h1>Invoice scan</h1><p class="page-subtitle">Read a supplier invoice, check it line by line, then update your price book.</p></div></div>
+    <div class="page-heading"><div><h1>Invoice scan</h1><p class="page-subtitle">Choose every page of one invoice, compare the detected products with the photo, then save selected prices.</p></div></div>
     <section class="panel invoice-panel" aria-labelledby="invoiceTitle">
+      <h2 id="invoiceTitle">Choose an invoice</h2>
       <div class="field invoice-file-field">
-        <label>Invoice PDF or photo</label>
-        <label for="invoiceFile" class="invoice-file-picker"><svg><use href="#icon-file"/></svg><span class="file-instructions">Choose a PDF, JPG, PNG or HEIC</span><strong>Browse</strong></label>
-        <input id="invoiceFile" type="file" accept="application/pdf,image/*,.heic,.heif" aria-label="Choose an invoice PDF or image">
+        <label>Invoice PDF or photos</label>
+        <label for="invoiceFile" class="invoice-file-picker"><svg><use href="#icon-file"/></svg><span class="file-instructions">Choose a PDF or all photos for one invoice</span><strong>Browse</strong></label>
+        <input id="invoiceFile" type="file" multiple accept="application/pdf,image/*,.heic,.heif" aria-label="Choose an invoice PDF or all its page photos">
         <span id="invoiceFileName" class="file-name" aria-live="polite">No invoice selected</span>
       </div>
       <div class="field supplier-field"><label for="invoiceSupplier">Supplier</label><input id="invoiceSupplier" placeholder="Read from the invoice" autocomplete="organization"></div>
-      <div class="invoice-actions"><button type="button" id="scanInvoice"><svg><use href="#icon-scan"/></svg> Read invoice</button><button type="button" class="secondary" id="clearInvoice">Clear</button></div>
+      <div class="invoice-actions"><button type="button" id="scanInvoice"><svg><use href="#icon-scan"/></svg> Read invoice</button><button type="button" class="secondary" id="invoiceCancelScan" hidden>Cancel scan</button><button type="button" class="secondary" id="clearInvoice">Clear</button></div>
       <p class="privacy-note"><svg><use href="#icon-shield"/></svg><span>Your invoice is read on this device. Only prices you choose to import are saved to your account.</span></p>
-      <div id="invoiceProgress" class="invoice-progress" role="status" aria-live="polite">Choose a supplier invoice to read its prices.</div>
+      <div id="invoiceProgress" class="invoice-progress" role="status" aria-live="polite">Choose an invoice to read its products and prices. The first scan downloads the free OCR files.</div>
       <details class="invoice-references"><summary>Invoice and order numbers</summary><div class="invoice-reference-fields">
         <div class="field"><label for="invoiceNumber">Invoice number</label><input id="invoiceNumber" placeholder="Read from invoice text" autocomplete="off"></div>
         <div class="field"><label for="invoiceOrderNumber">Order number / reference</label><input id="invoiceOrderNumber" placeholder="Read from order text" autocomplete="off"></div>
       </div></details>
-      <details class="ocr-details"><summary>View or correct the recognised text</summary>
-        <div class="field"><label for="invoiceText">Recognised invoice text</label><textarea id="invoiceText" rows="10" placeholder="Text from the selected invoice appears here. You can correct it before building the review list."></textarea></div>
-        <div class="invoice-actions"><button type="button" class="secondary" id="buildInvoiceReview">Build review list from text</button></div>
-      </details>
+      <input type="hidden" id="invoiceText">
+      <button type="button" id="buildInvoiceReview" hidden aria-hidden="true" tabindex="-1">Unavailable</button>
       <div id="invoiceReviewArea" class="invoice-review-area" hidden>
-        <div class="section-heading"><div><h2>Check detected products</h2><p class="section-help">Edit names, pack sizes, units, and prices. Amber fields need your attention.</p></div></div>
-        <div class="invoice-review-wrap"><table class="invoice-review"><thead><tr><th>Import</th><th>Supplier code</th><th>Ingredient / description</th><th>Items / case</th><th>Size / item</th><th>Unit</th><th>Total size</th><th>Case price (£)</th></tr></thead><tbody id="invoiceReviewRows"></tbody></table></div>
-        <div class="invoice-actions invoice-import-actions"><button type="button" class="secondary" id="selectInvoiceRows">Select all rows</button><button type="button" class="secondary" id="clearInvoiceSelection">Clear selection</button><button type="button" id="importInvoiceRows">Import selected prices</button></div>
+        <div class="section-heading"><div><h2>Check detected products</h2><p class="section-help">Check the photo, correct any fields, and tick only the products you want to save. Amber rows need attention.</p></div></div>
+        <div id="invoiceTotals" class="scan-totals"></div>
+        <div id="invoiceWarnings" class="scan-warnings" aria-live="polite"></div>
+        <label id="invoiceTotalsVerification" class="scan-totals-confirm" hidden><input type="checkbox" id="invoiceTotalsConfirm"><span>I checked the subtotal difference and the prices I am selecting.</span></label>
+        <div class="scan-mobile-switch" role="group" aria-label="Invoice review view"><button type="button" class="secondary" id="invoiceShowRows" aria-pressed="true">Edit products</button><button type="button" class="secondary" id="invoiceShowPhoto" aria-pressed="false">View invoice</button></div>
+        <div id="invoiceReviewLayout" class="scan-review-layout" data-mobile-view="rows">
+          <aside id="invoicePhotoPane" class="scan-photo-pane" aria-label="Invoice source image">
+            <div class="scan-photo-controls">
+              <label class="scan-field"><span class="scan-field-label">Page</span><select id="invoicePageSelect" aria-label="Invoice page"></select></label>
+              <label class="scan-field"><span class="scan-field-label">Image</span><select id="invoicePhotoMode" aria-label="Invoice image view"><option value="cleaned">Cleaned</option><option value="original">Original</option><option value="overlay">OCR boxes</option></select></label>
+            </div>
+            <div class="scan-photo-scroll"><div class="scan-photo-stage"><img id="invoiceSourceImage" alt="Selected invoice page"><div id="invoiceSourceHighlight" class="scan-source-highlight" hidden></div></div></div>
+            <p id="invoiceSourceCaption" class="scan-source-caption">Use View source beside a product to highlight its row.</p>
+            <button type="button" id="invoiceBackToRow" class="secondary scan-back-to-row">Back to products</button>
+            <div class="scan-debug-actions"><button type="button" id="invoiceDownloadCleaned" class="text-button">Save cleaned image</button><button type="button" id="invoiceDownloadDebug" class="text-button">Save OCR debug JSON</button></div>
+          </aside>
+          <div class="scan-result-pane">
+            <div id="invoiceReviewRows" class="scan-result-rows"></div>
+          </div>
+        </div>
+        <p id="invoiceSelectionSummary" class="scan-selection-summary" role="status">No products selected.</p>
+        <div class="invoice-actions invoice-import-actions"><button type="button" class="secondary" id="selectInvoiceRows">Select all products</button><button type="button" class="secondary" id="clearInvoiceSelection">Clear selection</button><button type="button" id="importInvoiceRows" disabled>Import selected prices</button></div>
       </div>
       <div class="toast" id="invoiceToast" role="status" aria-live="polite"></div>
     </section>
@@ -203,10 +222,11 @@
 window.addEventListener('error',event=>{const box=document.getElementById('mmGlobalError');if(!box)return;box.hidden=false;box.textContent='MenuMargin could not load part of the app. Reload this page; your saved device data is unchanged. Details: '+(event.message||'A script could not start.');},true);
 window.addEventListener('unhandledrejection',event=>{const box=document.getElementById('mmGlobalError');if(!box)return;box.hidden=false;box.textContent='A MenuMargin operation failed. Your local changes are kept. Details: '+String(event.reason?.message||event.reason||'unknown error');});
 </script>
-<script src="./js/auth.js"></script>
-<script src="./js/recipe.js"></script>
-<script src="./js/pricebook.js"></script>
-<script src="./js/invoice.js"></script>
-<script src="./js/startup.js"></script>
+<script src="./js/auth.js?v=2.0.0-scanner"></script>
+<script src="./js/recipe.js?v=2.0.0-scanner"></script>
+<script src="./js/pricebook.js?v=2.0.0-scanner"></script>
+<script src="./vendor/scanner/client.js?v=2.0.0-scanner"></script>
+<script src="./js/invoice.js?v=2.0.0-scanner"></script>
+<script src="./js/startup.js?v=2.0.0-scanner"></script>
 </body>
 </html>
