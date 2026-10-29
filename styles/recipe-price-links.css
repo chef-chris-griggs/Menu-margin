@@ -1,0 +1,7 @@
+.ingredient-table .ingredient-price-link{display:grid;gap:5px;margin-top:6px;max-width:100%;font-size:.75rem;line-height:1.4;color:#60746c}
+.ingredient-table .ingredient-price-link[hidden]{display:none}
+.ingredient-table .ingredient-price-link[data-state="linked"]{color:#155d42}
+.ingredient-table .ingredient-price-link[data-state="ambiguous"],.ingredient-table .ingredient-price-link[data-state="missing"],.ingredient-table .ingredient-price-link[data-state="name-mismatch"],.ingredient-table .ingredient-price-link[data-state="unit-mismatch"]{color:#865113}
+.ingredient-table .price-link-toggle{padding:2px 0;min-height:28px;justify-self:start;text-align:left;font-size:.75rem}
+.ingredient-table .price-link-choice{width:100%;min-width:0;max-width:100%;font-size:.8rem}
+.ingredient-table input[readonly]{background:#edf4ef;color:#315d4a}

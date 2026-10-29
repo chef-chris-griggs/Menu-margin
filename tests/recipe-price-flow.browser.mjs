@@ -1,0 +1,107 @@
+import assert from 'node:assert/strict';
+import {readFile,mkdir,writeFile} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+import path from 'node:path';
+import {createRequire} from 'node:module';
+const root=path.resolve(fileURLToPath(new URL('../',import.meta.url))),require=createRequire(import.meta.url);
+let pw;try{pw=require('playwright');}catch{pw=require(path.join(process.env.HOME,'.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright'));}
+const browserName=process.argv.includes('--webkit')?'webkit':'chromium',browser=await pw[browserName].launch({headless:true});
+const checks=[],errors=[],network=[];
+const context=await browser.newContext({viewport:{width:1280,height:900},reducedMotion:'reduce'}),page=await context.newPage();
+await context.route('**/*',r=>{if(new URL(r.request().url()).protocol==='blob:')return r.continue();network.push(r.request().url());return r.abort();});
+page.on('pageerror',e=>errors.push(e.message));
+try{
+ const html=(await readFile(path.join(root,'index.html'),'utf8')).replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'').replace(/<link\b[^>]*>/gi,'');
+ await page.setContent(html);
+ for(const css of ['styles.css','styles/invoice-scanner.css','styles/recipe-price-links.css','styles/account.css'])await page.addStyleTag({path:path.join(root,css)});
+ await page.evaluate(()=>{
+  window.mmUser={id:'account-a'};window.mmCloudReady=false;window.MM_LIBRARY_KEY='recipes';window.MM_PRICEBOOK_KEY='prices';
+  window.bookId='10000000-0000-4000-8000-000000000001';
+  const butter={id:bookId,name:'Butter',supplier:'Bidfood',code:'B1',price:10,packBase:1000,baseUnit:'g',sourcePackSize:1,sourceUnit:'kg',caseCount:1,unitPackSize:1,unitPackUnit:'kg',priceBasis:'ex_vat',priceHistory:[],updatedAt:'2026-10-01T00:00:00Z'};
+  const ingredient=qty=>({name:'Butter',qty,qtyUnit:'g',pack:1000,packUnit:'g',price:10,priceEntered:true});
+  window.accounts=new Map([['account-a',{prices:[butter],recipes:[{id:'20000000-0000-4000-8000-000000000001',name:'Mash',yield:4,sellingPrice:5,targetGp:70,ingredients:[ingredient(100)],updatedAt:'2026-10-01T00:00:00Z'},{id:'20000000-0000-4000-8000-000000000002',name:'Sauce',yield:2,sellingPrice:4,targetGp:70,ingredients:[ingredient(200)],updatedAt:'2026-10-01T00:00:00Z'}]}],['account-b',{prices:[],recipes:[]}]]);
+  window.mmReadUserCache=(key,userId)=>structuredClone(accounts.get(userId)?.[key]||[]);
+  window.mmWriteUserCache=(key,items,userId)=>{if(!userId)throw Error('No account');accounts.get(userId)[key]=structuredClone(items);};
+  let id=10;window.mmNewUuid=()=>`30000000-0000-4000-8000-${String(++id).padStart(12,'0')}`;
+  window.mmSaveRecipeDraftSoon=()=>{};window.mmClearRecipeDraft=()=>{};window.mmAuthMessage=()=>{};
+  window.confirm=()=>true;window.MenuMarginScanner={reset(){}};
+  document.body.classList.add('mm-authenticated');
+ });
+ for(const js of ['js/pricing.js','js/recipe.js','js/pricebook.js','js/invoice.js'])await page.addScriptTag({path:path.join(root,js)});
+ await page.evaluate(async()=>{
+  const c=document.createElement('canvas');c.width=600;c.height=900;const blob=await new Promise(r=>c.toBlob(r));
+  window.importButter=(price,{description=' BUTTER ',supplier='Bidfood',code='B1',size=1,unit='kg',forceTarget}={})=>{
+   invoiceRenderScanResult({version:1,supplier,invoiceNumber:'TEST',pages:[{pageNumber:1,width:600,height:900,original:blob,cleaned:blob,overlay:blob,words:[]}],rows:[{id:'line1',pageNumber:1,productCode:code,description,quantity:1,quantityBasis:'case',unitPrice:price,lineTotal:price,priceBasis:'ex_vat',pack:{caseCount:1,eachSize:size,unit},confidence:.99,needsReview:false,reasons:[]}],totals:{subtotal:price,vat:0,total:price},validation:{matchesSubtotal:true,blockingIssues:[]},warnings:[]});
+   const state=invoiceReviewStates[0];state.selected=true;state.confirmed=true;state.elements.selected.checked=true;state.elements.confirmed.checked=true;
+   if(forceTarget){state.matchChoice=forceTarget;state.matchExplicit=true;}
+   importInvoiceReview();
+  };
+  loadRecipe(readLibrary()[0]);setActiveView('costing');
+ });
+ assert.equal(await page.locator('#ingredients .price').inputValue(),'10');
+ assert.equal(await page.locator('#ingredients .price').evaluate(e=>e.readOnly),true);
+ checks.push('legacy exact-name row links and supplier-price fields are protected');
+ await page.locator('#ingredients .qty').fill('250');await page.locator('#recipeName').fill('Mash — unsaved edit');
+ await page.evaluate(()=>importButter(12));
+ let state=await page.evaluate(()=>({book:readPriceBook(),recipes:readLibrary(),raw:mmReadUserCache(MM_LIBRARY_KEY,mmUser.id),draft:recipeData(),dirty:hasUnsavedChanges,batch:document.getElementById('batchCost').textContent,other:mmReadUserCache(MM_PRICEBOOK_KEY,'account-b')}));
+ assert.equal(state.book.length,1);assert.equal(state.book[0].id,'10000000-0000-4000-8000-000000000001');assert.equal(state.book[0].price,12);assert.equal(state.book[0].priceHistory[0].price,10);
+ assert.deepEqual(state.recipes.map(r=>r.ingredients[0].price),[12,12]);assert.deepEqual(state.recipes.map(r=>r.ingredients[0].qty),[100,200]);
+ assert.ok(state.raw.every(r=>r.ingredients[0].priceBookId===state.book[0].id));assert.deepEqual(state.raw.map(r=>r.ingredients[0].price),[10,10]);
+ assert.equal(state.draft.ingredients[0].qty,250);assert.equal(state.draft.name,'Mash — unsaved edit');assert.equal(state.dirty,true);assert.equal(state.batch,'£3.00');assert.deepEqual(state.other,[]);
+ checks.push('invoice updates the same price-book ID and retains old price history','all saved recipes recost without changing their quantities','active unsaved edits survive a price increase','account boundaries are preserved');
+ await page.evaluate(()=>importButter(40,{size:5}));
+ state=await page.evaluate(()=>({book:readPriceBook(),recipes:readLibrary(),draft:recipeData(),batch:document.getElementById('batchCost').textContent}));
+ assert.deepEqual(state.recipes.map(r=>r.ingredients[0].pack),[5000,5000]);assert.equal(state.draft.ingredients[0].qty,250);assert.equal(state.batch,'£2.00');
+ assert.deepEqual(state.book[0].priceHistory.map(r=>r.price),[10,12]);
+ checks.push('pack-size and price-per-gram changes recost recipes correctly');
+ await page.evaluate(()=>importButter(35,{size:5}));
+ assert.equal(await page.locator('#ingredients .price').inputValue(),'35');assert.equal(await page.locator('#batchCost').textContent(),'£1.75');
+ const beforeRepeat=await page.evaluate(()=>readPriceBook()[0].priceHistory.length);await page.evaluate(()=>importButter(35,{size:5}));
+ assert.equal(await page.evaluate(()=>readPriceBook()[0].priceHistory.length),beforeRepeat);
+ checks.push('price decreases propagate','unchanged re-imports do not duplicate entries or history');
+ await page.evaluate(()=>importButter(99,{description:'Butter salted'}));assert.equal(await page.evaluate(()=>readPriceBook()[0].price),35);
+ await page.evaluate(()=>importButter(99,{description:'Butter!',code:'',forceTarget:bookId}));assert.equal(await page.evaluate(()=>readPriceBook()[0].price),35);
+ checks.push('same supplier code cannot bypass exact-name matching','forced non-exact name target is blocked');
+ await page.evaluate(()=>importButter(80,{supplier:'Other supplier',code:'OTHER'}));
+ assert.equal(await page.locator('#ingredients .price').inputValue(),'35');assert.deepEqual(await page.evaluate(()=>readLibrary().map(r=>r.ingredients[0].price)),[35,35]);
+ checks.push('another supplier with the same name cannot replace established recipe links');
+ await page.evaluate(()=>{addRow({name:'Butter',qty:100,qtyUnit:'g',pack:1000,packUnit:'g',price:9,priceEntered:true});});
+ const second=page.locator('#ingredients tr').nth(1);assert.equal(await second.locator('.price-link-choice').isVisible(),true);
+ const supplierB=await page.evaluate(()=>readPriceBook().find(i=>i.supplier==='Other supplier').id);
+ await second.locator('.price-link-choice').selectOption(supplierB);assert.equal(await second.locator('.price').inputValue(),'80');
+ checks.push('ambiguous exact-name rows require an explicit supplier choice');
+ await page.locator('#ingredients tr').first().locator('.price-link-toggle').click();
+ await page.locator('#ingredients tr').first().locator('.price').fill('7');
+ await page.evaluate(()=>importButter(30,{size:5}));assert.equal(await page.locator('#ingredients tr').first().locator('.price').inputValue(),'7');
+ await page.locator('#ingredients tr').first().locator('.price-link-toggle').click();assert.equal(await page.locator('#ingredients tr').first().locator('.price').inputValue(),'7','multiple suppliers require a deliberate choice after detaching');
+ await page.locator('#ingredients tr').first().locator('.price-link-choice').selectOption('10000000-0000-4000-8000-000000000001');assert.equal(await page.locator('#ingredients tr').first().locator('.price').inputValue(),'30');
+ checks.push('explicit own-price override is respected and relinking is deliberate');
+ await page.evaluate(()=>saveCurrentRecipe());assert.equal(await page.evaluate(()=>hasUnsavedChanges),false);
+ await page.evaluate(()=>importButter(25,{size:5}));assert.equal(await page.evaluate(()=>hasUnsavedChanges),false);
+ checks.push('automatic repricing does not mark an otherwise saved recipe as an unsaved edit');
+ await page.evaluate(()=>{
+  const old=readPriceBook()[0];window.backupPrice=mmBackupPrice({...old,priceBasis:'inc_vat'});window.backupRecipe=mmBackupRecipe(recipeData());
+ });
+ const backup=await page.evaluate(()=>({price:backupPrice,recipe:backupRecipe}));
+ assert.equal(backup.price.priceBasis,'inc_vat');assert.ok(backup.price.priceHistory.length>=4);assert.equal(backup.recipe.ingredients[0].priceBookId,'10000000-0000-4000-8000-000000000001');
+ checks.push('backup validation preserves ingredient links, VAT basis and price history');
+ await page.evaluate(async()=>{
+  const price={...readPriceBook()[0],id:'40000000-0000-4000-8000-000000000001',price:1};
+  const recipe={...recipeData(),id:'50000000-0000-4000-8000-000000000001',name:'Restored dish',ingredients:[{...recipeData().ingredients[0],priceBookId:price.id}]};
+  await restoreAccountBackup(new File([JSON.stringify({format:'menumargin-account-backup',schemaVersion:1,priceBook:[price],recipes:[recipe]})],'backup.json',{type:'application/json'}));
+ });
+ const restored=await page.evaluate(()=>readLibrary().find(r=>r.name==='Restored dish'));
+ assert.equal(restored.ingredients[0].priceBookId,'10000000-0000-4000-8000-000000000001');assert.equal(restored.ingredients[0].price,25);
+ checks.push('restoring a matching supplier with a different backup ID remaps links and retains the current price');
+ await page.evaluate(()=>writePriceBook(readPriceBook().filter(item=>item.id!==bookId)));
+ const deleted=await page.evaluate(()=>readLibrary()[0].ingredients[0]);
+ assert.ok(deleted.priceLinkIssue.includes('removed'));assert.notEqual(deleted.price,80);assert.equal(deleted.priceBookId,'10000000-0000-4000-8000-000000000001');
+ checks.push('deleting a linked supplier retains a flagged fallback and never switches to another same-name supplier');
+ await page.setViewportSize({width:390,height:844});await page.evaluate(()=>setActiveView('costing'));
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1));
+ checks.push('linked ingredient cards fit a phone-width viewport');
+ assert.deepEqual(errors,[]);assert.deepEqual(network,[]);
+ await mkdir(path.join(root,'reports'),{recursive:true});await page.screenshot({path:path.join(root,'reports',`recipe-prices-${browserName}.png`),fullPage:true});
+ const report={browser:browserName,passed:true,checks,browserErrors:errors,externalRequests:network};
+ await writeFile(path.join(root,'reports',`recipe-price-flow-${browserName}.json`),JSON.stringify(report,null,2));console.log(JSON.stringify(report));
+}finally{await browser.close();}

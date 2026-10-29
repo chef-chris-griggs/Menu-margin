@@ -25,6 +25,7 @@ try {
   await page.setContent(html);
   await page.addStyleTag({ path: root + '/styles.css' });
   await page.addStyleTag({ path: root + '/styles/invoice-scanner.css' });
+  await page.addScriptTag({path:root+'/js/pricing.js'});
   await page.evaluate(() => {
     // Exercise the real scroll targets without racing smooth-scroll animation
     // against the next browser action. Motion itself is not an import rule.
@@ -76,13 +77,17 @@ try {
   assert.equal((await page.evaluate(() => testBook))[0].price, 30, 'unchecked review acknowledgement must block writes');
   await page.locator('.scan-row').nth(0).locator('.invoice-row-confirm').check();
   await page.evaluate(() => importInvoiceReview());
+  assert.equal((await page.evaluate(()=>testBook))[0].price,30,'same code with a different name must not update');
+  await page.locator('.scan-row').nth(0).locator('.invoice-item-name').fill(' MACARONI ');
+  await page.locator('.scan-row').nth(0).locator('.invoice-row-confirm').check();
+  await page.evaluate(()=>importInvoiceReview());
   let book = await page.evaluate(() => testBook);
   assert.equal(book.length, 2, 'only selected row updated');
   assert.equal(book[0].price, 28.16);
   assert.equal(book[0].priceHistory.length, 1);
   assert.equal(book[0].priceHistory[0].price, 30);
   assert.equal(book[0].name,'Macaroni','OCR price updates preserve the existing product name');
-  assert.equal(book[0].priceSource.description,'Macaroni OCR typo','the invoice description remains available as source evidence');
+  assert.equal(book[0].priceSource.description,'MACARONI','the checked invoice name remains available as source evidence');
   assert.equal(await page.locator('.scan-row').nth(1).locator('.invoice-case-qty').inputValue(), '1');
   await page.locator('.scan-row').nth(1).locator('.invoice-import-check').check();
   await page.locator('.scan-row').nth(1).locator('.invoice-row-confirm').check();
@@ -99,9 +104,12 @@ try {
   await page.evaluate(() => renderFixture([{ ...fixtureRows[0], id: 'fuzzy', productCode: '', description: 'Haddock fillets MSC', quantity: 1, unitPrice: 2.2, lineTotal: 2.2, pack: { caseCount: 1, eachSize: 1, unit: 'each' } }]));
   await page.locator('.invoice-import-check').check();
   await page.locator('.invoice-row-confirm').check();
+  await page.evaluate(()=>{invoiceReviewStates[0].matchChoice='haddock';invoiceReviewStates[0].matchExplicit=true;});
   await page.evaluate(() => importInvoiceReview());
-  assert.equal((await page.evaluate(() => testBook)).find(item => item.id === 'haddock').price, 2, 'fuzzy match must not update before a choice');
-  await page.locator('.scan-match-area select').selectOption('haddock');
+  assert.equal((await page.evaluate(() => testBook)).find(item => item.id === 'haddock').price, 2, 'non-exact names cannot update even after a forced existing-item choice');
+  assert.equal(await page.locator('.scan-match-area select').count(),0,'no fuzzy name choices are offered');
+  await page.locator('.invoice-item-name').fill('HADDOCK  FILLET MSC');
+  await page.locator('.invoice-row-confirm').check();
   await page.evaluate(() => importInvoiceReview());
   book = await page.evaluate(() => testBook);
   assert.equal(book.find(item => item.id === 'haddock').price, 2.2);
@@ -219,7 +227,7 @@ try {
   await page.waitForFunction(() => document.getElementById('invoiceProgress').textContent.includes('cancelled'));
   assert.equal(await page.locator('#invoiceReviewArea').isVisible(), false, 'a cancelled result must never appear');
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ browser: browserName, checks: ['unchecked import blocked', 'only selected row updated', 'case price history', 'loose unit pack', 'weighed amount', 'fuzzy confirmation', 'different-code protection', 'manual history preservation', 'mandatory quantity', 'mandatory line total', 'mandatory unit price', 'mandatory VAT basis', 'arithmetic blocks import', 'printed weight rounding', 'weight edit synchronization', 'document conflicts block import', 'subtotal acknowledgement', 'missing-page warning', 'mobile source view', 'mobile width', 'debug download', 'clear releases review', 'multi-photo API', 'cancelled result discarded'], passed: true, browserErrors: errors }));
+  console.log(JSON.stringify({ browser: browserName, checks: ['unchecked import blocked', 'only selected row updated', 'case price history', 'loose unit pack', 'weighed amount', 'exact-name matching only', 'different-code protection', 'manual history preservation', 'mandatory quantity', 'mandatory line total', 'mandatory unit price', 'mandatory VAT basis', 'arithmetic blocks import', 'printed weight rounding', 'weight edit synchronization', 'document conflicts block import', 'subtotal acknowledgement', 'missing-page warning', 'mobile source view', 'mobile width', 'debug download', 'clear releases review', 'multi-photo API', 'cancelled result discarded'], passed: true, browserErrors: errors }));
 } catch (error) {
   await page.screenshot({ path: join(debugDirectory, 'invoice-review-' + browserName + '-failure.png'), fullPage: true }).catch(() => {});
   throw error;

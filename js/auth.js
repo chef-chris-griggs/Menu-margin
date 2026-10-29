@@ -3,7 +3,8 @@ const MM_SUPABASE_URL = 'https://phwdyckedcqxbojpbqgz.supabase.co';
 const MM_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_q711FpfYM17f3d1J_dTJOg_XRgmOufq';
 const MM_AUTH_REDIRECT_URL = window.location.protocol === 'file:'
   ? 'https://chef-chris-griggs.github.io/Menu-margin/'
-  : window.location.href.split('#')[0];
+  : new URL('./',window.location.href).href;
+const MM_PASSWORD_REDIRECT_URL=MM_AUTH_REDIRECT_URL+'?auth=recovery';
 const MM_LIBRARY_KEY = 'menumargin-recipes-v1';
 const MM_PRICEBOOK_KEY = 'menumargin-pricebook-v1';
 const MM_PENDING_PREFIX = 'menumargin-pending-v1::user:';
@@ -44,30 +45,47 @@ function mmPendingKey(userId=mmUser?.id){return MM_PENDING_PREFIX+userId}
 function mmManifestKey(userId=mmUser?.id){return MM_MANIFEST_PREFIX+userId}
 function mmDraftKey(userId=mmUser?.id){return MM_DRAFT_PREFIX+userId}
 function mmAccessKey(userId=mmUser?.id){return MM_ACCESS_PREFIX+userId}
-function mmReadPending(userId=mmUser?.id){return userId?mmRawJson(mmPendingKey(userId),[]):[]}
+function mmReadPending(userId=mmUser?.id){
+ if(!userId)return [];const text=localStorage.getItem(mmPendingKey(userId));if(!text)return [];
+ let queue;try{queue=JSON.parse(text);}catch{throw new Error('Pending saves could not be read. Keep device data and contact support.');}
+ if(!Array.isArray(queue))throw new Error('Pending saves are invalid. Keep device data and contact support.');return queue;
+}
 function mmWritePending(queue,userId=mmUser?.id){if(userId)localStorage.setItem(mmPendingKey(userId),JSON.stringify(queue))}
 function mmQueueMutation(kind,action,id,record,userId=mmUser?.id){
   if(!userId||!id)return;
-  const queue=mmReadPending(userId).filter(m=>!(m.kind===kind&&m.id===id));
-  queue.push({kind,action,id,record:record||null,changedAt:Date.now()});
+  const pending=mmReadPending(userId),prior=pending.find(m=>m.kind===kind&&m.id===id);
+  const queue=pending.filter(m=>!(m.kind===kind&&m.id===id));
+  const versions=kind==='recipes'?mmCloudVersionsRecipes:mmCloudVersionsPrices;
+  const manifest=mmRawJson(mmManifestKey(userId),{});
+  const baseVersion=prior?.baseVersion??versions.get(id)??manifest[kind]?.[id]??null;
+  queue.push({kind,action,id,record:record||null,baseVersion,changedAt:Date.now()});
   mmWritePending(queue,userId);
 }
-function mmQueueListDiff(kind,before,after,userId){
-  const oldById=new Map((Array.isArray(before)?before:[]).filter(x=>x?.id).map(x=>[x.id,x]));
-  const newById=new Map((Array.isArray(after)?after:[]).filter(x=>x?.id).map(x=>[x.id,x]));
-  for(const [id] of oldById)if(!newById.has(id))mmQueueMutation(kind,'delete',id,null,userId);
-  for(const [id,item] of newById){
-    if(!oldById.has(id)||JSON.stringify(oldById.get(id))!==JSON.stringify(item))mmQueueMutation(kind,'upsert',id,item,userId);
-  }
+function mmReadUserCache(key,userId){
+ const text=localStorage.getItem(mmAccountCacheKey(key,userId));
+ if(text===null||text==='')return [];
+ let records;try{records=JSON.parse(text);}catch{throw new Error('Saved device data could not be read. Keep this browser data and contact support.');}
+ if(!Array.isArray(records)||records.some(record=>!record||typeof record!=='object'||!record.id))throw new Error('Saved device data is invalid. Keep this browser data and contact support.');
+ return records;
 }
-function mmReadUserCache(key,userId){return mmParseJson(localStorage.getItem(mmAccountCacheKey(key,userId)),[])}
 function mmWriteUserCache(key,records,userId=mmUser?.id,{track=true}={}){
-  if(!userId)throw new Error('Sign in to save account data.');
-  const kind=key===MM_LIBRARY_KEY?'recipes':key===MM_PRICEBOOK_KEY?'prices':null;
-  const tracked=Boolean(track&&kind&&!mmHydrating);
-  const before=tracked?mmReadUserCache(key,userId):[];
-  localStorage.setItem(mmAccountCacheKey(key,userId),JSON.stringify(records));
-  if(tracked){mmQueueListDiff(kind,before,records,userId);mmScheduleSync();}
+ if(!userId)throw new Error('Sign in to save account data.');
+ if(!Array.isArray(records))throw new Error('Account records must be a list.');
+ const kind=key===MM_LIBRARY_KEY?'recipes':key===MM_PRICEBOOK_KEY?'prices':null;
+ const before=mmReadUserCache(key,userId),entries=[[mmAccountCacheKey(key,userId),records]];
+ if(track&&kind&&!mmHydrating){
+  let queue=mmReadPending(userId);const versions=kind==='recipes'?mmCloudVersionsRecipes:mmCloudVersionsPrices;
+  const manifest=mmRawJson(mmManifestKey(userId),{}),old=new Map(before.map(row=>[row.id,row])),next=new Map(records.map(row=>[row.id,row]));
+  const add=(action,id,record)=>{
+   const prior=queue.find(edit=>edit.kind===kind&&edit.id===id),baseVersion=prior?.baseVersion??versions.get(id)??manifest[kind]?.[id]??null;
+   queue=queue.filter(edit=>!(edit.kind===kind&&edit.id===id));queue.push({kind,action,id,record,baseVersion,changedAt:Date.now()});
+  };
+  for(const [id] of old)if(!next.has(id))add('delete',id,null);
+  for(const [id,row] of next)if(!old.has(id)||JSON.stringify(old.get(id))!==JSON.stringify(row))add('upsert',id,row);
+  entries.push([mmPendingKey(userId),queue]);
+ }
+ mmCommitStorage(localStorage,entries);
+ if(track&&kind&&!mmHydrating)mmScheduleSync();
 }
 function mmReadManifest(userId){
   const value=mmRawJson(mmManifestKey(userId),{});
@@ -88,7 +106,7 @@ function mmApplyPending(kind,records,queue){
   }
   return [...map.values()];
 }
-function mmTryMigrateLegacy(userId,recipes,prices){
+function mmTryMigrateLegacy(userId,recipes,prices,queueMutation=mmQueueMutation){
   const owner=localStorage.getItem(MM_LEGACY_CLAIM_KEY);
   if(owner&&owner!==userId)return {recipes,prices,migrated:false};
   // The owner key is also the completed-migration marker. Leave the legacy
@@ -104,77 +122,57 @@ function mmTryMigrateLegacy(userId,recipes,prices){
   for(const item of [...legacyRecipes,...(legacyRecipe?[legacyRecipe]:[])]){
     if(!item||typeof item!=='object')continue;
     const migrated={...item,id:item.id&&!recipeIds.has(item.id)?item.id:mmNewUuid(),name:item.name||'My saved recipe',updatedAt:item.updatedAt||new Date().toISOString()};
-    migratedRecipes.push(migrated);recipeIds.add(migrated.id);mmQueueMutation('recipes','upsert',migrated.id,migrated,userId);
+    migratedRecipes.push(migrated);recipeIds.add(migrated.id);queueMutation('recipes','upsert',migrated.id,migrated,userId);
   }
   const migratedPrices=[...prices],priceIds=new Set(migratedPrices.map(x=>x.id));
   for(const item of legacyPrices){
     if(!item||typeof item!=='object')continue;
     const migrated={...item,id:item.id&&!priceIds.has(item.id)?item.id:mmNewUuid(),updatedAt:item.updatedAt||new Date().toISOString()};
-    migratedPrices.push(migrated);priceIds.add(migrated.id);mmQueueMutation('prices','upsert',migrated.id,migrated,userId);
+    migratedPrices.push(migrated);priceIds.add(migrated.id);queueMutation('prices','upsert',migrated.id,migrated,userId);
   }
   return {recipes:migratedRecipes,prices:migratedPrices,migrated:true};
 }
-function mmPreferCachedRecord(local,cloud,knownOnPriorCloud){
-  if(!cloud)return !knownOnPriorCloud;
-  const localTime=Date.parse(local.updatedAt||'')||0;
-  const cloudTime=Date.parse(cloud.updatedAt||'')||0;
-  return localTime>cloudTime;
-}
 async function mmLoadCloud(userId=mmUser?.id){
   if(!userId)throw new Error('Sign in is required to load account data.');
-  mmCloudReady=false;mmHydrating=true;
-  try{
-    const [recipesResult,pricesResult]=await Promise.all([
-      mmSupabase.from('recipes').select('id,name,recipe_data,updated_at').eq('user_id',userId).order('updated_at',{ascending:false}),
-      mmSupabase.from('price_book').select('id,item_data,updated_at').eq('user_id',userId).order('updated_at',{ascending:false})
-    ]);
-    if(recipesResult.error)throw new Error('Could not load recipes: '+recipesResult.error.message);
-    if(pricesResult.error)throw new Error('Could not load price book: '+pricesResult.error.message);
-    if(mmUser?.id!==userId)throw new Error('Account changed while data was loading.');
-    const cloudRecipes=(recipesResult.data||[]).map(r=>({...r.recipe_data,id:r.id,name:r.name||r.recipe_data?.name||'Untitled recipe',updatedAt:r.updated_at||r.recipe_data?.updatedAt}));
-    const cloudPrices=(pricesResult.data||[]).map(r=>({...r.item_data,id:r.id,updatedAt:r.updated_at||r.item_data?.updatedAt}));
-    const oldManifest=mmReadManifest(userId),queue=mmReadPending(userId);
-    const localRecipes=mmReadUserCache(MM_LIBRARY_KEY,userId),localPrices=mmReadUserCache(MM_PRICEBOOK_KEY,userId);
-    let merged=mmTryMigrateLegacy(userId,cloudRecipes,cloudPrices);
-    const mergeCache=(kind,cloud,cache,seen)=>{
-      const byId=new Map(cloud.map(r=>[r.id,r]));
-      for(const local of cache){
-        if(!local?.id)continue;
-        const existing=byId.get(local.id),known=seen.has(local.id);
-        if(mmPreferCachedRecord(local,existing,known)){
-          byId.set(local.id,local);mmQueueMutation(kind,'upsert',local.id,local,userId);
-        }
-      }
-      for(const item of mmReadPending(userId).filter(m=>m.kind===kind)){
-        if(item.action==='delete')byId.delete(item.id);
-        else if(item.action==='upsert'&&item.record)byId.set(item.id,item.record);
-      }
-      return [...byId.values()];
-    };
-    merged.recipes=mergeCache('recipes',merged.recipes,localRecipes,oldManifest.recipes);
-    merged.prices=mergeCache('prices',merged.prices,localPrices,oldManifest.prices);
-    // Hydrate only the signed-in account's cache. Pending local edits and deletes have already
-    // been overlaid, so a successful cloud read cannot erase work from a previous session.
-    localStorage.setItem(mmAccountCacheKey(MM_LIBRARY_KEY,userId),JSON.stringify(merged.recipes));
-    localStorage.setItem(mmAccountCacheKey(MM_PRICEBOOK_KEY,userId),JSON.stringify(merged.prices));
-    mmCloudBaselineRecipes=new Map(cloudRecipes.map(r=>[r.id,JSON.stringify(r)]));
-    mmCloudBaselinePrices=new Map(cloudPrices.map(r=>[r.id,JSON.stringify(r)]));
-    mmCloudVersionsRecipes=new Map((recipesResult.data||[]).map(r=>[r.id,r.updated_at]));
-    mmCloudVersionsPrices=new Map((pricesResult.data||[]).map(r=>[r.id,r.updated_at]));
-    localStorage.setItem(mmManifestKey(userId),JSON.stringify({
-      recipes:Object.fromEntries(mmCloudVersionsRecipes),prices:Object.fromEntries(mmCloudVersionsPrices)
-    }));
-    // Claim the one-time migration only after the migrated caches and cloud
-    // manifest have been written successfully. Keep the source keys for recovery.
-    if(merged.migrated)localStorage.setItem(MM_LEGACY_CLAIM_KEY,userId);
-    mmCloudReady=true;mmCloudOffline=false;
-    if(merged.migrated){
-      const note=document.getElementById('mmMigrationNotice');
-      if(note){note.hidden=false;note.textContent='Your previous device recipes and price book were copied into this signed-in account and queued to sync.';}
-    }
-    if(mmReadPending(userId).length&&mmUser?.id===userId)mmScheduleSync();
-    return {recipes:merged.recipes,prices:merged.prices,migrated:merged.migrated};
-  }finally{mmHydrating=false;}
+  mmCloudReady=false;
+  const isCurrent=()=>mmUser?.id===userId&&!mmSigningOut&&mmRecoveryMode==='none';
+  const [recipeRows,priceRows]=await Promise.all([
+    mmFetchAccountTable(mmSupabase,'recipes','id,name,recipe_data,updated_at',userId,{isCurrent}),
+    mmFetchAccountTable(mmSupabase,'price_book','id,item_data,updated_at',userId,{isCurrent})
+  ]);
+  if(!isCurrent())throw new Error('Account changed while data was loading.');
+  const cloudRecipes=recipeRows.map(row=>{
+    const value=row.recipe_data;
+    if(!value||typeof value!=='object'||Array.isArray(value)||(value.ingredients!==undefined&&(!Array.isArray(value.ingredients)||value.ingredients.some(item=>!item||typeof item!=='object'||Array.isArray(item)))))throw new Error('A saved recipe has invalid data. Your device copy was kept. Contact support.');
+    return {...value,ingredients:value.ingredients||[],id:row.id,name:row.name||value.name||'Untitled recipe',updatedAt:row.updated_at};
+  });
+  const cloudPrices=priceRows.map(row=>{
+    if(!row.item_data||typeof row.item_data!=='object'||Array.isArray(row.item_data))throw new Error('A saved supplier price has invalid data. Your device copy was kept. Contact support.');
+    return {...row.item_data,id:row.id,updatedAt:row.updated_at};
+  });
+  // Read local changes after the network calls, including edits made while loading.
+  const prior=mmRawJson(mmManifestKey(userId),{}),pending=mmReadPending(userId),now=Date.now();
+  const merge=(kind,cloud,key)=>mmMergeCloudRecords({kind,cloud,local:mmReadUserCache(key,userId),pending,knownVersions:prior[kind==='recipes'?'recipes':'prices']||{},newId:mmNewUuid,now});
+  const recipes=merge('recipes',cloudRecipes,MM_LIBRARY_KEY),prices=merge('prices',cloudPrices,MM_PRICEBOOK_KEY);
+  const queue=[...recipes.mutations,...prices.mutations];
+  const merged=mmTryMigrateLegacy(userId,recipes.records,prices.records,(kind,action,id,record)=>queue.push({kind,action,id,record,baseVersion:null,changedAt:now}));
+  const manifest={recipes:Object.fromEntries(recipeRows.map(row=>[row.id,row.updated_at])),prices:Object.fromEntries(priceRows.map(row=>[row.id,row.updated_at]))};
+  const entries=[
+    [mmAccountCacheKey(MM_LIBRARY_KEY,userId),merged.recipes],
+    [mmAccountCacheKey(MM_PRICEBOOK_KEY,userId),merged.prices],
+    [mmPendingKey(userId),queue],[mmManifestKey(userId),manifest]
+  ];
+  if(merged.migrated)entries.push([MM_LEGACY_CLAIM_KEY,userId,true]);
+  mmCommitStorage(localStorage,entries);
+  mmCloudBaselineRecipes=new Map(cloudRecipes.map(row=>[row.id,JSON.stringify(row)]));
+  mmCloudBaselinePrices=new Map(cloudPrices.map(row=>[row.id,JSON.stringify(row)]));
+  mmCloudVersionsRecipes=new Map(Object.entries(manifest.recipes));mmCloudVersionsPrices=new Map(Object.entries(manifest.prices));
+  mmCloudReady=true;mmCloudOffline=false;
+  const notices=[...recipes.notices,...prices.notices];
+  if(merged.migrated)notices.push('Your previous device recipes and prices were copied into this account and queued to sync.');
+  const note=document.getElementById('mmMigrationNotice');if(note){note.hidden=!notices.length;note.textContent=notices.join(' ');}
+  if(queue.length)mmScheduleSync();
+  return {...merged,notices};
 }
 function mmScheduleSync(){
   if(!mmUser||!mmCloudReady||!navigator.onLine)return;
@@ -186,7 +184,7 @@ function mmScheduleSync(){
     console.error(error);
     if(mmUser?.id!==userId)return;
     mmCloudReady=false;mmCloudOffline=true;
-    mmAuthMessage('Offline — your changes are saved on this device and will sync when the connection returns.');
+    mmAuthMessage('Saved on this device. Cloud sync failed; choose Refresh & sync to retry.');
     });
   },MM_SYNC_DEBOUNCE_MS);
 }
@@ -200,7 +198,7 @@ function mmSyncCloud(){
 function mmRemoveSyncedPending(snapshot,userId){
   const current=mmReadPending(userId),sent=new Map(snapshot.map(item=>[item.kind+':'+item.id,JSON.stringify(item)]));
   const remaining=current.filter(item=>sent.get(item.kind+':'+item.id)!==JSON.stringify(item));
-  mmWritePending(remaining,userId);
+  mmWritePending(remaining.map(item=>({...item,baseVersion:(item.kind==='recipes'?mmCloudVersionsRecipes:mmCloudVersionsPrices).get(item.id)??item.baseVersion??null})),userId);
 }
 async function mmPushOne(kind,rec,versions,userId=mmUser?.id){
   if(!userId)throw new Error('Sign in is required to sync account data.');
@@ -214,27 +212,37 @@ async function mmPushOne(kind,rec,versions,userId=mmUser?.id){
     const {data:current,error:readError}=await mmSupabase.from(table).select('*').eq('id',rec.id).eq('user_id',userId);
     if(readError)throw readError;
     if(current&&current.length)return {conflict:current[0]};
+    return {deleted:true};
   }
   const {data,error}=await mmSupabase.from(table).upsert({id:rec.id,...body},{onConflict:'id'}).select('id,updated_at');
-  if(error)throw error;if(data&&data[0])versions.set(rec.id,data[0].updated_at);return {ok:true};
+  if(error)throw error;if(!data?.[0]?.updated_at)throw new Error('The server did not confirm this save. Your device copy is kept.');versions.set(rec.id,data[0].updated_at);return {ok:true};
 }
 async function mmResolveConflict(c){
-  const {kind,key,rec,cloud,baseline,versions,userId}=c;
-  const cloudRec=kind==='recipes'
-    ?{...cloud.recipe_data,id:cloud.id,name:cloud.name||cloud.recipe_data?.name||'Untitled recipe',updatedAt:cloud.updated_at}
-    :{...cloud.item_data,id:cloud.id,updatedAt:cloud.updated_at};
-  const label=rec.name||'Untitled',copy={...rec,id:mmNewUuid(),name:label+' (conflict copy)',updatedAt:new Date().toISOString()};
-  await mmPushOne(kind,copy,versions,userId);
-  baseline.set(cloudRec.id,JSON.stringify(cloudRec));versions.set(cloudRec.id,cloud.updated_at);baseline.set(copy.id,JSON.stringify(copy));
-  const fresh=mmReadUserCache(key,userId).filter(x=>x.id!==rec.id&&x.id!==copy.id);
-  fresh.push(cloudRec,copy);mmWriteUserCache(key,fresh,userId,{track:false});
-  const msg=`“${label}” changed on another device. Both versions were kept; yours is “${copy.name}”. Review both and delete the one you do not need.`;
-  if(mmUser?.id!==userId)return;
-  mmAuthMessage(msg);
-  if(kind==='recipes'){
-    if(currentRecipeId===rec.id&&!hasUnsavedChanges)loadRecipe(copy);else if(currentRecipeId===rec.id)currentRecipeId=copy.id;
-    refreshLibrary(currentRecipeId);showToast(msg);
-  }else{renderPriceBook();const toast=document.getElementById('pbToast');if(toast)toast.textContent=msg;}
+ const {kind,key,rec,cloud,baseline,versions,userId}=c;
+ const cloudRec=cloud?(kind==='recipes'
+  ?{...cloud.recipe_data,id:cloud.id,name:cloud.name||cloud.recipe_data?.name||'Untitled recipe',updatedAt:cloud.updated_at}
+  :{...cloud.item_data,id:cloud.id,updatedAt:cloud.updated_at}):null;
+ const latest=mmReadUserCache(key,userId).find(row=>row.id===rec.id)||rec;
+ const label=latest.name||'Untitled',suffix=cloud?' (conflict copy)':' (recovered copy)';
+ const copy={...latest,id:mmNewUuid(),name:label+suffix,updatedAt:new Date().toISOString()};
+ await mmPushOne(kind,copy,versions,userId);
+ const current=mmReadUserCache(key,userId),newer=current.find(row=>row.id===rec.id);
+ const savedCopy=newer&&JSON.stringify(newer)!==JSON.stringify(latest)?{...newer,id:copy.id,name:(newer.name||'Untitled')+suffix}:copy;
+ if(cloudRec){baseline.set(cloudRec.id,JSON.stringify(cloudRec));versions.set(cloudRec.id,cloud.updated_at);}
+ else{baseline.delete(rec.id);versions.delete(rec.id);}
+ baseline.set(copy.id,JSON.stringify(copy));
+ const fresh=current.filter(row=>row.id!==rec.id&&row.id!==copy.id);if(cloudRec)fresh.push(cloudRec);fresh.push(savedCopy);
+ // Move any edit made during the conflict-copy save onto that copy's queue ID.
+ const queue=mmReadPending(userId).filter(edit=>!(edit.kind===kind&&edit.id===rec.id));
+ if(savedCopy!==copy)queue.push({kind,action:'upsert',id:copy.id,record:savedCopy,baseVersion:versions.get(copy.id),changedAt:Date.now()});
+ mmCommitStorage(localStorage,[[mmAccountCacheKey(key,userId),fresh],[mmPendingKey(userId),queue]]);
+ const msg=cloud?`“${label}” changed on another device. Both versions were kept; yours is “${savedCopy.name}”. Review both.`:`“${label}” was deleted on another device. Your edits were kept as “${savedCopy.name}”.`;
+ if(mmUser?.id!==userId)return;
+ mmAuthMessage(msg);
+ if(kind==='recipes'){
+  if(currentRecipeId===rec.id&&!hasUnsavedChanges)loadRecipe(savedCopy);else if(currentRecipeId===rec.id)currentRecipeId=copy.id;
+  refreshLibrary(currentRecipeId);showToast(msg);
+ }else{renderPriceBook();mmRefreshRecipePrices();const toast=document.getElementById('pbToast');if(toast)toast.textContent=msg;}
 }
 async function mmSyncCloudInner(userId){
   if(!userId||mmUser?.id!==userId||!mmCloudReady||!navigator.onLine)return {offline:true};
@@ -250,7 +258,7 @@ async function mmSyncCloudInner(userId){
         const json=JSON.stringify(rec);if(baseline.get(rec.id)===json)continue;
         const result=await mmPushOne(kind,rec,versions,userId);
         if(mmUser?.id!==userId)return {stale:true};
-        if(result.conflict)conflicts.push({kind,key,rec,cloud:result.conflict,baseline,versions,userId});
+        if(result.conflict||result.deleted)conflicts.push({kind,key,rec,cloud:result.conflict,baseline,versions,userId});
         else baseline.set(rec.id,json);
       }
       const removed=[...baseline.keys()].filter(id=>!ids.has(id));
@@ -291,10 +299,48 @@ async function mmSyncCloudInner(userId){
     mmRemoveSyncedPending(pendingSnapshot,userId);mmSaveCloudManifest(userId,recipeVersions,priceVersions);
     if(mmUser?.id===userId){
       mmCloudOffline=false;
-      if(!conflicts.length)mmAuthMessage('Cloud sync is up to date.');
+      if(!conflicts.length)mmAuthMessage(mmReadPending(userId).length?'Saved on this device; more changes are waiting to sync.':'Cloud sync is up to date.');
+      if(typeof updateRecipeHeader==='function')updateRecipeHeader();
     }
     return {conflicts:conflicts.length};
   }finally{mmSyncing=false;}
+}
+let mmRefreshPromise=null,mmLastRefreshAt=0;
+function mmRefreshCloud(manual=false){
+ if(!mmUser||mmSigningOut||mmEntryPromise||mmRecoveryMode!=='none')return Promise.resolve({skipped:true});
+ if(mmRefreshPromise)return mmRefreshPromise;
+ if(!manual&&Date.now()-mmLastRefreshAt<15000)return Promise.resolve({skipped:true});
+ const userId=mmUser.id,button=document.getElementById('mmRefreshCloud');
+ if(button)button.disabled=true;
+ const run=mmSyncChain.catch(()=>{}).then(async()=>{
+  if(mmUser?.id!==userId||mmSigningOut)return {stale:true};
+  if(!navigator.onLine){mmCloudOffline=true;mmAuthMessage('Offline — changes are saved on this device. Refresh & sync when connected.');return {offline:true};}
+  mmAuthMessage('Refreshing your recipes and supplier prices…');
+  if(mmCloudReady)await mmSyncCloudInner(userId);
+  if(mmUser?.id!==userId||mmSigningOut)return {stale:true};
+  if(mmBillingEnabled){
+   const {data,error}=await mmSupabase.rpc('menu_margin_has_paid_access');
+   if(error)throw error;
+   if(!data){if(hasUnsavedChanges)mmSaveRecipeDraft();mmShowSubscriptionGate(mmUser);return {access:false};}
+  }
+  const result=await mmLoadCloud(userId);
+  if(mmUser?.id!==userId||mmSigningOut)return {stale:true};
+  if(mmReadPending(userId).length)await mmSyncCloudInner(userId);
+  // Inspect the editor now: the chef may have typed while the request ran.
+  if(!hasUnsavedChanges&&currentRecipeId){
+   const updated=readLibrary().find(item=>item.id===currentRecipeId);
+   if(updated)loadRecipe(updated);
+   else{loadRecipe({name:'',yield:10,sellingPrice:0,targetGp:70,ingredients:[]});showToast('This recipe was deleted on another device.');}
+  }
+  mmRefreshRecipePrices();refreshLibrary(currentRecipeId);renderPriceBook();
+  mmLastRefreshAt=Date.now();
+  mmAuthMessage(result.notices?.length?result.notices.join(' '):mmReadPending(userId).length?'Saved on this device; changes are waiting to sync.':'Cloud sync is up to date.');
+  return {ok:true,notices:result.notices};
+ }).catch(error=>{
+  if(mmUser?.id===userId){mmCloudReady=false;mmCloudOffline=true;mmAuthMessage('Refresh failed. Your device data and edits are kept. Choose Refresh & sync to retry. '+error.message);updateRecipeHeader();}
+  return {offline:true,error:error.message};
+ }).finally(()=>{mmRefreshPromise=null;if(button)button.disabled=false;});
+ mmRefreshPromise=run;mmSyncChain=run;return run;
 }
 function mmUseOfflineCache(userId){
   mmCloudReady=false;mmCloudOffline=true;mmHydrating=true;
@@ -357,7 +403,7 @@ function mmLoadCurrentAccountData(result){
   refreshLibrary(currentRecipeId);renderPriceBook();
 }
 function mmEnterApp(user,force=false){
-  if(!user)return Promise.resolve();
+  if(!user||mmRecoveryMode!=='none')return Promise.resolve();
   if(!mmAppBooted)return mmAppBootPromise.then(()=>mmEnterApp(user,force));
   if(mmEntryPromise&&mmEntryUserId===user.id)return mmEntryPromise;
   if(!force&&mmUser?.id===user.id&&document.body.classList.contains('mm-authenticated')&&(mmCloudReady||mmCloudOffline))return Promise.resolve();
@@ -369,13 +415,13 @@ function mmEnterApp(user,force=false){
     currentRecipeId=null;hasUnsavedChanges=false;
     let offlineAccess=false;
     await mmRefreshBillingMode(user.id);
-    if(mmUser?.id!==user.id)return;
+    if(mmUser?.id!==user.id||mmRecoveryMode!=='none')return;
     if(mmBillingEnabled){
       mmAuthMessage('Checking your subscription…');
       try{
         const {data,error}=await mmSupabase.rpc('menu_margin_has_paid_access');
         if(error)throw error;mmSaveAccessSnapshot(user.id,Boolean(data));
-        if(mmUser?.id!==user.id)return;
+        if(mmUser?.id!==user.id||mmRecoveryMode!=='none')return;
         if(!data){mmShowSubscriptionGate(user);return;}
       }catch(error){
         const recent=mmReadFreshAccess(user.id);
@@ -386,11 +432,11 @@ function mmEnterApp(user,force=false){
     let result;
     try{result=await mmLoadCloud(user.id);}
     catch(error){
-      if(mmUser?.id!==user.id)return;
+      if(mmUser?.id!==user.id||mmRecoveryMode!=='none')return;
       result=mmUseOfflineCache(user.id);
       mmAuthMessage('Offline mode — recipes and prices are available on this device. Changes are queued and will sync when online.');
     }
-    if(mmUser?.id!==user.id)return;
+    if(mmUser?.id!==user.id||mmRecoveryMode!=='none')return;
     document.body.classList.remove('mm-payment-required');document.getElementById('mmSubscriptionGate').hidden=true;
     document.body.classList.add('mm-authenticated');
     document.getElementById('mmAccountLabel').textContent='Signed in: '+(user.email||'your account');
@@ -400,7 +446,7 @@ function mmEnterApp(user,force=false){
     if(offlineAccess||mmCloudOffline)mmAuthMessage('Offline mode — local changes are safe here and will sync when the connection returns.');
     else mmAuthMessage('Signed in. Cloud sync is working.');
   })().catch(error=>{
-    if(mmUser?.id!==user.id)return;
+    if(mmUser?.id!==user.id||mmRecoveryMode!=='none')return;
     console.error('MenuMargin startup error:',error);
     mmCloudReady=false;document.body.classList.remove('mm-authenticated');
     mmAuthMessage('Could not open your account. Your device copy has not been cleared. Check the connection, then choose retry.');
@@ -446,15 +492,33 @@ function mmClearPrivateUi(){
   currentRecipeId=null;hasUnsavedChanges=false;mmCloudReady=false;mmCloudOffline=false;mmBillingEnabled=false;
   mmCloudBaselineRecipes=new Map();mmCloudBaselinePrices=new Map();mmCloudVersionsRecipes=new Map();mmCloudVersionsPrices=new Map();
 }
+function mmRemoveAccountDeviceCopy(userId){
+ const keys=[mmAccountCacheKey(MM_LIBRARY_KEY,userId),mmAccountCacheKey(MM_PRICEBOOK_KEY,userId),mmPendingKey(userId),mmManifestKey(userId),mmDraftKey(userId),mmAccessKey(userId),MM_BILLING_CONFIG_KEY+'::user:'+userId];
+ for(const key of keys)localStorage.removeItem(key);
+ if(localStorage.getItem(MM_LEGACY_CLAIM_KEY)===userId){
+  // Keep the owner marker: another account must never claim old private data.
+  for(const key of [MM_LIBRARY_KEY,MM_PRICEBOOK_KEY,'menumargin-recipe'])localStorage.removeItem(key);
+ }
+}
 async function mmSignOut(){
-  if(mmSigningOut)return;mmSigningOut=true;
-  try{
-    if(hasUnsavedChanges)mmSaveRecipeDraft();
-    if(mmCloudReady&&navigator.onLine)await mmSyncCloud().catch(error=>console.warn('Sync will resume after sign-in:',error));
-    await mmSupabase.auth.signOut({scope:'local'});
-    mmUser=null;mmEntryPromise=null;mmEntryUserId=null;mmClearPrivateUi();
-    mmAuthMessage('Signed out. This account’s data is hidden on this device.');
-  }finally{mmSigningOut=false;}
+ if(mmSigningOut)return;const userId=mmUser?.id;if(!userId)return;
+ const forget=document.getElementById('mmForgetDevice')?.checked===true;
+ if(forget&&hasUnsavedChanges){mmAuthMessage('Save your recipe before removing this device copy, then refresh & sync.');return;}
+ mmSigningOut=true;
+ try{
+  if(hasUnsavedChanges)mmSaveRecipeDraft();
+  if(mmCloudReady&&navigator.onLine)await mmSyncCloud().catch(()=>{});
+  if(forget&&(mmReadPending(userId).length||mmRawJson(mmDraftKey(userId),null)?.recipe)){
+   mmAuthMessage('Device copy kept: saved changes or a recovery draft still need attention. Save and sync them first, or sign out without removing the device copy.');return;
+  }
+  const {error}=await mmSupabase.auth.signOut({scope:'local'});if(error)throw error;
+  // The signed-out callback is suppressed while this operation owns cleanup.
+  mmUser=null;mmEntryPromise=null;mmEntryUserId=null;mmClearPrivateUi();
+  if(forget)mmRemoveAccountDeviceCopy(userId);
+  const checkbox=document.getElementById('mmForgetDevice');if(checkbox)checkbox.checked=false;
+  mmAuthMessage(forget?'Signed out. This account’s device copy was removed.':'Signed out. This account’s data is hidden; a device copy is kept for offline recovery.');
+ }catch(error){mmAuthMessage('Sign-out could not finish. '+error.message);}
+ finally{mmSigningOut=false;}
 }
 async function mmStartTrial(){
   const button=document.getElementById('mmStartTrial');button.disabled=true;document.getElementById('mmBillingMessage').textContent='Opening secure Stripe Checkout…';
@@ -468,7 +532,7 @@ async function mmManageBilling(button=document.getElementById('mmManageBilling')
 }
 
 document.getElementById('mmAuthForm').addEventListener('submit',async event=>{
-  event.preventDefault();const email=document.getElementById('mmEmail').value.trim(),password=document.getElementById('mmPassword').value;
+  event.preventDefault();if(mmRecoveryMode==='error'){mmRecoveryMode='none';mmRecoveryClearUrl();}const email=document.getElementById('mmEmail').value.trim(),password=document.getElementById('mmPassword').value;
   mmAuthMessage('Signing in…');const {error}=await mmSupabase.auth.signInWithPassword({email,password});if(error)mmAuthMessage(error.message);
 });
 document.getElementById('mmSignUp').addEventListener('click',async()=>{
@@ -477,27 +541,44 @@ document.getElementById('mmSignUp').addEventListener('click',async()=>{
   mmAuthMessage('Creating your account…');const {data,error}=await mmSupabase.auth.signUp({email,password,options:{emailRedirectTo:MM_AUTH_REDIRECT_URL}});
   if(error)mmAuthMessage(error.message);else if(!data.session)mmAuthMessage('Account created. Check your email for the confirmation link, then return here and sign in.');
 });
-document.getElementById('mmReset').addEventListener('click',async()=>{
-  const email=document.getElementById('mmEmail').value.trim();if(!email){mmAuthMessage('Enter your email address first, then choose Forgot password again.');return;}
-  mmAuthMessage('Sending password reset email…');const {error}=await mmSupabase.auth.resetPasswordForEmail(email,{redirectTo:MM_AUTH_REDIRECT_URL});
-  mmAuthMessage(error?error.message:'If that email is registered, a password reset link has been sent.');
-});
-document.getElementById('mmPasswordRecoveryForm').addEventListener('submit',async event=>{
-  event.preventDefault();const password=document.getElementById('mmNewPassword').value;
-  if(password.length<8){mmAuthMessage('Choose a password with at least 8 characters.');return;}
-  mmAuthMessage('Updating password…');const {error}=await mmSupabase.auth.updateUser({password});
-  if(error){mmAuthMessage('Could not update password: '+error.message);return;}
-  document.getElementById('mmPasswordRecoveryForm').hidden=true;document.getElementById('mmAuthForm').hidden=false;document.getElementById('mmNewPassword').value='';await mmSupabase.auth.signOut({scope:'local'});mmAuthMessage('Password updated. You can now sign in with your new password.');
-});
-document.getElementById('mmCancelPasswordRecovery').addEventListener('click',async()=>{
-  document.getElementById('mmPasswordRecoveryForm').hidden=true;document.getElementById('mmAuthForm').hidden=false;await mmSupabase.auth.signOut({scope:'local'});mmAuthMessage('Password reset cancelled. You can sign in normally.');
-});
-document.getElementById('mmSignOut').addEventListener('click',mmSignOut);
+const MM_RESET_COOLDOWN_KEY='menumargin-reset-email-cooldown-v1';
+let mmResetEmailSending=false,mmResetEmailUntil=0,mmResetEmailTimer=null;
+try{const value=Number(sessionStorage.getItem(MM_RESET_COOLDOWN_KEY));if(Number.isFinite(value)&&value>Date.now()&&value<Date.now()+61000)mmResetEmailUntil=value;}catch{}
+function mmRenderResetEmailButton(){
+ const button=document.getElementById('mmReset'),seconds=Math.max(0,Math.ceil((mmResetEmailUntil-Date.now())/1000));
+ button.disabled=mmResetEmailSending||seconds>0;
+ button.textContent=mmResetEmailSending?'Sending reset email…':seconds>0?`Resend cooldown (${seconds}s)`:'Forgot password?';
+ clearTimeout(mmResetEmailTimer);if(seconds>0)mmResetEmailTimer=setTimeout(mmRenderResetEmailButton,1000);
+}
+async function mmRequestPasswordReset(){
+ if(mmResetEmailSending)return;
+ if(Date.now()<mmResetEmailUntil){mmAuthMessage('Please wait for the resend cooldown. The email service may impose a longer sending limit.');return;}
+ const field=document.getElementById('mmEmail'),email=field.value.trim();
+ if(!email||!field.checkValidity()){mmAuthMessage('Enter a valid email address first, then choose Forgot password again.');return;}
+ mmResetEmailSending=true;mmResetEmailUntil=Date.now()+60000;
+ try{sessionStorage.setItem(MM_RESET_COOLDOWN_KEY,String(mmResetEmailUntil));}catch{}
+ mmRenderResetEmailButton();mmAuthMessage('Sending password reset email…');
+ try{
+  const {error}=await mmSupabase.auth.resetPasswordForEmail(email,{redirectTo:MM_PASSWORD_REDIRECT_URL});
+  if(error){
+   const emailLimit=String(error.code||'')==='over_email_send_rate_limit'||/email.*rate|rate.*email/i.test(String(error.message||''));
+   mmAuthMessage(emailLimit?'Email sending limit reached. The email service is temporarily blocking more messages. Wait for its sending quota to reset; the resend cooldown does not reset that quota. Your password has not changed.':error.status===429?'Too many requests. Wait and try again later. Your password has not changed.':error.message);
+  }else mmAuthMessage('If that email is registered, a password reset link has been sent. Use the newest email; wait before requesting another.');
+ }catch{mmAuthMessage('Could not request a reset email. Check the connection and try again after the cooldown.');}
+ finally{mmResetEmailSending=false;mmRenderResetEmailButton();}
+}
+document.getElementById('mmReset').addEventListener('click',mmRequestPasswordReset);
+mmRenderResetEmailButton();
+document.getElementById('mmPasswordRecoveryForm').addEventListener('submit',mmRecoverySubmit);
+document.getElementById('mmCancelPasswordRecovery').addEventListener('click',()=>mmRecoveryFinish('Password reset cancelled. You can sign in normally.'));
+document.getElementById('mmFinishRecoverySignOut').addEventListener('click',()=>mmRecoveryFinish('Recovery session closed. Sign in with your current password.'));
+document.getElementById('mmSignOut').addEventListener('click',()=>mmSignOut());
+document.getElementById('mmRefreshCloud')?.addEventListener('click',()=>mmRefreshCloud(true));
 document.getElementById('mmStartTrial').addEventListener('click',mmStartTrial);
 document.getElementById('mmManageBilling').addEventListener('click',()=>mmManageBilling());
 document.getElementById('mmManageBillingAccount').addEventListener('click',()=>mmManageBilling(document.getElementById('mmManageBillingAccount'),document.getElementById('mmCloudStatus')));
 document.getElementById('mmCheckBilling').addEventListener('click',()=>mmUser&&mmEnterApp(mmUser,true));
-document.getElementById('mmBillingSignOut').addEventListener('click',mmSignOut);
+document.getElementById('mmBillingSignOut').addEventListener('click',()=>mmSignOut());
 document.getElementById('mmRetryStartup').addEventListener('click',async()=>{const {data,error}=await mmSupabase.auth.getSession();if(error)mmAuthMessage('Could not reconnect: '+error.message);else if(data.session)await mmEnterApp(data.session.user,true);});
 document.addEventListener('input',event=>{if(event.target?.closest('#view-costing'))mmSaveRecipeDraftSoon();});
 document.addEventListener('change',event=>{if(event.target?.closest('#view-costing'))mmSaveRecipeDraftSoon();});
@@ -512,15 +593,24 @@ window.addEventListener('pagehide',()=>{
   if(mmCloudReady)mmSyncCloud().catch(()=>{});
 });
 document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState!=='hidden')return;
+  if(document.visibilityState!=='hidden'){if(document.body.classList.contains('mm-authenticated'))mmRefreshCloud();return;}
   mmPersistBeforeLeave();
   if(mmCloudReady)mmSyncCloud().catch(()=>{});
 });
-window.addEventListener('online',()=>{if(mmUser){mmAuthMessage('Connection restored. Merging local changes and syncing…');mmEnterApp(mmUser,true);}});
+window.addEventListener('online',()=>{if(mmUser)mmRefreshCloud(true);});
+window.addEventListener('focus',()=>{if(document.body.classList.contains('mm-authenticated'))mmRefreshCloud();});
+window.addEventListener('storage',event=>{
+  if(!mmUser)return;
+  if(event.key===mmAccountCacheKey(MM_PRICEBOOK_KEY,mmUser.id)&&typeof mmRefreshRecipePrices==='function'){
+    mmRefreshRecipePrices();renderPriceBook();refreshLibrary(currentRecipeId);
+  }
+});
 mmSupabase.auth.onAuthStateChange((event,session)=>{
   if(event==='PASSWORD_RECOVERY'){
-    document.getElementById('mmAuthForm').hidden=true;document.getElementById('mmPasswordRecoveryForm').hidden=false;mmAuthMessage('Enter a new password below.');return;
+    mmRecoveryStart(session);return;
   }
+  if(event==='SIGNED_OUT'&&mmRecoveryMode!=='none'){mmUser=null;if(mmRecoveryMode==='editing')mmRecoveryShowError('The recovery session ended. Request a fresh reset link.');return;}
+  if(mmRecoveryMode!=='none')return;
   if(event==='SIGNED_OUT'&&!mmSigningOut){mmUser=null;if(mmAppBooted)mmClearPrivateUi();}
   if(session&&['INITIAL_SESSION','SIGNED_IN','TOKEN_REFRESHED','USER_UPDATED'].includes(event)){
     Promise.resolve().then(()=>mmEnterApp(session.user));
@@ -530,7 +620,8 @@ mmSupabase.auth.onAuthStateChange((event,session)=>{
   try{
     const {data,error}=await mmSupabase.auth.getSession();
     if(error)throw error;
+    if(await mmRecoveryCheckInitial(data.session))return;
     if(data.session)await mmEnterApp(data.session.user);
     else mmAuthMessage('Enter your email and password to sign in, or create a new account.');
-  }catch(error){mmAuthMessage('Sign-in service unavailable. Reconnect to sign in; this device’s saved data remains intact.');}
+  }catch(error){if(mmRecoveryRequested){mmRecoveryShowError('Could not verify this reset link. Reconnect and request a fresh reset email.');return;}mmAuthMessage('Sign-in service unavailable. Reconnect to sign in; this device’s saved data remains intact.');}
 })();

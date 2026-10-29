@@ -6,7 +6,7 @@ import test from 'node:test';
 import vm from 'node:vm';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const source = (await readFile(resolve(root, 'js/pricebook.js'), 'utf8')) +
+const source = (await readFile(resolve(root, 'js/pricing.js'), 'utf8'))+'\n'+(await readFile(resolve(root, 'js/pricebook.js'), 'utf8')) +
   '\n' + (await readFile(resolve(root, 'js/invoice.js'), 'utf8'));
 
 function createReviewApi() {
@@ -16,7 +16,7 @@ function createReviewApi() {
     return elements.get(id);
   };
   $('invoiceSupplier').value = 'Bidfood';
-  const api = vm.runInNewContext(source + '\n({invoicePrepareRow,invoiceFindMatches,invoiceNameSimilarity,invoiceRowIssues,invoiceValidateImport,invoiceSetWeight,importInvoiceReview,mmPriceHistoryForUpdate,invoiceCurrentValidation,seed:(result,states)=>{invoiceScanResult=result;invoiceReviewStates=states}})', {
+  const api = vm.runInNewContext(source + '\n({invoicePrepareRow,invoiceFindMatches,invoiceRowIssues,invoiceValidateImport,invoiceSetWeight,importInvoiceReview,mmPriceHistoryForUpdate,invoiceCurrentValidation,seed:(result,states)=>{invoiceScanResult=result;invoiceReviewStates=states}})', {
     $, document: { getElementById: $, querySelectorAll() { return []; } }, window: {}, console, URL, Blob, setTimeout, clearTimeout
   });
   return { api, $ };
@@ -59,16 +59,24 @@ test('exact supplier codes match while different known codes cannot fuzzy-match'
   assert.equal(api.invoiceFindMatches(state, [{ ...old, supplier: 'Another supplier' }]).exact, null);
 });
 
-test('close names remain suggestions and duplicated supplier codes require an existing-item choice', () => {
+test('non-exact names are never update suggestions and duplicate exact names require a choice', () => {
   const { api } = createReviewApi();
   const state = api.invoicePrepareRow({ ...basic(), productCode: '', description: 'Haddock fillets' }, 0), old = existing();
   const fuzzy = api.invoiceFindMatches(state, [old]);
   assert.equal(fuzzy.exact, null);
-  assert.equal(fuzzy.close[0].id, 'p1');
-  const duplicate = api.invoiceFindMatches({ ...state, productCode: '123' }, [old, { ...old, id: 'p2' }]);
+  assert.equal(fuzzy.close.length,0);
+  const duplicate = api.invoiceFindMatches({ ...state, description:old.name, productCode: '123' }, [old, { ...old, id: 'p2' }]);
   assert.equal(duplicate.exact, null);
   assert.equal(duplicate.requiresExisting, true);
   assert.equal(duplicate.close.length, 2);
+});
+test('a matching supplier code does not bypass exact-name matching',()=>{
+ const {api}=createReviewApi(),old=existing();
+ for(const description of ['Haddock fillets','Haddock fillet!','Haddock fillet smoked']){
+  const match=api.invoiceFindMatches(api.invoicePrepareRow({...basic(),description},0),[old]);
+  assert.equal(match.exact,null);assert.equal(match.close.length,0);assert.equal(match.blockedName,true);
+ }
+ assert.equal(api.invoiceFindMatches(api.invoicePrepareRow({...basic(),description:' HADDOCK   FILLET '},0),[old]).exact.id,'p1');
 });
 
 test('loose-item and weighed purchases use the amount actually priced', () => {

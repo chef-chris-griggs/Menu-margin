@@ -13,7 +13,7 @@ const server=http.createServer(async(req,res)=>{
     const url=new URL(req.url,'http://localhost');if(req.method!=='GET'||!url.pathname.startsWith(prefix))throw new Error('Invalid request');
     if(url.pathname===prefix+'qa'){res.writeHead(200,{'content-type':'text/html'});res.end(`<!doctype html><script src="${prefix}vendor/scanner/client.js"></script>`);return;}
     const relative=decodeURIComponent(url.pathname.slice(prefix.length))||'index.html';
-    if(!/^(?:index\.html|sw\.js|styles\.css|manifest\.webmanifest|icons\/|js\/|styles\/|vendor\/|samples\/IMG_2384\.HEIC$)/.test(relative))throw new Error('Not an app asset');
+    if(!/^(?:index\.html|privacy\.html|help\.html|terms\.html|sw\.js|styles\.css|manifest\.webmanifest|icons\/|js\/|styles\/|vendor\/|samples\/IMG_2384\.HEIC$)/.test(relative))throw new Error('Not an app asset');
     const file=path.resolve(root,relative);if(!file.startsWith(root+path.sep))throw new Error('Invalid path');
     const bytes=await readFile(file);res.writeHead(200,{'content-type':types[path.extname(file)]||'application/octet-stream'});res.end(bytes);
   }catch{res.writeHead(404);res.end('Not found');}
@@ -38,6 +38,10 @@ try{
   const cached=await page.evaluate(async prefix=>{const cachesNames=await caches.keys();const legacy=await caches.open('menumargin-shell-v1.0.5');if(await(await legacy.match('/Menu-margin/live-cache-sentinel'))?.text()!=='LIVE APP')throw new Error('Preview damaged the live cache.');const cache=await caches.open(cachesNames.find(n=>n.startsWith('menumargin-shell-'+encodeURIComponent(prefix)+'-')));return (await cache.keys()).map(r=>new URL(r.url).pathname);},prefix);
   for(const name of ['scanner.worker.js','ort-wasm-simd-threaded.wasm','PP-OCRv5_mobile_det_onnx_infer.tar','en_PP-OCRv5_mobile_rec_onnx_infer.tar'])assert.ok(cached.some(p=>p.endsWith(name)),`${name} cached`);
   assert.equal(cached.some(p=>p.includes('/samples/')),false);console.log('PASS: models/runtime cached; invoice photo is absent from HTTP cache; live-app cache preserved.');
+  const legal=await context.newPage();await legal.goto(origin+prefix+'privacy.html');
+  assert.match(await legal.locator('h1').textContent(),/information in MenuMargin/);await legal.close();
+  const appShell=await page.evaluate(async prefix=>{const names=await caches.keys(),cache=await caches.open(names.find(name=>name.startsWith('menumargin-shell-'+encodeURIComponent(prefix)+'-')));return (await cache.match(prefix+'index.html')).text();},prefix);
+  assert.ok(appShell.includes('id="recipeHeading"'));console.log('PASS: opening privacy information does not overwrite the cached app home.');
   await page.evaluate(()=>MenuMarginScanner.reset());
   // Playwright's WebKit setOffline emulation blocks even new Blob(['test'])
   // arrayBuffer() with NotReadableError. Stop the only HTTP origin instead so
@@ -46,6 +50,7 @@ try{
   if(browserName==='webkit'){server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}else await context.setOffline(true);
   const offline=await page.evaluate(async()=>{const r=await MenuMarginScanner.scanFile(window.invoice,{onProgress:message=>console.log('OFFLINE:',message)});return r.rows.map(row=>[row.productCode,row.quantity,row.unitPrice,row.lineTotal]);});
   assert.deepEqual(offline,online);console.log('PASS: fresh OCR worker scans the same HEIC with '+offlineMode+'.');
+  const help=await context.newPage();await help.goto(origin+prefix+'help.html');assert.match(await help.locator('h1').textContent(),/Help with MenuMargin/);await help.close();console.log('PASS: support information opens from the offline cache.');
   await page.evaluate(async()=>{
     MenuMarginScanner.reset();const controller=new AbortController();
     const pending=MenuMarginScanner.scanFile(window.invoice,{signal:controller.signal,onProgress:()=>controller.abort()});

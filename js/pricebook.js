@@ -1,6 +1,6 @@
 let editingPriceId=null;
 function readPriceBook(){if(!mmUser)return [];try{const x=mmReadUserCache(MM_PRICEBOOK_KEY,mmUser.id);return Array.isArray(x)?x.filter(i=>i&&i.id):[]}catch(e){return []}}
-function writePriceBook(items){mmWriteUserCache(MM_PRICEBOOK_KEY,items,mmUser?.id)}
+function writePriceBook(items){if(typeof mmPreserveRecipePriceLinks==='function')mmPreserveRecipePriceLinks();mmWriteUserCache(MM_PRICEBOOK_KEY,items,mmUser?.id);if(typeof mmRefreshRecipePrices==='function')mmRefreshRecipePrices()}
 function unitBaseSize(size,unit){const factors={kg:1000,g:1,l:1000,ml:1,each:1};return Number(size)*factors[unit||'g']}
 function baseUnit(unit){return unit==='kg'||unit==='g'?'g':unit==='l'||unit==='ml'?'ml':'each'}
 function pbMoney(n){return money(Number(n)||0)}
@@ -39,13 +39,13 @@ function renderPriceBook(){
 function exportPriceBookCsv(){
  const items=readPriceBook();
  if(!items.length){pbToast('There are no supplier prices to export yet.');return}
- const lines=[['Ingredient','Supplier','Supplier product code','Items per case','Size per item','Unit','Total case size','Total case price (£)','Price per item (£)','Normalized price unit','Price per kg / litre / each (£)','Updated']];
+ const lines=[['Ingredient','Supplier','Supplier product code','Items per case','Size per item','Unit','Total case size','Total case price (£)','Price per item (£)','Normalized price unit','Price per kg / litre / each (£)','VAT basis','Updated']];
  items.forEach(item=>{
   const count=Math.max(1,Number(item.caseCount)||1),size=Number(item.unitPackSize)||Number(item.sourcePackSize)||Number(item.packBase)||0;
   const unit=item.unitPackUnit||item.sourceUnit||item.baseUnit||'each',casePrice=Number(item.price)||0;
   const totalSize=Number(item.sourcePackSize)||size*count,normalized=item.baseUnit||baseUnit(unit),perBase=casePrice/(Number(item.packBase)||unitBaseSize(totalSize,unit)||1);
   const rateUnit=normalized==='g'?'kg':normalized==='ml'?'litre':'each',rate=perBase*(normalized==='each'?1:1000);
-  lines.push([item.name,item.supplier,item.code||'',count,size,unit,totalSize,casePrice.toFixed(2),(casePrice/count).toFixed(2),rateUnit,rate.toFixed(2),item.updatedAt||'']);
+  lines.push([item.name,item.supplier,item.code||'',count,size,unit,totalSize,casePrice.toFixed(2),(casePrice/count).toFixed(2),rateUnit,rate.toFixed(2),item.priceBasis||'unknown',item.updatedAt||'']);
  });
  const csv=lines.map(row=>row.map(escapeCsv).join(',')).join('\r\n'),blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');
  a.href=url;a.download=`menumargin-price-book-${new Date().toISOString().slice(0,10)}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);pbToast(`${items.length} supplier price${items.length===1?'':'s'} exported.`);
@@ -77,23 +77,29 @@ function savePriceEntry(event){
  const totalSize=eachSize*caseCount;if(!Number.isFinite(totalSize)){pbToast('That case size is too large. Check the quantity and item size.');return}
  const items=readPriceBook();
  let idx=editingPriceId?items.findIndex(i=>i.id===editingPriceId):-1;
- if(idx<0&&code)idx=items.findIndex(i=>mmNormalizeProductKey(i.supplier)===mmNormalizeProductKey(supplier)&&mmNormalizeProductKey(i.code)===mmNormalizeProductKey(code));
- if(idx<0)idx=items.findIndex(i=>mmNormalizeProductKey(i.supplier)===mmNormalizeProductKey(supplier)&&mmNormalizeProductKey(i.name)===mmNormalizeProductKey(name)&&(!code||!mmNormalizeProductKey(i.code)));
+ if(idx<0){
+  const supplierItems=items.filter(i=>mmNormalizeProductKey(i.supplier)===mmNormalizeProductKey(supplier));
+  const sameCode=code?supplierItems.filter(i=>mmNormalizeProductKey(i.code)===mmNormalizeProductKey(code)):[];
+  if(sameCode.some(i=>mmExactIngredientName(i.name)!==mmExactIngredientName(name))){pbToast('This supplier code has a different ingredient name. Use Edit price on that item to change it deliberately.');return;}
+  const matches=supplierItems.filter(i=>mmExactIngredientName(i.name)===mmExactIngredientName(name)&&(!code||!i.code||mmNormalizeProductKey(i.code)===mmNormalizeProductKey(code)));
+  if(matches.length>1){pbToast('More than one supplier item has this exact name. Choose Edit price on the item you want to change.');return;}
+  if(matches.length===1)idx=items.findIndex(i=>i.id===matches[0].id);
+ }
  const id=idx>=0?items[idx].id:mmNewUuid();
  const previous=idx>=0?items[idx]:null;
- const entry={...(previous||{}),id,name,supplier,code:code||(previous?.code||''),packBase:unitBaseSize(totalSize,unit),baseUnit:baseUnit(unit),price,priceBasis:previous?.priceBasis||'unknown',sourcePackSize:totalSize,sourceUnit:unit,caseCount,unitPackSize:eachSize,unitPackUnit:unit,updatedAt:new Date().toISOString(),priceSource:{type:'manual'}};
+ const entry={...(previous||{}),id,name,supplier,code:code||(previous?.code||''),packBase:unitBaseSize(totalSize,unit),baseUnit:baseUnit(unit),price,priceBasis:$('pbPriceBasis').value,sourcePackSize:totalSize,sourceUnit:unit,caseCount,unitPackSize:eachSize,unitPackUnit:unit,updatedAt:new Date().toISOString(),priceSource:{type:'manual'}};
  entry.priceHistory=mmPriceHistoryForUpdate(previous,entry,'manual');
  if(idx>=0)items[idx]=entry;else items.push(entry);
- try{writePriceBook(items);clearPriceForm();renderPriceBook();pbToast(idx>=0?'This supplier item already existed, so its case price was updated. Existing recipes keep their saved prices.':'Ingredient saved to your price book.');}
+ try{writePriceBook(items);clearPriceForm();renderPriceBook();pbToast(idx>=0?'Supplier price updated. Recipes linked by exact ingredient name use the current price.':'Ingredient saved to your price book. Exact-name recipe matches use this price.');}
  catch(e){pbToast('Could not save the price book. Export important recipes and check browser storage.');}
 }
-function editPriceEntry(id){const item=readPriceBook().find(i=>i.id===id);if(!item)return;editingPriceId=id;const count=Math.max(1,Number(item.caseCount)||1),unit=item.unitPackUnit||item.sourceUnit||item.baseUnit||'g';let each=Number(item.unitPackSize)||Number(item.sourcePackSize)||Number(item.packBase)||1;if(!item.unitPackSize&&count>1)each=Number(item.sourcePackSize||item.packBase)/count;$('pbName').value=item.name;$('pbSupplier').value=item.supplier;$('pbCode').value=item.code||'';$('pbCaseQty').value=count;$('pbPack').value=each;$('pbUnit').value=unit;$('pbPrice').value=item.price;$('pbSave').textContent='Save price changes';$('pbName').focus();$('pricebookForm').scrollIntoView({behavior:'smooth',block:'center'});pbToast('The price field is the total for the full case. Existing recipes keep their saved prices.');}
+function editPriceEntry(id){const item=readPriceBook().find(i=>i.id===id);if(!item)return;editingPriceId=id;const count=Math.max(1,Number(item.caseCount)||1),unit=item.unitPackUnit||item.sourceUnit||item.baseUnit||'g';let each=Number(item.unitPackSize)||Number(item.sourcePackSize)||Number(item.packBase)||1;if(!item.unitPackSize&&count>1)each=Number(item.sourcePackSize||item.packBase)/count;$('pbName').value=item.name;$('pbSupplier').value=item.supplier;$('pbCode').value=item.code||'';$('pbCaseQty').value=count;$('pbPack').value=each;$('pbUnit').value=unit;$('pbPrice').value=item.price;$('pbPriceBasis').value=item.priceBasis||'unknown';$('pbSave').textContent='Save price changes';$('pbName').focus();$('pricebookForm').scrollIntoView({behavior:'smooth',block:'center'});pbToast('Enter the total case price. Exact-name linked recipes use the current supplier price.');}
 function deletePriceEntry(id){const item=readPriceBook().find(i=>i.id===id);if(!item)return;if(!confirm(`Delete ${item.name} from your price book? Existing recipes will not be changed.`))return;try{writePriceBook(readPriceBook().filter(i=>i.id!==id));renderPriceBook();pbToast('Ingredient removed from the price book. Existing recipes are unchanged.')}catch(e){pbToast('Could not delete this price-book item.')}}
 function addPriceToRecipe(item){
- // Add a snapshot of the current supplier price, then take the user to the recipe editor.
+ // Store the exact supplier-item link so later confirmed prices flow through.
  const rows=[...$('ingredients').querySelectorAll('tr')];
  const empty=rows.find(tr=>!tr.querySelector('.ingredient').value.trim()&&!tr.querySelector('.qty').value&&!tr.querySelector('.pack').value&&!tr.querySelector('.price').value);
- const data={name:item.name,qty:'',qtyUnit:item.baseUnit||'g',pack:item.packBase,packUnit:item.baseUnit||'g',price:item.price};
+ const data={name:item.name,qty:'',qtyUnit:item.baseUnit||'g',pack:item.packBase,packUnit:item.baseUnit||'g',price:item.price,priceBookId:item.id,priceLinkMode:'linked'};
  let row;
  if(empty){
   empty.querySelector('.ingredient').value=data.name;
@@ -102,6 +108,7 @@ function addPriceToRecipe(item){
   empty.querySelector('.qty-unit').value=data.qtyUnit;
   empty.querySelector('.pack-unit').value=data.packUnit;
   empty.querySelector('.price').value=data.price;
+  empty.dataset.priceBookId=item.id;empty.dataset.priceLinkMode='linked';
   row=empty;
  }else{
   addRow(data);
@@ -115,7 +122,7 @@ function addPriceToRecipe(item){
   requestAnimationFrame(()=>{qty.focus({preventScroll:true});qty.scrollIntoView({behavior:'smooth',block:'center'});});
  }
  showToast(`${item.name} added to your recipe using ${item.supplier}'s current pack price. Choose the quantity unit, enter the amount used, then save the recipe.`);
- pbToast(`${item.name} added to the recipe. Its copied price won't change if you update the price book later.`);
+ pbToast(`${item.name} is linked to this supplier item. Confirmed price changes update recipes whose ingredient name matches exactly.`);
 }
 $('pricebookForm').addEventListener('submit',savePriceEntry);
 $('pbSearch').addEventListener('input',renderPriceBook);

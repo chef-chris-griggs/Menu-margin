@@ -15,7 +15,10 @@
 <link rel="apple-touch-icon" href="./icons/icon-180.png">
 <link rel="stylesheet" href="./styles.css?v=1.0.5">
 <link rel="stylesheet" href="./styles/invoice-scanner.css?v=2">
+<link rel="stylesheet" href="./styles/recipe-price-links.css?v=2.1.1">
+<link rel="stylesheet" href="./styles/account.css?v=2.1.1">
 <script src="./vendor/supabase/supabase.js"></script>
+<script src="./js/site-config.js?v=2.1.1" defer></script>
 </head>
 <body data-active-view="costing">
 <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -45,8 +48,10 @@
   <form id="mmPasswordRecoveryForm" hidden>
     <h2>Choose a new password</h2>
     <div class="mm-field"><label for="mmNewPassword">New password</label><input id="mmNewPassword" type="password" autocomplete="new-password" minlength="8" required placeholder="At least 8 characters"></div>
-    <div class="mm-actions"><button type="submit">Update password</button><button type="button" class="secondary" id="mmCancelPasswordRecovery">Cancel</button></div>
+    <div class="mm-field"><label for="mmConfirmPassword">Confirm new password</label><input id="mmConfirmPassword" type="password" autocomplete="new-password" minlength="8" required></div>
+    <div class="mm-actions"><button type="submit" id="mmUpdatePassword">Update password</button><button type="button" id="mmFinishRecoverySignOut" hidden>Finish sign out</button><button type="button" class="secondary" id="mmCancelPasswordRecovery">Cancel</button></div>
   </form>
+  <p class="customer-links">By creating an account, you agree to the <a href="./terms.html">terms</a>. Read our <a href="./privacy.html">privacy information</a> and <a href="./help.html">contact support</a>.</p>
   <div id="mmAuthMessage" role="status" aria-live="polite">Connecting to your account…</div>
   <button type="button" id="mmRetryStartup" class="secondary" hidden>Retry opening MenuMargin</button>
 </section>
@@ -67,6 +72,7 @@
     <span id="mmCloudStatus" class="cloud-status" role="status">Checking sync…</span>
     <button type="button" id="mmInstallApp" class="header-action secondary" hidden>Install app</button>
     <button type="button" id="mmManageBillingAccount" class="header-action secondary" hidden>Manage billing</button>
+    <button type="button" id="mmRefreshCloud" class="header-action secondary">Refresh &amp; sync</button>
     <button type="button" id="mmSignOut" class="signout-button"><svg><use href="#icon-logout"/></svg><span>Sign out</span></button>
   </div>
 </header>
@@ -81,6 +87,13 @@
 </nav>
 
 <main id="appMain">
+  <details class="panel account-settings">
+    <summary>Account &amp; privacy</summary>
+    <p id="mmDeviceCopyNote">This browser keeps an account-specific device copy for offline recovery. It is not encrypted by MenuMargin.</p>
+    <label class="device-option"><input type="checkbox" id="mmForgetDevice"> Remove this account’s device copy when I sign out</label>
+    <p class="hint">Save and sync changes first. Removal is blocked while unsynced changes or recovery drafts remain. It does not delete your cloud account or other accounts on this device.</p>
+    <p class="customer-links"><a href="./help.html">Help &amp; contact</a> · <a href="./privacy.html">Privacy</a> · <a href="./terms.html">Terms</a> · <a href="./help.html#account-deletion">Request account deletion</a></p>
+  </details>
   <section id="view-costing" class="app-view" role="tabpanel" aria-labelledby="tab-costing">
     <div class="page-heading recipe-page-heading">
       <div><h1 id="recipeHeading">New recipe</h1><p id="recipeStateCaption" class="page-subtitle">Not saved yet</p></div>
@@ -122,10 +135,10 @@
         </div>
         <div class="target"><div><div class="eyebrow">Price for target GP</div><div class="big" id="targetPrice">£0.00</div></div><button type="button" class="secondary" id="useTarget">Use price</button></div>
         <div class="status" id="status">Add ingredients to see your GP.</div>
-        <p class="hint">Selling price is excluding VAT. GP is after food cost, before labour, overheads and waste.</p>
+        <p id="vatCostingNote" class="hint">Ingredient costs use the amounts entered; MenuMargin does not deduct VAT. Check the VAT labels before relying on GP. Selling price is excluding VAT. GP is after food cost, before labour, overheads and waste.</p>
       </aside>
     </div>
-    <p class="footer-note">MenuMargin 1.0.0 · Check supplier prices before service.</p>
+    <p class="footer-note">MenuMargin 2.1.3 candidate · Check supplier prices before service.</p>
   </section>
 
   <section id="view-recipes" class="app-view" role="tabpanel" aria-labelledby="tab-recipes" hidden>
@@ -157,6 +170,7 @@
         <div class="field"><label for="pbPack">Size per item</label><input id="pbPack" type="number" inputmode="decimal" min="0.001" step="any" placeholder="e.g. 850" required></div>
         <div class="field"><label for="pbUnit">Item unit</label><select id="pbUnit"><option value="g">g</option><option value="kg">kg</option><option value="ml">ml</option><option value="l">litres</option><option value="each">each</option></select></div>
         <div class="field"><label for="pbPrice">Case price (£)</label><input id="pbPrice" type="number" inputmode="decimal" min="0" step="0.01" placeholder="e.g. 24.00" required></div>
+        <div class="field"><label for="pbPriceBasis">VAT basis of this price</label><select id="pbPriceBasis"><option value="unknown">Not confirmed</option><option value="ex_vat">Excluding VAT</option><option value="inc_vat">Including VAT</option></select></div>
         <button type="submit" id="pbSave">Save price</button>
       </form>
       <p class="unit-note">Enter the total price for the full case. MenuMargin divides it across the case contents when costing a recipe.</p>
@@ -222,11 +236,14 @@
 window.addEventListener('error',event=>{const box=document.getElementById('mmGlobalError');if(!box)return;box.hidden=false;box.textContent='MenuMargin could not load part of the app. Reload this page; your saved device data is unchanged. Details: '+(event.message||'A script could not start.');},true);
 window.addEventListener('unhandledrejection',event=>{const box=document.getElementById('mmGlobalError');if(!box)return;box.hidden=false;box.textContent='A MenuMargin operation failed. Your local changes are kept. Details: '+String(event.reason?.message||event.reason||'unknown error');});
 </script>
-<script src="./js/auth.js?v=2.0.0-scanner"></script>
-<script src="./js/recipe.js?v=2.0.0-scanner"></script>
-<script src="./js/pricebook.js?v=2.0.0-scanner"></script>
+<script src="./js/cloud-data.js?v=2.1.1"></script>
+<script src="./js/pricing.js?v=2.1.0"></script>
+<script src="./js/auth-recovery.js?v=2.1.2"></script>
+<script src="./js/auth.js?v=2.1.3-email"></script>
+<script src="./js/recipe.js?v=2.1.1-launch"></script>
+<script src="./js/pricebook.js?v=2.1.1-launch"></script>
 <script src="./vendor/scanner/client.js?v=2.0.0-scanner"></script>
-<script src="./js/invoice.js?v=2.0.0-scanner"></script>
-<script src="./js/startup.js?v=2.0.0-scanner"></script>
+<script src="./js/invoice.js?v=2.1.1-launch"></script>
+<script src="./js/startup.js?v=2.1.3-email"></script>
 </body>
 </html>
