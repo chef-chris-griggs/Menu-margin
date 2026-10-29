@@ -15,7 +15,7 @@ class AppFiles(SimpleHTTPRequestHandler):
 
     def send_head(self):
         path = urllib.parse.unquote(urllib.parse.urlsplit(self.path).path).lstrip('/')
-        allowed = path in ('', 'index.html', 'styles.css', 'sw.js', 'manifest.webmanifest') or path.startswith(('js/', 'styles/', 'icons/', 'vendor/'))
+        allowed = path in ('', 'index.html', 'styles.css', 'sw.js', 'manifest.webmanifest', 'privacy.html', 'help.html', 'terms.html') or path.startswith(('js/', 'styles/', 'icons/', 'vendor/'))
         resolved = (ROOT / path).resolve()
         if not allowed or not resolved.is_relative_to(ROOT):
             self.send_error(404)

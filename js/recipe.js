@@ -27,18 +27,20 @@ let currentRecipeId=null;
 let hasUnsavedChanges=false;
 let toastTimer=null;
 let recipesToastTimer=null;
+let mmLoadingRecipe=false;
 
 function updateRecipeHeader(){
   const name=$('recipeName').value.trim();
   $('recipeHeading').textContent=name||'New recipe';
-  $('recipeStateCaption').textContent=hasUnsavedChanges?'Changes not saved':currentRecipeId?(mmCloudReady?'Saved to your account':'Saved on this device'):'Not saved yet';
+  $('recipeStateCaption').textContent=hasUnsavedChanges?'Changes not saved':currentRecipeId?(mmCloudReady&&typeof mmReadPending==='function'&&!mmReadPending(mmUser?.id).some(item=>item.kind==='recipes'&&item.id===currentRecipeId)?'Saved to your account':'Saved on this device — waiting to sync'):'Not saved yet';
 }
 
 function readLibrary(){
   if(!mmUser)return [];
   try{
     const value=mmReadUserCache(MM_LIBRARY_KEY,mmUser.id);
-    return Array.isArray(value)?value.filter(r=>r&&typeof r==='object'&&r.id):[];
+    const index=mmBuildPriceIndex(readPriceBook());
+    return Array.isArray(value)?value.filter(r=>r&&typeof r==='object'&&r.id).map(recipe=>mmResolveRecipePrices(recipe,index)):[];
   }catch(e){return []}
 }
 function writeLibrary(items){
@@ -98,10 +100,15 @@ function downloadAccountBackup(){
 function mmBackupUuid(value){return typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)?value:mmNewUuid()}
 function mmBackupRecipe(value){
   if(!value||typeof value!=='object'||Array.isArray(value))return null;
+  if(!Array.isArray(value.ingredients)||value.ingredients.length>1000)return null;
   const ingredients=Array.isArray(value.ingredients)?value.ingredients.slice(0,1000).map(item=>({
     name:String(item?.name||'').slice(0,300),qty:Math.max(0,Number(item?.qty)||0),qtyUnit:['g','kg','ml','l','each'].includes(item?.qtyUnit)?item.qtyUnit:'g',
     pack:Math.max(0,Number(item?.pack)||0),packUnit:['g','kg','ml','l','each'].includes(item?.packUnit)?item.packUnit:'g',
-    price:Math.max(0,Number(item?.price)||0),priceEntered:item?.priceEntered===true||(item?.priceEntered==null&&item?.price!==undefined&&item?.price!==null&&item?.price!=='')
+    price:Math.max(0,Number(item?.price)||0),priceEntered:item?.priceEntered===true||(item?.priceEntered==null&&item?.price!==undefined&&item?.price!==null&&item?.price!==''),
+    priceBookId:typeof item?.priceBookId==='string'?item.priceBookId.slice(0,150):null,
+    priceLinkMode:['auto','linked','manual'].includes(item?.priceLinkMode)?item.priceLinkMode:'auto',
+    priceBasis:['ex_vat','inc_vat'].includes(item?.priceBasis)?item.priceBasis:'unknown',
+    priceBookUpdatedAt:typeof item?.priceBookUpdatedAt==='string'?item.priceBookUpdatedAt.slice(0,100):null
   })):[];
   return {id:mmBackupUuid(value.id),name:String(value.name||'Untitled recipe').slice(0,300),yield:Math.max(1,Math.floor(Number(value.yield)||1)),sellingPrice:Math.max(0,Number(value.sellingPrice)||0),targetGp:Math.min(99.9,Math.max(1,Number(value.targetGp)||70)),ingredients,updatedAt:new Date(Date.parse(value.updatedAt)||Date.now()).toISOString()};
 }
@@ -116,7 +123,8 @@ function mmBackupPrice(value){
   const price=Number(value.price),packBase=Number(value.packBase),caseCount=Math.floor(Number(value.caseCount)||1),unitPackSize=Number(value.unitPackSize)||Number(value.sourcePackSize)||0;
   const name=String(value.name||'').trim(),supplier=String(value.supplier||'').trim();
   if(!name||!supplier||!unit||!Number.isFinite(price)||price<0||!Number.isFinite(packBase)||packBase<=0||!Number.isFinite(unitPackSize)||unitPackSize<=0)return null;
-  return {id:mmBackupUuid(value.id),name:name.slice(0,300),supplier:supplier.slice(0,200),code:String(value.code||'').slice(0,120),packBase,baseUnit:['g','kg'].includes(value.baseUnit)?'g':['ml','l'].includes(value.baseUnit)?'ml':'each',price,sourcePackSize:Math.max(0,Number(value.sourcePackSize)||packBase),sourceUnit:unit,caseCount:Math.max(1,caseCount),unitPackSize,unitPackUnit:unit,updatedAt:new Date(Date.parse(value.updatedAt)||Date.now()).toISOString()};
+  const priceHistory=(Array.isArray(value.priceHistory)?value.priceHistory:[]).filter(row=>row&&typeof row==='object'&&row.price!==null&&Number.isFinite(Number(row.price))&&Number(row.price)>=0).map(row=>({...row,price:Number(row.price)}));
+  return {id:mmBackupUuid(value.id),name:name.slice(0,300),supplier:supplier.slice(0,200),code:String(value.code||'').slice(0,120),packBase,baseUnit:['g','kg'].includes(value.baseUnit)?'g':['ml','l'].includes(value.baseUnit)?'ml':'each',price,priceBasis:['ex_vat','inc_vat'].includes(value.priceBasis)?value.priceBasis:'unknown',priceHistory,priceSource:value.priceSource&&typeof value.priceSource==='object'?{...value.priceSource}:null,sourcePackSize:Math.max(0,Number(value.sourcePackSize)||packBase),sourceUnit:unit,caseCount:Math.max(1,caseCount),unitPackSize,unitPackUnit:unit,updatedAt:new Date(Date.parse(value.updatedAt)||Date.now()).toISOString()};
 }
 function mmBackupRecordKey(item){
   const normalize=value=>String(value||'').normalize('NFKC').trim().toLocaleLowerCase('en-GB').replace(/\s+/g,' ');
@@ -139,24 +147,31 @@ async function restoreAccountBackup(file){
   if(!accepted)return;
   let recipeCopies=0,priceCopies=0,priceMatches=0;
   const recipes=[...currentRecipes],recipeById=new Map(recipes.map(item=>[item.id,item]));
+  const prices=[...currentPrices],priceByProduct=new Map(prices.map(item=>[mmBackupRecordKey(item),item])),priceById=new Map(prices.map(item=>[item.id,item])),restoredPriceIds=new Map();
+  for(const incoming of incomingPrices){
+    const productKey=mmBackupRecordKey(incoming),sameProduct=priceByProduct.get(productKey),sameId=priceById.get(incoming.id);
+    const sourceId=incoming.id;
+    if(sameProduct){restoredPriceIds.set(sourceId,sameProduct.id);priceMatches++;continue;}
+    if(sameId){incoming.id=mmNewUuid();priceCopies++;}
+    restoredPriceIds.set(sourceId,incoming.id);
+    prices.push(incoming);priceById.set(incoming.id,incoming);priceByProduct.set(productKey,incoming);
+  }
   for(const incoming of incomingRecipes){
+    incoming.ingredients=incoming.ingredients.map(row=>{
+      if(!row.priceBookId)return row;
+      const target=restoredPriceIds.get(row.priceBookId);
+      return target?{...row,priceBookId:target}:{...row,priceBookId:null,priceLinkMode:'manual'};
+    });
     const existing=recipeById.get(incoming.id);
     if(!existing){recipes.push(incoming);recipeById.set(incoming.id,incoming);continue;}
     if(mmStableJson(existing)===mmStableJson(incoming))continue;
     const copy={...incoming,id:mmNewUuid(),name:(incoming.name||'Untitled recipe')+' (restored copy)',updatedAt:new Date().toISOString()};
     recipes.push(copy);recipeById.set(copy.id,copy);recipeCopies++;
   }
-  const prices=[...currentPrices],priceByProduct=new Map(prices.map(item=>[mmBackupRecordKey(item),item])),priceById=new Map(prices.map(item=>[item.id,item]));
-  for(const incoming of incomingPrices){
-    const productKey=mmBackupRecordKey(incoming),sameProduct=priceByProduct.get(productKey),sameId=priceById.get(incoming.id);
-    if(sameProduct){priceMatches++;continue;}
-    if(sameId){incoming.id=mmNewUuid();priceCopies++;}
-    prices.push(incoming);priceById.set(incoming.id,incoming);priceByProduct.set(productKey,incoming);
-  }
   const recipeCount=recipes.length-currentRecipes.length,priceCount=prices.length-currentPrices.length;
   try{
-    if(recipeCount)writeLibrary(recipes);
     if(priceCount)writePriceBook(prices);
+    if(recipeCount)writeLibrary(recipes);
   }catch(error){
     refreshLibrary(currentRecipeId);renderPriceBook();
     showRecipesToast('The backup could not be fully saved. Some rows may already be on this device; check Recipes and Prices before retrying.');
@@ -174,7 +189,7 @@ $('backupFile').addEventListener('change',async event=>{
 });
 function addRow(data={name:'',qty:100,pack:1000,price:0}){
   const tr=document.createElement('tr');tr.dataset.id=++rowId;
-  tr.innerHTML=`<td><input class="ingredient" aria-label="Ingredient name" placeholder="e.g. Chicken breast" autocomplete="off"></td>
+  tr.innerHTML=`<td><input class="ingredient" aria-label="Ingredient name" placeholder="e.g. Chicken breast" autocomplete="off"><div class="ingredient-price-link" hidden><span class="price-link-status" role="status"></span><select class="price-link-choice" aria-label="Supplier price for this ingredient" hidden></select><select class="ingredient-vat-basis" aria-label="VAT basis of ingredient price"><option value="unknown">VAT basis not confirmed</option><option value="ex_vat">Price excluding VAT</option><option value="inc_vat">Price including VAT</option></select><button type="button" class="text-button price-link-toggle">Use own price</button></div></td>
   <td><input class="qty" aria-label="Quantity used" type="number" inputmode="decimal" min="0" step="any"></td>
   <td><select class="qty-unit" aria-label="Quantity unit"><option value="g">g</option><option value="kg">kg</option><option value="ml">ml</option><option value="l">litre</option><option value="each">each</option></select></td>
   <td><input class="pack" aria-label="Pack size" type="number" inputmode="decimal" min="0" step="any"></td>
@@ -187,21 +202,79 @@ function addRow(data={name:'',qty:100,pack:1000,price:0}){
   tr.querySelector('.pack').value=data.pack??'';
   tr.querySelector('.pack-unit').value=data.packUnit||'g';
   tr.querySelector('.price').value=data.priceEntered===false?'':data.price??'';
-  tr.querySelectorAll('input,select').forEach(el=>el.addEventListener('input',()=>{hasUnsavedChanges=true;calculate();updateRecipeHeader()}));
-  tr.querySelectorAll('select').forEach(el=>el.addEventListener('change',()=>{hasUnsavedChanges=true;calculate();updateRecipeHeader()}));
+  tr.dataset.priceBookId=data.priceBookId||'';tr.dataset.priceLinkMode=data.priceLinkMode||'auto';
+  tr.dataset.priceBasis=data.priceBasis||'unknown';tr.dataset.priceBookUpdatedAt=data.priceBookUpdatedAt||'';
+  tr.querySelector('.ingredient-vat-basis').addEventListener('change',event=>{tr.dataset.priceBasis=event.target.value;hasUnsavedChanges=true;calculate();updateRecipeHeader();});
+  tr.querySelector('.price-link-toggle').addEventListener('click',()=>{
+   tr.dataset.priceLinkMode=tr.dataset.priceLinkMode==='manual'?'auto':'manual';
+   if(tr.dataset.priceLinkMode==='manual')tr.dataset.priceBookId='';
+   hasUnsavedChanges=true;calculate();updateRecipeHeader();
+  });
+  tr.querySelector('.price-link-choice').addEventListener('change',event=>{
+   tr.dataset.priceBookId=event.target.value;tr.dataset.priceLinkMode='auto';hasUnsavedChanges=true;calculate();updateRecipeHeader();
+  });
+  tr.querySelectorAll('input,select:not(.price-link-choice):not(.ingredient-vat-basis)').forEach(el=>el.addEventListener('input',()=>{hasUnsavedChanges=true;calculate();updateRecipeHeader()}));
+  tr.querySelectorAll('select:not(.price-link-choice):not(.ingredient-vat-basis)').forEach(el=>el.addEventListener('change',()=>{hasUnsavedChanges=true;calculate();updateRecipeHeader()}));
   tr.querySelector('.remove-row').addEventListener('click',()=>{tr.remove();hasUnsavedChanges=true;calculate();updateRecipeHeader()});
-  $('ingredients').appendChild(tr);calculate();
+  $('ingredients').appendChild(tr);if(!mmLoadingRecipe)calculate();
 }
-function rows(){
-  return [...$('ingredients').querySelectorAll('tr')].map(tr=>({
+function mmIngredientRowData(tr){return {
     name:tr.querySelector('.ingredient').value.trim(),
     qty:Number(tr.querySelector('.qty').value)||0,
     qtyUnit:tr.querySelector('.qty-unit').value,
     pack:Number(tr.querySelector('.pack').value)||0,
     packUnit:tr.querySelector('.pack-unit').value,
     price:Number(tr.querySelector('.price').value)||0,
-    priceEntered:tr.querySelector('.price').value.trim()!==''
-  }));
+    priceEntered:tr.querySelector('.price').value.trim()!=='',
+    priceBookId:tr.dataset.priceBookId||null,priceLinkMode:tr.dataset.priceLinkMode||'auto',
+    priceBasis:tr.dataset.priceBasis||'unknown',priceBookUpdatedAt:tr.dataset.priceBookUpdatedAt||null
+  };
+}
+function mmRenderIngredientPricing(tr,index){
+ const result=mmResolveIngredientPrice(mmIngredientRowData(tr),index),data=result.ingredient;
+ if(result.status==='linked'){
+  tr.querySelector('.pack').value=data.pack;tr.querySelector('.pack-unit').value=data.packUnit;tr.querySelector('.price').value=data.price;
+  tr.dataset.priceBookId=data.priceBookId;tr.dataset.priceLinkMode='linked';tr.dataset.priceBasis=data.priceBasis;tr.dataset.priceBookUpdatedAt=data.priceBookUpdatedAt||'';
+ }
+ const basis=tr.querySelector('.ingredient-vat-basis');basis.value=tr.dataset.priceBasis||'unknown';basis.disabled=result.status==='linked';
+ const linked=result.status==='linked';tr.querySelector('.pack').readOnly=linked;tr.querySelector('.price').readOnly=linked;tr.querySelector('.pack-unit').disabled=linked;
+ const box=tr.querySelector('.ingredient-price-link');box.hidden=!String(data.name||'').trim();box.dataset.state=result.status;
+ tr.querySelector('.price-link-status').textContent=result.message;
+ const toggle=tr.querySelector('.price-link-toggle');toggle.textContent=data.priceLinkMode==='manual'?'Use price book':'Use own price';toggle.hidden=!linked&&!data.priceBookId&&data.priceLinkMode!=='manual';
+ const select=tr.querySelector('.price-link-choice');select.replaceChildren();select.hidden=result.candidates.length<2;
+ if(!select.hidden){
+  const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent='Choose the supplier item';select.appendChild(placeholder);
+  for(const item of result.candidates){const option=document.createElement('option');option.value=item.id;option.textContent=(item.supplier||'Supplier')+(item.code?' · '+item.code:'')+' · '+money(Number(item.price));select.appendChild(option);}
+  select.value=data.priceBookId||'';
+ }
+ return data;
+}
+function rows(priceIndex){
+ const index=priceIndex?.isPriceIndex?priceIndex:mmBuildPriceIndex(readPriceBook());
+ return [...$('ingredients').querySelectorAll('tr')].map(tr=>mmRenderIngredientPricing(tr,index));
+}
+function mmRefreshRecipePrices(){
+ if(!mmUser||!$('ingredients'))return;
+ const dirty=hasUnsavedChanges;calculate();hasUnsavedChanges=dirty;updateRecipeHeader();
+ if(dirty&&typeof mmSaveRecipeDraftSoon==='function')mmSaveRecipeDraftSoon();
+}
+function mmPreserveRecipePriceLinks(){
+ if(!mmUser)return;
+ const stored=mmReadUserCache(MM_LIBRARY_KEY,mmUser.id),index=mmBuildPriceIndex(readPriceBook());
+ if(!Array.isArray(stored))return;
+ let changed=false;const stamp=new Date().toISOString();
+ const linked=stored.map(recipe=>{
+  let recipeChanged=false;
+  const ingredients=(recipe.ingredients||[]).map(row=>{
+   if(row.priceBookId||row.priceLinkMode==='manual')return row;
+   const match=mmResolveIngredientPrice(row,index);if(match.status!=='linked')return row;
+   recipeChanged=true;return {...row,priceBookId:match.ingredient.priceBookId,priceLinkMode:'linked'};
+  });
+  if(!recipeChanged)return recipe;changed=true;return {...recipe,ingredients,updatedAt:stamp};
+ });
+ // Bind legacy identities before changing the price book. Keep their original
+ // saved numbers as a fallback; never write the editor's unsaved quantities.
+ if(changed)mmWriteUserCache(MM_LIBRARY_KEY,linked,mmUser.id);
 }
 function mmUnitKind(u){return u==='kg'||u==='g'?'mass':u==='l'||u==='ml'?'volume':'count'}
 function mmToBase(value,unit){const factor={g:1,kg:1000,ml:1,l:1000,each:1};return Number(value||0)*(factor[unit]||1)}
@@ -245,13 +318,17 @@ function calculate(){
  if(invalid)warnings.push(`${invalid} ingredient line${invalid===1?' contains':'s contain'} a negative or invalid quantity or price and is excluded from the total.`);
  if(incomplete)warnings.push(`${incomplete} incomplete ingredient line${incomplete===1?' is':'s are'} excluded from the total.`);
  if(mismatch)warnings.push(`${mismatch} ingredient line${mismatch===1?' has':'s have'} incompatible units and is excluded. Check the highlighted units.`);
+ const entered=list.filter(row=>mmIngredientCost(row).complete),unknownVat=entered.filter(row=>!['ex_vat','inc_vat'].includes(row.priceBasis)).length,incVat=entered.filter(row=>row.priceBasis==='inc_vat').length;
+ if(unknownVat)warnings.push(`${unknownVat} ingredient price${unknownVat===1?' has':'s have'} unconfirmed VAT. Costs use entered amounts; GP may not be comparable with your excluding-VAT selling price.`);
+ if(incVat)warnings.push(`${incVat} ingredient price${incVat===1?' includes':'s include'} VAT. No VAT has been deducted; check the costing basis before using GP.`);
+ const priceIssues=list.filter(r=>r.priceLinkIssue).length;if(priceIssues)warnings.push(`${priceIssues} ingredient price link${priceIssues===1?' needs':'s need'} checking; saved prices are shown.`);
  if(warnings.length){status.className='status bad';status.textContent=warnings.join(' ')+' '+status.textContent}
 }
 
 function loadRecipe(d){
   currentRecipeId=d.id||null;
   $('recipeName').value=d.name||'';$('yield').value=d.yield||1;$('sellingPrice').value=d.sellingPrice??0;$('targetGp').value=d.targetGp??70;
-  $('ingredients').innerHTML='';(d.ingredients||[]).forEach(addRow);if(!(d.ingredients||[]).length)addRow({name:'',qty:'',pack:'',price:''});
+  $('ingredients').innerHTML='';mmLoadingRecipe=true;try{(d.ingredients||[]).forEach(addRow);if(!(d.ingredients||[]).length)addRow({name:'',qty:'',pack:'',price:''});}finally{mmLoadingRecipe=false;}
   hasUnsavedChanges=false;calculate();updateRecipeHeader();refreshLibrary(currentRecipeId);
 }
 async function saveCurrentRecipe(){
@@ -259,15 +336,17 @@ async function saveCurrentRecipe(){
   if(!currentRecipeId){data.id=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16)})}
   const index=items.findIndex(r=>r.id===data.id);
   if(index>=0)items[index]=data;else items.push(data);
+  let savedOnDevice=false;
   try{
-    writeLibrary(items);currentRecipeId=data.id;hasUnsavedChanges=false;refreshLibrary(currentRecipeId);updateRecipeHeader();mmClearRecipeDraft();
+    writeLibrary(items);savedOnDevice=true;currentRecipeId=data.id;hasUnsavedChanges=false;refreshLibrary(currentRecipeId);updateRecipeHeader();mmClearRecipeDraft();
     if(!mmUser || !mmCloudReady) { showToast(`Saved “${data.name}” on this device. It will sync when you are online.`); if(mmUser)mmAuthMessage('Saved on this device. Cloud sync will resume when online.'); return; }
     mmAuthMessage('Saving recipe to your cloud account…');
     const res=await mmSyncCloud();
-    if(res&&res.conflicts)return;
+    if(res&&(res.conflicts||res.stale))return;
+    if(res?.offline||(typeof mmReadPending==='function'&&mmReadPending(mmUser?.id).some(item=>item.kind==='recipes'&&item.id===data.id))){showToast(`Saved “${data.name}” on this device. Choose Refresh & sync when connected.`);updateRecipeHeader();return;}
     showToast(`Saved “${data.name}” to your cloud account.`);
     mmAuthMessage('Cloud sync working — recipe saved.');
-  }catch(e){console.error('MenuMargin cloud recipe save failed:',e);showToast(`Recipe saved on this device, but cloud save failed: ${e.message}`);mmAuthMessage('CLOUD SAVE ERROR: '+e.message);}
+  }catch(e){console.error('MenuMargin cloud recipe save failed:',e);showToast(savedOnDevice?`Recipe saved on this device, but cloud save failed: ${e.message}`:`Could not save this recipe. Keep this page open and download a backup. ${e.message}`);mmAuthMessage((savedOnDevice?'CLOUD SAVE ERROR: ':'DEVICE SAVE ERROR: ')+e.message);}
 }
 function maybeSaveChanges(){
   if(!hasUnsavedChanges)return true;
@@ -290,7 +369,7 @@ $('ingredients').addEventListener('keydown',event=>{
   if(!field.matches('input'))return;
   event.preventDefault();
   const row=field.closest('tr');
-  const fields=[...row.querySelectorAll('input')];
+  const fields=[...row.querySelectorAll('input')].filter(input=>!input.readOnly&&!input.disabled);
   const index=fields.indexOf(field);
   if(index>=0&&index<fields.length-1){fields[index+1].focus();}
   else if(index===fields.length-1){$('addIngredient').focus();showToast('Ingredient ready. Tap “Add next ingredient” to continue.');}
@@ -339,7 +418,7 @@ function deleteRecipeById(id){
   if(!id)return;
   const items=readLibrary(),item=items.find(r=>r.id===id);if(!item)return;
   if(currentRecipeId===id&&!maybeSaveChanges())return;
-  if(!confirm(`Delete “${item.name}” from this device? This cannot be undone.`))return;
+  if(!confirm(`Delete “${item.name}” from your account and synced devices? Download a backup first if you may need it.`))return;
   try{writeLibrary(items.filter(r=>r.id!==id));if(currentRecipeId===id){currentRecipeId=null;loadRecipe({name:'',yield:10,sellingPrice:0,targetGp:70,ingredients:[]});hasUnsavedChanges=false;mmClearRecipeDraft()}refreshLibrary();showToast(`Deleted “${item.name}” from your account.`)}
   catch(e){showToast('Could not delete recipe.')}
 }
@@ -452,4 +531,4 @@ $('exportCsv').addEventListener('click',()=>{
  ];
  const csv=lines.map(row=>row.map(escapeCsv).join(',')).join('\r\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(d.name||'menumargin-recipe').toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 });
-// v0.5 Price Book. Entries are independent of saved recipe ingredient snapshots.
+// Linked recipes resolve the account's current exact-name supplier price.

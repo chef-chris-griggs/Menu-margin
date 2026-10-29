@@ -1,0 +1,15 @@
+.account-settings{margin-bottom:18px;max-width:100%;font-size:.9rem}
+.account-settings summary{cursor:pointer;font-weight:750;color:var(--green)}
+.account-settings p{line-height:1.6}
+.device-option{display:flex;align-items:flex-start;gap:10px;line-height:1.5}
+.device-option input{flex:0 0 auto;width:22px;height:22px;margin:0}
+.customer-links{font-size:.85rem;line-height:1.7;overflow-wrap:anywhere}
+.customer-links a,.legal-page a{color:#155d42;text-underline-offset:3px}
+.legal-page{padding:24px 18px 60px;background:#f3f6f3;color:#183d32;font-family:system-ui,-apple-system,sans-serif}
+.legal-page article{max-width:760px;margin:0 auto;padding:clamp(18px,5vw,40px);border:1px solid #dce6df;border-radius:22px;background:white;line-height:1.7;overflow-wrap:anywhere}
+.legal-page h1{line-height:1.2;font-size:clamp(1.8rem,6vw,2.5rem)}
+.legal-page h2{margin-top:1.7em;font-size:1.2rem}
+.legal-page nav{display:flex;flex-wrap:wrap;gap:16px}
+.legal-page li{margin-bottom:8px}
+@media(max-width:700px){.app-header{flex-wrap:wrap}.app-header #mmAccountBar{flex:1 1 185px}.app-header .cloud-status{flex-basis:100%;max-width:100%;text-align:right}.account-settings{padding:13px 15px}}
+@media print{.account-settings,.customer-links{display:none!important}}

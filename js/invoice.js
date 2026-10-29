@@ -461,26 +461,7 @@ function invoiceUpdateRow(state) {
   state.elements.savedPrice.textContent = 'Save ' + (price === null ? '—' : invoiceMoney(price)) + ' for ' + totalSize;
 }
 function invoiceNormaliseName(value) {
-  return String(value || '').normalize('NFKC').toLocaleLowerCase('en-GB').replace(/[^a-z0-9]+/g, ' ').trim();
-}
-function invoiceNameSimilarity(first, second) {
-  const a = invoiceNormaliseName(first), b = invoiceNormaliseName(second);
-  if (!a || !b) return 0;
-  if (a === b) return 1;
-  const left = new Set(a.split(' ')), right = new Set(b.split(' '));
-  const shared = [...left].filter(word => right.has(word)).length;
-  const tokenScore = 2 * shared / (left.size + right.size);
-  const costs = Array.from({ length: b.length + 1 }, (_, index) => index);
-  for (let i = 1; i <= a.length; i++) {
-    let diagonal = costs[0]; costs[0] = i;
-    for (let j = 1; j <= b.length; j++) {
-      const prior = costs[j];
-      costs[j] = Math.min(costs[j] + 1, costs[j - 1] + 1, diagonal + (a[i - 1] === b[j - 1] ? 0 : 1));
-      diagonal = prior;
-    }
-  }
-  const editScore = 1 - costs[b.length] / Math.max(a.length, b.length);
-  return Math.max(tokenScore, editScore);
+  return mmExactIngredientName(value);
 }
 function invoiceFindMatches(state, items) {
   const supplier = mmNormalizeProductKey($('invoiceSupplier').value);
@@ -488,31 +469,32 @@ function invoiceFindMatches(state, items) {
   const name = invoiceNormaliseName(state.description);
   const supplierItems = items.filter(item => mmNormalizeProductKey(item.supplier) === supplier);
   const exactCode = code ? supplierItems.filter(item => mmNormalizeProductKey(item.code) === code) : [];
-  if (exactCode.length === 1) return { exact: exactCode[0], close: [], requiresExisting: false };
   const compatible = supplierItems.filter(item => !(code && item.code && mmNormalizeProductKey(item.code) !== code));
   const exactName = compatible.filter(item => invoiceNormaliseName(item.name) === name && name);
-  if (!exactCode.length && exactName.length === 1) return { exact: exactName[0], close: [], requiresExisting: false };
-  const close = compatible.map(item => ({ item, score: invoiceNameSimilarity(state.description, item.name) }))
-    .filter(match => match.score >= .72).sort((a, b) => b.score - a.score).slice(0, 4).map(match => match.item);
-  return { exact: null, close: exactCode.length > 1 ? exactCode : close, requiresExisting: exactCode.length > 1 };
+  if (exactName.length === 1) return { exact: exactName[0], close: [], requiresExisting: false };
+  if(exactName.length>1)return {exact:null,close:exactName,requiresExisting:true};
+  return { exact: null, close: [], requiresExisting: false, blockedName:exactCode.length>0, conflictingNames:exactCode.map(item=>item.name) };
 }
 function invoiceRenderMatch(state) {
   const matches = invoiceFindMatches(state, readPriceBook());
   state.matches = matches;
   const box = state.elements.match;
   box.replaceChildren();
-  if (matches.exact) {
+  if(matches.blockedName){
+    state.matchChoice='';state.matchExplicit=false;
+    box.appendChild(invoiceNewElement('p','scan-match-note','This supplier code already exists as “'+matches.conflictingNames.join('” / “')+'”. Correct the scanned name to match exactly before updating it.'));
+  } else if (matches.exact) {
     state.matchChoice = matches.exact.id;
     state.matchExplicit = false;
     box.appendChild(invoiceNewElement('p', 'scan-match-note', 'Existing supplier item: ' + matches.exact.name + ' · current price ' + invoiceMoney(matches.exact.price) + '. Import will update it and keep its old price in history.'));
   } else if (matches.close.length) {
     const validChoice = state.matchExplicit && ((!matches.requiresExisting && state.matchChoice === '__new__') || matches.close.some(item => item.id === state.matchChoice));
     if (!validChoice) { state.matchChoice = ''; state.matchExplicit = false; }
-    const select = invoiceCreateField('Possible existing product — choose what to do', 'select', state.matchChoice, value => {
+    const select = invoiceCreateField('Exact name matches — choose the supplier item', 'select', state.matchChoice, value => {
       state.matchChoice = value; state.matchExplicit = Boolean(value); invoiceUpdateSelectionSummary();
     }, [['', 'Choose before importing'], ...(!matches.requiresExisting ? [['__new__', 'Add as a new product']] : []), ...matches.close.map(item => [item.id, 'Update ' + item.name + ' · ' + invoiceMoney(item.price)])]);
     box.appendChild(select.label);
-    box.appendChild(invoiceNewElement('p', 'scan-match-note', matches.requiresExisting ? 'More than one saved item has this supplier code. Choose the existing entry to update.' : 'Similar names are suggestions. A close match is only updated after you choose it.'));
+    box.appendChild(invoiceNewElement('p', 'scan-match-note', 'More than one saved item has this exact name. Choose the existing entry to update.'));
   } else {
     state.matchChoice = '__new__';
     state.matchExplicit = false;
@@ -635,6 +617,7 @@ function importInvoiceReview() {
   const planned = [];
   for (const state of selected) {
     const currentMatches = invoiceFindMatches(state, items);
+    if(currentMatches.blockedName){invoiceToast('Nothing was imported. The name for '+state.productCode+' must match its existing supplier item exactly.');invoiceRenderMatch(state);return;}
     let targetId = state.matchChoice === '__new__' ? null : state.matchChoice;
     if (currentMatches.exact && state.matchChoice !== currentMatches.exact.id) {
       invoiceToast('An exact supplier item now exists for ' + state.description + '. Review its match before importing.'); invoiceRenderMatch(state); return;
@@ -644,6 +627,7 @@ function importInvoiceReview() {
     }
     let index = targetId ? items.findIndex(item => item.id === targetId) : -1;
     if (targetId && index < 0) { invoiceToast('A matched price-book item changed. Review the matching choices and try again.'); return; }
+    if(index>=0&&invoiceNormaliseName(items[index].name)!==invoiceNormaliseName(state.description)){invoiceToast('Nothing was imported. Product names must match exactly; capital letters and extra spaces are ignored.');invoiceRenderMatch(state);return;}
     if (index >= 0 && mmNormalizeProductKey(items[index].supplier) !== mmNormalizeProductKey(supplier)) { invoiceToast('The supplier changed. Review the existing-product choices again.'); return; }
     if (index >= 0 && state.productCode && items[index].code && mmNormalizeProductKey(state.productCode) !== mmNormalizeProductKey(items[index].code)) { invoiceToast('Different known product codes cannot be combined. Choose a separate product.'); return; }
     const key = targetId || (mmNormalizeProductKey(supplier) + '|' + (mmNormalizeProductKey(state.productCode) || invoiceNormaliseName(state.description)));
@@ -671,7 +655,7 @@ function importInvoiceReview() {
     invoiceUpdateSelectionSummary();
     renderPriceBook();
     invoiceToast(added + ' new product(s) added; ' + updated + ' existing price(s) updated. Previous prices are kept in the price book history.');
-    pbToast(added + ' product(s) added from the invoice; ' + updated + ' price(s) updated with history. Saved recipe prices keep their snapshots.');
+    pbToast(added + ' product(s) added from the invoice; ' + updated + ' price(s) updated with history. Exact-name linked recipes now use the current prices.');
   } catch (error) { invoiceToast('The price book could not be saved. Your review is still here; export important data and check device storage.'); }
 }
 

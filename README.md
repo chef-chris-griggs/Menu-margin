@@ -1,232 +1,197 @@
 # MenuMargin
 
-Mobile recipe costing, saved recipes and a supplier price book. This branch
-contains an experimental replacement invoice scanner using PaddleOCR models and
-OpenCV inside the browser.
+**Recipe costing, supplier prices and invoice scanning for busy kitchens.**
 
-**The scanner is not release-ready. The real-invoice regression report still
-contains mismatches. Passing unit or review-screen tests does not establish OCR
-accuracy.** Read the current per-field report before describing a build as fixed.
-No deployment or paid-launch approval is implied by this source folder.
+MenuMargin helps you cost dishes, maintain an ingredient price book and see how
+buying-price changes affect your recipes. It works in a mobile or desktop
+browser and can be added to a phone’s Home Screen when hosted over HTTPS.
 
-## What the app does
+This folder contains the **2.1.3 email-protection candidate**. The working scanner is
+preserved; this update adds safer cloud saves, exact-name recipe price updates,
+VAT warnings and account controls. Payment collection remains switched off.
 
-- Recipe costing with mass, volume and each conversions, portions, food cost,
-  GP, target selling prices, CSV and print/PDF.
-- Account-scoped recipe and price-book saves, offline change queues, conflict
-  copies and JSON backups.
-- Supplier prices with product codes, pack composition, explicit VAT basis and
-  previous price/pack history. Existing recipes retain their saved price
-  snapshots when the price book changes.
-- A mobile four-tab layout and a static PWA shell.
+## What you can do
 
-## Invoice scanner architecture
+| Screen | Purpose |
+| --- | --- |
+| **Cost** | Enter a dish, portions and ingredient quantities. See batch cost, cost per portion, food cost %, GP and a target selling price. |
+| **Recipes** | Save, open, rename and delete recipes. Download or restore a complete JSON account backup. |
+| **Prices** | Keep supplier buying prices, product codes, pack sizes, VAT labels and previous price history. Add an ingredient straight to a recipe. |
+| **Scan** | Read a supplier invoice PDF or photo, compare products with the source image and import only the rows you select. |
 
-The scanner runs independently on each phone. A Mac service, Python server,
-paid OCR account and remote invoice-processing API are not required. GitHub
-Pages can serve the browser files over HTTPS.
+Recipe costing supports weight, volume and individual items, including
+conversions within each measurement type. CSV exports and print/PDF views are
+also available.
 
-The local worker uses:
+## Start with your first recipe
 
-1. Image orientation metadata, OpenCV paper-edge detection and perspective
-   correction where a reliable page boundary is found.
-2. Grayscale/shadow cleanup, adaptive thresholding and size normalization.
-   Preprocessing fallbacks remain visible as review warnings.
-3. PaddleOCR PP-OCRv5 mobile detection and the dedicated English recognition
-   model through ONNX Runtime Web CPU WebAssembly. The English model includes
-   the GBP character. OCR runs one page at a time with one WASM thread.
-4. Word boxes and confidence derived from the recognizer's CTC alignment,
-   including recognition padding and inverse crop geometry. Detector line
-   boxes are preserved. Words are not placed by equally spacing a flat string.
-5. Positioned table-row grouping and header-based column assignment, followed
-   by per-cell GBP parsing and arithmetic checks. Full OCR text is not passed
-   through a regex product parser.
+1. Open the hosted app and sign in.
+2. Choose **Cost**, enter a dish name and the number of portions in the batch.
+3. Add ingredients. Enter the **amount used in the whole batch**, the size of
+   the pack you buy and its total price. You can also choose **Add to recipe**
+   from the price book.
+4. Check the ingredient units, selling price and any warnings.
+5. Choose **Save recipe** and check whether it was saved on this device or
+   confirmed in your cloud account.
 
-The reader distinguishes cases, loose items and weighed purchases. A printed
-case composition does not turn a loose-item price into a full-case price.
-Invoice references are kept separate from delivery-note and order references.
-Multi-page photos belonging to one invoice should be selected together; a
-subtotal printed on the last page cannot reconcile an incomplete selection.
-Different invoice references and duplicate printed page numbers block review.
-A name-only band is retained for review rather than appended to the previous
-product. Positive cases together with positive loose units require the priced
-quantity and pack to be resolved explicitly.
+For example, a case containing **6 × 1 kg** costs **£24**. Its total size is
+**6 kg**, so **250 g used in a batch costs £1**. Enter the whole case price,
+not the price of one item in the case.
 
-Some bounded, per-cell recoveries require review even when a value is retained:
-an unclear GBP symbol, a litre unit read as `1tr`, or extra punctuation before
-an otherwise explicit decimal. Original tokens and warnings remain available.
-The scanner never inserts a missing price decimal or scales a whole-pound
-amount down by 100. Unreadable cells may receive one bounded recognizer retry
-using the adaptive image, capped at 12 cells per page; there is no repeated
-full-page OCR loop.
+GP uses the entered ingredient costs and an **excluding-VAT selling price**.
+Labour, overheads and waste are not included in the displayed food-cost GP.
 
-## Review and privacy
+## Update prices from an invoice
 
-The review screen shows the original/cleaned page alongside editable rows on
-desktop. Phones can switch between the photo and products. Source highlighting
-uses cleaned-image coordinates and is never drawn onto an uncorrected original
-photo.
+1. Choose **Scan** and select the invoice PDF, JPG, PNG or HEIC photo. Select
+   related pages together for a multipage invoice.
+2. Choose **Read invoice**. The first scan downloads the recognition files,
+   so allow time and a working connection.
+3. Compare the product names, pack sizes, quantities and prices with the photo.
+   Correct missing or unclear fields and resolve the highlighted checks.
+4. Tick only the products you want to import and complete the required photo
+   confirmation. Rows start unchecked.
+5. Import the selected products. Existing matching supplier items update their
+   price and retain the previous price/pack details in history.
 
-Every import selection starts unchecked. A row must have valid price-book
-fields and an explicit photo check before it can be imported. Close product
-name matches require a choice; different known supplier codes are not merged
-by fuzzy name matching. Updating a price preserves the previous price, pack
-composition and VAT basis in history.
+Recognition runs **on the device** using PaddleOCR and OpenCV. A Mac service
+or paid invoice-processing API is not needed. MenuMargin does not upload the
+invoice photo or full OCR word output. Selected price-book entries, invoice
+references and price history use the account save/sync flow.
 
-Invoice photos and OCR word data stay on the device. Only selected price-book
-entries and their price history use the existing account save/sync flow.
-Original and cleaned scan images are held for the current review and released
-when cleared or signed out. The user can explicitly download a cleaned image
-or OCR debug JSON. Local regression tests also save debug files on the
-developer's computer.
+Recognition is followed by a review step: uncertain values, missing fields and
+arithmetic mismatches require attention. A clear review result is not a
+guarantee that every field on every supplier invoice is correct.
 
-The first scan downloads the self-hosted worker, model and WASM files from this
-site. The current asset manifest contains about 38 MB including the optional
-HEIC decoder; see [the exact file sizes and checksums](vendor/scanner/assets.json).
-Allow time and memory for this first load. Subsequent offline use depends on
-the relevant assets having been cached successfully. Browser storage can be
-evicted, so cached models and an installed PWA are not a promise that every
-offline session or account sign-in will succeed.
+## How recipe prices stay current
 
-## Install, build and serve
+A recipe ingredient can link to the supplier item in your price book. Confirmed
+changes to that item’s price or pack size recost the linked recipes without
+changing the ingredient quantities, dish names or portions.
 
-The generated browser assets are included under `vendor/scanner/`. After
-changing scanner source, rebuild them:
+Names must match **exactly, ignoring capitals and extra spaces only**:
 
-    npm ci
-    npm run build:scanner
+- `BUTTER`, `Butter` and `  Butter  ` count as the same name.
+- `Salted butter`, `Butter unsalted`, `Buter` and `Butter!` stay separate.
+- Different suppliers and different known product codes are not silently merged.
+  If several compatible items have the exact name, choose the intended item.
 
-The pinned detector and recognizer archives are included under
-`vendor/scanner/models/`; their upstream URLs, sizes and SHA-256 hashes are in
-[the model manifest](vendor/scanner/models/manifest.json). Runtime dependencies
-and third-party source/notices are self-hosted. No production CDN imports are
-needed.
+A unique exact-name legacy ingredient can link automatically. Once linked, it
+stays with that supplier item. Choose **Use own price** to deliberately stop
+automatic updates for an ingredient. Missing, renamed or incompatible supplier
+items show a warning and retain a saved-price fallback.
 
-Serve the project from `localhost` for development, for example:
+Other phones fetch changed prices through **Refresh & sync** or when returning
+to the app. This is not an instant push to every already-open device.
 
-On the owner's Mac, double-click `Start MenuMargin.command` for a local preview.
-This optional Python host only serves app files; OCR runs in the browser. It
-blocks invoice samples, debug data, Git files and developer directories.
-Alternatively:
+## Email delivery before launch
 
-    python3 -m http.server 8080 --bind 127.0.0.1
+The owner hit an email-sending rate limit during recovery testing. The app now
+prevents duplicate requests, preserves a 60-second resend cooldown across page
+reloads and explains server quota errors. The cooldown does not increase or
+reset the email service’s quota. A real-email recovery retest remains pending.
 
-Then open `http://localhost:8080/`. Opening `index.html` through `file://` does
-not provide a reliable worker/service-worker environment. For phones and public
-hosting, use HTTPS and publish the complete app folders, including every
-referenced scanner/model/WASM asset. Uploading only `index.html` is insufficient.
+If the project uses Supabase’s built-in sender, its documented allowance is
+currently two emails per hour for the whole project, with recipients restricted
+to project-team addresses. That sender is intended for setup/testing. Connect a
+production SMTP service before opening signup to customers. The support Gmail
+inbox does not automatically configure authentication-email delivery.
 
-## Tests and accuracy
+See [email delivery setup](docs/EMAIL-DELIVERY.md) for the required owner steps.
 
-Install the two browser engines used by the regression checks:
+## Reset your password
 
-    npx playwright install chromium webkit
+From sign-in, enter your email and choose **Forgot password?**. Open the newest
+reset email: a valid link displays **Choose a new password** with a confirmation
+field. After updating, sign in using the new password. Expired or used links
+show instructions to request a fresh email. The 2.1.2 recovery change has passed
+browser tests; the real-email retest remains a release check.
 
-Offline/cache and retry checks:
+## VAT, saving and recovery
 
-    npm run test:offline
-    npm run test:offline:webkit
+- **Prices stay as entered.** Mark prices as including VAT, excluding VAT or
+  unconfirmed. MenuMargin warns about inclusive/unknown ingredient prices when
+  showing GP. It does not guess a VAT rate or deduct VAT automatically.
+- **Device saves and cloud saves are different.** A device save stays queued
+  until the server confirms it. Use **Refresh & sync** after reconnecting and
+  before relying on another device’s copy. Interrupted cloud loads keep the
+  previous device snapshot. Conflicting edits can be preserved as copies.
+- **Keep an independent backup.** In Recipes, choose **Download backup** for
+  recipes, supplier prices, links, VAT basis and price history. A CSV is useful
+  for viewing data but is not a complete account backup.
+- **Shared device?** Open **Account & privacy** to select removal of this
+  account’s device copy at sign-out. Unsaved edits, pending changes and recovery
+  drafts must be dealt with first. Normal sign-out keeps an account-specific
+  copy for recovery; MenuMargin does not encrypt that browser copy itself.
 
-Chromium uses simulated browser offline mode. Playwright WebKit's offline
-emulation also blocks in-memory Blob reads, so its test stops the HTTP origin
-instead and verifies cached assets with a fresh OCR worker. Neither replaces
-an actual iPhone airplane-mode and memory/performance test.
+Offline use depends on a cached app, cached recognition files and an available
+sign-in session. Browser storage can be removed or evicted. Do not clear site
+storage to install an update while it contains unsynced work.
 
-Run the deterministic extraction/value/CTC and price-book review rules:
+## Run this copy
 
-    npm run test:unit
+**On a Mac:** keep the complete folder together and open
+`Start MenuMargin.command`. It starts a localhost preview and opens the app.
+Keep that terminal window running while using the preview. It needs Python 3;
+Python serves the files only, while scanning runs in the browser.
 
-Run the synthetic review/import interaction checks:
+**On a phone:** use an HTTPS-hosted copy. A Mac’s localhost link cannot be opened
+on the phone. Use your browser’s Add to Home Screen option to install the
+hosted app.
 
-    npm run test:review
-    npm run test:review:webkit
+Opening `index.html` directly through `file://` is not a supported scanner
+setup. When publishing to GitHub Pages, upload the **whole app**, including
+`js/`, `styles/`, `icons/`, `vendor/`, the manifest, service worker and customer
+information pages. Uploading only `index.html` will not work. Private invoice
+samples, debug reports, credentials and `node_modules` must stay out of the
+published files.
 
-These review checks cover selection, required acknowledgement, confirmed close
-matches, price history, pack semantics, cancellation, debug downloads, source
-highlight coordinates and mobile layout. They do not run OCR on real invoices.
-WebKit provides useful Safari-engine coverage; it does not replace testing on
-an actual iPhone with its memory and performance constraints.
+## Verified in this candidate
 
-Check original HEIC decoding, generated EXIF rotation/mirroring, image limits,
-PDF page numbering and rejection/cancellation:
+| Check | Latest local result |
+| --- | --- |
+| Unit tests: extraction, values, OCR alignment, review rules, recipe pricing and cloud data | **74 passed, 0 failed** |
+| Invoice review/import | **24 checks passed in Chromium and 24 in WebKit** |
+| Recipe price updates and backups | **18 checks passed in each browser engine** |
+| App startup, cloud refresh, save failures, VAT and device privacy | **21 checks passed in each browser engine** |
+| Real HEIC scan, online and offline | **Passed; the same 4 rows were returned** |
+| Scanner cancellation, retry, duplicate handling and offline help | **Passed** |
+| Protected scanner source/runtime files | **73 of 73 unchanged against c477122** |
+| Password recovery with real Supabase browser library | **16 checks passed in each browser engine, using synthetic auth responses** |
+| Owner phone test and two-account screen separation (2.1.1) | **Reported working on 29 October 2026** |
+| Active database RLS/owner-policy configuration | **Reviewed from supplied SQL results on 29 October 2026** |
 
-    npm run test:decode
-    npm run test:decode:webkit
+The browser interaction tests use synthetic cloud/auth data. The real-invoice
+check above covers one existing private BPM invoice; it is not an accuracy
+percentage for unseen invoices. WebKit tests are useful Safari-engine coverage.
+The owner has since reported that the phone app works and that neither of two
+accounts displays the other account’s saved data. This is a manual app test; it
+does not by itself prove that direct database/API requests are denied. The
+supplied SQL results also confirm RLS is enabled and owner boundaries are
+configured on both tables; a direct API denial test remains separate. Extended
+phone/Android, email recovery and upgrade checks remain on the release checklist.
 
-These use the five private original HEIC fixtures. A fresh checkout can run only
-the generated orientation/JPEG/PDF cases with `npm run test:decode -- --skip-private`;
-that is not a passing real-HEIC or OCR test.
+Before public sign-off, complete the **live two-account database privacy test**,
+**actual-phone and email-recovery checks**, and **operator review of customer
+policies and deletion/retention procedures**. These are recorded separately so
+a passing local test is not confused with a completed launch check.
 
-Run actual OCR on every private invoice sample:
+- [Launch audit and evidence](docs/LAUNCH-READINESS.md)
+- [Remaining real-device and live-account checks](docs/TEST-BEFORE-LAUNCH.md)
+- [Developer setup, scanner architecture and test commands](docs/DEVELOPMENT.md)
 
-    npm run test:scanner
-    npm run test:scanner:webkit
+## Support and privacy
 
-The default scanner test uses the original HEIC files. To isolate image decoding
-from OCR while investigating a failure:
+Support, privacy enquiries and account-deletion requests:
+**[admin.menumargin@gmail.com](mailto:admin.menumargin@gmail.com)**.
+Never email your password or sign-in tokens.
 
-    npm run test:scanner -- --jpeg
-    npm run test:scanner -- --only=IMG_2385
+The app includes [help](help.html), [privacy information](privacy.html) and
+[terms](terms.html). The public operator/contact settings are in
+`js/site-config.js`. Request account deletion through support; identity must be
+verified before action. Removing a device copy does not delete the cloud account.
 
-The test runner prints each mismatch and per-field accuracy, including missing
-rows in the denominator. It compares against the previous report only when the
-expected-data hash is unchanged, so an altered ground truth cannot silently
-appear as an accuracy improvement. It also checks the combined Bidfood invoice
-across all three pages.
-
-After each scanner change, run this real-sample report and compare the per-field
-deltas. Keep failures visible. Do not substitute a passing synthetic unit test
-for the real-invoice accuracy gate.
-
-### Private samples and debug output
-
-The local `samples/` folder contains original photos, orientation-corrected
-JPEG copies and independently transcribed expected JSON. See
-[samples/README.md](samples/README.md) for the schema and page-group rules.
-The real photos, expected values and manifest are excluded from Git so they do
-not enter the published app. A fresh checkout needs those private fixtures
-restored locally before the real-invoice tests can run.
-
-Cleaned images, word-box overlays, positioned JSON, accuracy reports and review
-screenshots are written under the ignored `scanner-debug/` folder. The sample
-harness serves them locally and rejects external requests; invoices are not
-sent to a remote OCR service.
-
-## Supabase setup
-
-Apply the migrations in filename order from `supabase/migrations/`. The first
-migration creates the recipe, price-book and billing tables with per-user
-row-level security. The feature-switch migration leaves billing off while the
-Stripe account is prepared.
-
-The browser contains only the Supabase project URL and publishable key.
-Secrets and service-role keys belong in server secrets, never browser code.
-Confirm the Auth redirect allow-list contains the deployed app URL. Live
-database policies, account isolation, Auth redirects and recovery still require
-checks against the owner's actual project before launch.
-
-## Stripe setup before charging
-
-1. Create the £9.99 monthly price and confirm the 14-day trial.
-2. Add the Stripe secret, price ID, webhook secret, Supabase server credentials
-   and deployed app URL to Edge Function secrets.
-3. Deploy `create-checkout-session`, `create-portal-session` and
-   `stripe-webhook`; configure subscription and invoice-payment events.
-4. Verify checkout, cancellation, webhook replay and access enforcement before
-   enabling billing:
-
-       update public.menu_margin_app_config
-       set billing_enabled = true, updated_at = now()
-       where singleton = true;
-
-The browser cannot change that feature switch. Database access must enforce the
-server-owned subscription state after billing is enabled.
-
-## Third-party notices
-
-See [vendor/LICENSES.md](vendor/LICENSES.md) and the scanner-specific
-[NOTICE](vendor/scanner/NOTICE.md). PaddleOCR/OpenCV/ONNX and their models remain
-under their upstream licenses. The separate HEIC decoder includes LGPL-covered
-libraries; its license texts, matching declared source versions and replacement
-instructions are supplied under `vendor/scanner/`. Preserve those materials
-when distributing the app.
+Third-party notices and matching source materials are included under
+[vendor/](vendor/LICENSES.md), including the scanner’s
+[NOTICE](vendor/scanner/NOTICE.md). Keep those materials when distributing the
+app.
