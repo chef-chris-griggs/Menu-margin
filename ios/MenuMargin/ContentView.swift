@@ -106,11 +106,7 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .overlay {
                     if isLoading {
-                        ProgressView("Opening MenuMargin…")
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 16)
-                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
-                            .accessibilityAddTraits(.updatesFrequently)
+                        LaunchLoadingView()
                     }
                 }
 
@@ -202,6 +198,16 @@ struct ContentView: View {
                 dismissButton: .default(Text("OK"))
             )
         }
+        .task(id: retryID) {
+            do {
+                try await Task.sleep(nanoseconds: 35_000_000_000)
+            } catch {
+                return
+            }
+            guard isLoading, loadFailure == nil else { return }
+            isLoading = false
+            loadFailure = "MenuMargin took too long to respond. Check your internet connection, then try again."
+        }
     }
 
     private func retry() {
@@ -237,6 +243,31 @@ struct ContentView: View {
         } else {
             externalPage = ExternalPage(url: url)
         }
+    }
+}
+
+private struct LaunchLoadingView: View {
+    var body: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "fork.knife.circle.fill")
+                .font(.system(size: 38, weight: .medium))
+                .foregroundStyle(Color.menuMarginGreen)
+            ProgressView()
+                .tint(Color.menuMarginGreen)
+            Text("Opening MenuMargin")
+                .font(.headline)
+                .foregroundStyle(Color.menuMarginGreen)
+            Text("Connecting to your recipes and price book…")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(24)
+        .frame(maxWidth: 300)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
+        .shadow(color: .black.opacity(0.12), radius: 16, y: 5)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.updatesFrequently)
     }
 }
 
