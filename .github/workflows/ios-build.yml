@@ -29,5 +29,13 @@ jobs:
           -configuration Debug
           -sdk iphonesimulator
           -destination 'generic/platform=iOS Simulator'
+          -derivedDataPath "$RUNNER_TEMP/MenuMarginDerivedData"
           CODE_SIGNING_ALLOWED=NO
           build
+      - name: Upload simulator app for testing
+        uses: actions/upload-artifact@v7
+        with:
+          name: MenuMargin-iOS-Simulator
+          path: ${{ runner.temp }}/MenuMarginDerivedData/Build/Products/Debug-iphonesimulator/MenuMargin.app
+          if-no-files-found: error
+          retention-days: 14
