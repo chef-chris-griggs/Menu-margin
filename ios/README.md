@@ -10,13 +10,28 @@ This Xcode project adds an iPhone interface around the existing hosted MenuMargi
 - CSV and account backup files open in the iPhone share sheet. Use **Save to Files** or **Print** there. Recipe printing creates a PDF for the share sheet.
 - A new evergreen plate and leaf home-screen icon. The editable source is `Design/MenuMarginIcon.svg`.
 
-## Open and run
+## Open and run in Xcode
 
 1. Open `MenuMargin.xcodeproj` in Xcode.
 2. Select the **MenuMargin** scheme and an iPhone simulator.
 3. Press **Run** and sign in within the app.
 
-The target uses bundle identifier `com.menumargin.app` and supports iOS 16 and later. Change the bundle identifier when preparing it under your Apple Developer account.
+The target uses bundle identifier `com.menumargin.app` and supports iOS 16 and later.
+
+## Download and run a GitHub simulator build
+
+A successful **iOS simulator build** GitHub Actions run uploads a `MenuMargin-iOS-Simulator` artifact for 14 days. It is a Simulator app, not an iPhone-installable IPA.
+
+1. Open the repository's **Actions** tab and select the latest successful **iOS simulator build** run.
+2. Download `MenuMargin-iOS-Simulator` under **Artifacts** and unzip it on your Mac.
+3. Start an iPhone simulator in Xcode, then use Terminal to install and open the app (replace the path with the unzipped `MenuMargin.app` location):
+
+```sh
+xcrun simctl install booted "/path/to/MenuMargin.app"
+xcrun simctl launch booted com.menumargin.app
+```
+
+To test on a physical iPhone, build and run from Xcode with a personal signing team. App Store or TestFlight distribution requires Apple Developer Program membership.
 
 ## Account deletion setup
 
