@@ -195,3 +195,7 @@ Third-party notices and matching source materials are included under
 [vendor/](vendor/LICENSES.md), including the scanner’s
 [NOTICE](vendor/scanner/NOTICE.md). Keep those materials when distributing the
 app.
+
+## iPhone app
+
+The iOS Xcode project, native invoice camera, share-sheet exports and Apple setup notes are in [ios/README.md](ios/README.md). The project keeps the existing invoice OCR and Supabase account service in place.
