@@ -42,12 +42,21 @@ function mmUpdateMenuSummary() {
 }
 document.getElementById('mmMenuRefresh')?.addEventListener('click', () => document.getElementById('mmRefreshCloud')?.click());
 document.getElementById('mmMenuBilling')?.addEventListener('click', () => {
-  if (typeof mmManageBilling === 'function') mmManageBilling();
+  if (typeof mmManageBilling === 'function') mmManageBilling(document.getElementById('mmManageBillingAccount'), document.getElementById('mmCloudStatus'));
 });
 document.getElementById('mmMenuSignOut')?.addEventListener('click', () => document.getElementById('mmSignOut')?.click());
-document.getElementById('mmMenuCsv')?.addEventListener('click', () => document.getElementById('exportCsv')?.click());
-document.getElementById('mmMenuPriceCsv')?.addEventListener('click', () => document.getElementById('pbExport')?.click());
-document.getElementById('mmMenuBackup')?.addEventListener('click', () => document.getElementById('exportBackup')?.click());
+document.getElementById('mmMenuCsv')?.addEventListener('click', () => {
+  setActiveView('costing');
+  document.getElementById('exportCsv')?.click();
+});
+document.getElementById('mmMenuPriceCsv')?.addEventListener('click', () => {
+  setActiveView('pricebook');
+  document.getElementById('pbExport')?.click();
+});
+document.getElementById('mmMenuBackup')?.addEventListener('click', () => {
+  setActiveView('recipes');
+  document.getElementById('exportBackup')?.click();
+});
 document.getElementById('mmMenuPrintFlow')?.addEventListener('click', () => {
   setActiveView('costing');
   document.getElementById('printBtn')?.focus({preventScroll: true});
