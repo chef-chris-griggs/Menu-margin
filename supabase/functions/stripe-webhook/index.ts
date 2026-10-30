@@ -19,6 +19,17 @@ async function syncSubscription(subscriptionId: string) {
   const userId = mapping?.user_id ?? subscription.metadata?.supabase_user_id;
   if (!userId) throw new Error(`No MenuMargin account is mapped to Stripe customer ${customerId}`);
 
+  if (!mapping?.user_id) {
+    const { error: userError } = await admin.auth.admin.getUserById(userId);
+    if (userError && (userError as { status?: number }).status === 404) {
+      // Account deletion cancels subscriptions before removing the auth user.
+      // Stripe may deliver the cancellation webhook after the FK cascade.
+      if (subscription.status === "canceled" || subscription.status === "incomplete_expired") return;
+      throw userError;
+    }
+    if (userError) throw userError;
+  }
+
   const item = subscription.items.data[0];
   const { error } = await admin.from("menu_margin_subscriptions").upsert({
     stripe_subscription_id: subscription.id,

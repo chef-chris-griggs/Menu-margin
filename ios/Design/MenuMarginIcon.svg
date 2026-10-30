@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1b5849"/>
+      <stop offset="1" stop-color="#0d352d"/>
+    </linearGradient>
+    <linearGradient id="plate" x1="0" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#f8fbf7"/>
+      <stop offset="1" stop-color="#dfece4"/>
+    </linearGradient>
+    <filter id="shadow" x="-25%" y="-25%" width="150%" height="160%">
+      <feDropShadow dx="0" dy="22" stdDeviation="20" flood-color="#071f1a" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#background)"/>
+  <circle cx="512" cy="514" r="359" fill="url(#plate)" filter="url(#shadow)"/>
+  <circle cx="512" cy="514" r="320" fill="#e5efe8" stroke="#d5b35e" stroke-width="9"/>
+
+  <path d="M512 284c-48-58-123-62-153-53 14 69 71 103 153 89 82 14 139-20 153-89-30-9-105-5-153 53Z" fill="#d5b35e"/>
+  <path d="M512 316v-52" fill="none" stroke="#153e35" stroke-width="12" stroke-linecap="round"/>
+
+  <path d="M337 687V384c0-21 25-30 39-14l136 157 136-157c14-16 39-7 39 14v303" fill="none" stroke="#153e35" stroke-width="76" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M396 749h232" fill="none" stroke="#d5b35e" stroke-width="16" stroke-linecap="round"/>
+</svg>
