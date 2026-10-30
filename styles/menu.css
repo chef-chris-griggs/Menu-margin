@@ -1,0 +1,35 @@
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.menu-card h2 { margin-bottom: 10px; }
+.menu-card > p { color: var(--muted); line-height: 1.5; }
+.menu-account-email { overflow-wrap: anywhere; font-weight: 750; }
+.menu-sync-status { display: flex; gap: 8px; align-items: baseline; }
+.menu-label { color: var(--muted); font-size: .76rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.menu-actions { display: flex; flex-wrap: wrap; gap: 9px; margin: 15px 0 8px; }
+.menu-actions button { flex: 1 1 145px; min-height: 44px; }
+.menu-hint { margin-top: 13px; font-size: .86rem; }
+.menu-link-list { display: grid; gap: 10px; margin: 15px 0; }
+.menu-link-list a { color: var(--green); font-weight: 750; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.menu-settings, .menu-delete-panel { margin: 16px 0; }
+.menu-settings summary, .menu-delete-panel summary { cursor: pointer; font-weight: 800; }
+.menu-delete-panel { border-color: #e3b9b6; }
+.menu-delete-panel > p { max-width: 760px; color: #713b38; line-height: 1.5; }
+.menu-delete-form { display: grid; gap: 8px; max-width: 620px; }
+.menu-delete-form .field { margin: 4px 0; }
+.menu-delete-form input { min-height: 46px; width: 100%; padding: 11px 13px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink); }
+.menu-delete-form button { justify-self: start; min-height: 45px; }
+.menu-delete-message { margin: 2px 0 0; color: var(--muted); font-size: .88rem; }
+.menu-delete-message[data-state="error"] { color: #8b3033; }
+.menu-delete-message[data-state="success"] { color: #285d43; }
+@media (max-width: 720px) {
+  .menu-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .menu-card, .menu-settings, .menu-delete-panel { padding: 18px; }
+  .menu-actions button { flex: 1 1 100%; }
+}
+@media print {
+  #view-menu { display: none !important; }
+}

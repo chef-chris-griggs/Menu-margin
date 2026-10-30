@@ -13,10 +13,11 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icons/icon-180.png">
-<link rel="stylesheet" href="./styles.css?v=1.0.5">
+<link rel="stylesheet" href="./styles.css?v=1.0.6">
 <link rel="stylesheet" href="./styles/invoice-scanner.css?v=2">
 <link rel="stylesheet" href="./styles/recipe-price-links.css?v=2.1.1">
 <link rel="stylesheet" href="./styles/account.css?v=2.1.1">
+<link rel="stylesheet" href="./styles/menu.css?v=2.2.0">
 <script src="./vendor/supabase/supabase.js"></script>
 <script src="./js/site-config.js?v=2.1.1" defer></script>
 </head>
@@ -34,6 +35,7 @@
   <symbol id="icon-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14M10 11v6M14 11v6"/></symbol>
   <symbol id="icon-search-empty" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7"/><path d="m16 16 5 5M8 8l5 5M13 8l-5 5"/></symbol>
   <symbol id="icon-shield" viewBox="0 0 24 24"><path d="m12 3 8 3v5c0 5-3.4 8.3-8 10-4.6-1.7-8-5-8-10V6l8-3Z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></symbol>
+  <symbol id="icon-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="1"/><circle cx="16" cy="12" r="1"/><circle cx="10" cy="18" r="1"/></symbol>
 </svg>
 
 <section id="mmAuthGate" aria-labelledby="mmAuthTitle">
@@ -84,16 +86,62 @@
   <button type="button" class="nav-tab" role="tab" aria-selected="false" aria-controls="view-recipes" id="tab-recipes" data-view="recipes"><svg><use href="#icon-recipe"/></svg><span>Recipes</span></button>
   <button type="button" class="nav-tab" role="tab" aria-selected="false" aria-controls="view-pricebook" id="tab-pricebook" data-view="pricebook"><svg><use href="#icon-book"/></svg><span>Prices</span></button>
   <button type="button" class="nav-tab" role="tab" aria-selected="false" aria-controls="view-invoices" id="tab-invoices" data-view="invoices"><svg><use href="#icon-scan"/></svg><span>Scan</span></button>
+  <button type="button" class="nav-tab" role="tab" aria-selected="false" aria-controls="view-menu" id="tab-menu" data-view="menu"><svg><use href="#icon-menu"/></svg><span>Menu</span></button>
 </nav>
 
 <main id="appMain">
-  <details class="panel account-settings">
-    <summary>Account &amp; privacy</summary>
-    <p id="mmDeviceCopyNote">This browser keeps an account-specific device copy for offline recovery. It is not encrypted by MenuMargin.</p>
-    <label class="device-option"><input type="checkbox" id="mmForgetDevice"> Remove this account’s device copy when I sign out</label>
-    <p class="hint">Save and sync changes first. Removal is blocked while unsynced changes or recovery drafts remain. It does not delete your cloud account or other accounts on this device.</p>
-    <p class="customer-links"><a href="./help.html">Help &amp; contact</a> · <a href="./privacy.html">Privacy</a> · <a href="./terms.html">Terms</a> · <a href="./help.html#account-deletion">Request account deletion</a></p>
-  </details>
+  <section id="view-menu" class="app-view" role="tabpanel" aria-labelledby="tab-menu" hidden>
+    <div class="page-heading"><div><h1>Menu</h1><p class="page-subtitle">Account settings, exports, and useful links.</p></div></div>
+    <div class="menu-grid">
+      <section class="panel menu-card" aria-labelledby="menuAccountTitle">
+        <h2 id="menuAccountTitle">Account</h2>
+        <p id="mmMenuAccountEmail" class="menu-account-email">Sign in to view your account.</p>
+        <p class="menu-sync-status"><span class="menu-label">Sync</span><span id="mmMenuSyncStatus">Checking sync…</span></p>
+        <div class="menu-actions">
+          <button type="button" id="mmMenuRefresh" class="secondary">Refresh &amp; sync</button>
+          <button type="button" id="mmMenuBilling" class="secondary" hidden>Manage billing</button>
+          <button type="button" id="mmMenuSignOut" class="secondary">Sign out</button>
+        </div>
+      </section>
+      <section class="panel menu-card" aria-labelledby="menuExportTitle">
+        <h2 id="menuExportTitle">Export your work</h2>
+        <p>On iPhone, choose <strong>Save to Files</strong> in the share sheet to keep a copy you can print or send.</p>
+        <div class="menu-actions">
+          <button type="button" id="mmMenuCsv" class="secondary">Share recipe CSV</button>
+          <button type="button" id="mmMenuPriceCsv" class="secondary">Share price book CSV</button>
+          <button type="button" id="mmMenuBackup" class="secondary">Share account backup</button>
+        </div>
+        <p class="menu-hint">For a recipe PDF, open Cost and choose Print. On iPhone, use the print preview’s share options to save or send the PDF.</p>
+        <button type="button" id="mmMenuPrintFlow" class="text-button">Open Cost and PDF tools</button>
+      </section>
+      <section class="panel menu-card" aria-labelledby="menuHelpTitle">
+        <h2 id="menuHelpTitle">Help &amp; information</h2>
+        <div class="menu-link-list">
+          <a href="./help.html">Help &amp; contact</a>
+          <a href="./privacy.html">Privacy information</a>
+          <a href="./terms.html">Terms</a>
+        </div>
+        <p class="menu-hint">To add MenuMargin to your iPhone Home Screen, open this page in Safari, tap Share, then choose Add to Home Screen.</p>
+      </section>
+    </div>
+    <details class="panel account-settings menu-settings">
+      <summary>Device privacy &amp; sign-out</summary>
+      <p id="mmDeviceCopyNote">This browser keeps an account-specific device copy for offline recovery. It is not encrypted by MenuMargin.</p>
+      <label class="device-option"><input type="checkbox" id="mmForgetDevice"> Remove this account’s device copy when I sign out</label>
+      <p class="hint">Save and sync changes first. Removal is blocked while unsynced changes or recovery drafts remain. It does not delete your cloud account or other accounts on this device.</p>
+    </details>
+    <details class="panel menu-delete-panel">
+      <summary>Delete account and cloud data</summary>
+      <p>This permanently deletes your MenuMargin account, cloud recipes, and supplier prices. Your account subscription will be cancelled where applicable. This cannot be undone.</p>
+      <form id="mmDeleteAccountForm" class="menu-delete-form">
+        <div class="field"><label for="mmDeleteEmail">Account email</label><input id="mmDeleteEmail" type="email" autocomplete="username" required></div>
+        <div class="field"><label for="mmDeletePassword">Account password</label><input id="mmDeletePassword" type="password" autocomplete="current-password" required></div>
+        <div class="field"><label for="mmDeleteConfirmation">Type DELETE to confirm</label><input id="mmDeleteConfirmation" type="text" autocapitalize="characters" autocomplete="off" spellcheck="false" required></div>
+        <button type="submit" id="mmDeleteAccountSubmit" class="danger" disabled>Delete account and data</button>
+        <p id="mmDeleteAccountMessage" class="menu-delete-message" role="status" aria-live="polite">Enter the signed-in email and password, then type DELETE.</p>
+      </form>
+    </details>
+  </section>
   <section id="view-costing" class="app-view" role="tabpanel" aria-labelledby="tab-costing">
     <div class="page-heading recipe-page-heading">
       <div><h1 id="recipeHeading">New recipe</h1><p id="recipeStateCaption" class="page-subtitle">Not saved yet</p></div>
@@ -240,10 +288,11 @@ window.addEventListener('unhandledrejection',event=>{const box=document.getEleme
 <script src="./js/pricing.js?v=2.1.0"></script>
 <script src="./js/auth-recovery.js?v=2.1.2"></script>
 <script src="./js/auth.js?v=2.1.3-email"></script>
-<script src="./js/recipe.js?v=2.1.1-launch"></script>
-<script src="./js/pricebook.js?v=2.1.1-launch"></script>
+<script src="./js/recipe.js?v=2.2.0-menu-share"></script>
+<script src="./js/pricebook.js?v=2.2.0-menu-share"></script>
 <script src="./vendor/scanner/client.js?v=2.0.0-scanner"></script>
 <script src="./js/invoice.js?v=2.1.1-launch"></script>
 <script src="./js/startup.js?v=2.1.3-email"></script>
+<script src="./js/menu.js?v=2.2.0"></script>
 </body>
 </html>

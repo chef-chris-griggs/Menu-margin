@@ -8,6 +8,7 @@ function setActiveView(name){
   $('view-recipes').hidden=name!=='recipes';
   $('view-pricebook').hidden=name!=='pricebook';
   $('view-invoices').hidden=name!=='invoices';
+  $('view-menu').hidden=name!=='menu';
   $('costingLayout').hidden=name!=='costing';
   if(name==='pricebook')renderPriceBook();
   if(name==='recipes')refreshLibrary(currentRecipeId);
@@ -86,16 +87,18 @@ function updateLibraryButtons(){
 }
 function showToast(message){const toast=$('toast');toast.textContent=message;toast.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{toast.hidden=true;},5500)}
 function showRecipesToast(message){const toast=$('recipesToast');toast.textContent=message;clearTimeout(recipesToastTimer);recipesToastTimer=setTimeout(()=>{toast.textContent='';},7000)}
-function downloadAccountBackup(){
+async function downloadAccountBackup(){
   if(!mmUser){showRecipesToast('Sign in before downloading your account backup.');return;}
   const recipes=readLibrary(),draft=hasUnsavedChanges?recipeData():null;
   const draftHasContent=draft&&(draft.name!=='Untitled recipe'||draft.ingredients.some(mmIngredientTouched));
   if(draftHasContent){draft.id=currentRecipeId||mmNewUuid();const index=recipes.findIndex(item=>item.id===draft.id);if(index>=0)recipes[index]=draft;else recipes.push(draft);}
   const backup={format:'menumargin-account-backup',schemaVersion:1,exportedAt:new Date().toISOString(),recipes,priceBook:readPriceBook()};
-  const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');
-  link.href=url;link.download=`menumargin-backup-${new Date().toISOString().slice(0,10)}.json`;link.click();
-  setTimeout(()=>URL.revokeObjectURL(url),1000);
-  showRecipesToast(`Backup downloaded with ${backup.recipes.length} recipe${backup.recipes.length===1?'':'s'} and ${backup.priceBook.length} supplier price${backup.priceBook.length===1?'':'s'}${draftHasContent?'; your unsaved recipe changes were included':''}.`);
+  const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
+  const filename=`menumargin-backup-${new Date().toISOString().slice(0,10)}.json`;
+  const delivery=await mmDeliverFile(blob,filename,'MenuMargin account backup');
+  if(delivery==='cancelled')return;
+  const action=delivery==='shared'?'ready to save or share':'downloaded';
+  showRecipesToast(`Backup ${action} with ${backup.recipes.length} recipe${backup.recipes.length===1?'':'s'} and ${backup.priceBook.length} supplier price${backup.priceBook.length===1?'':'s'}${draftHasContent?'; your unsaved recipe changes were included':''}.`);
 }
 function mmBackupUuid(value){return typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)?value:mmNewUuid()}
 function mmBackupRecipe(value){
@@ -499,7 +502,7 @@ $('printBtn').addEventListener('click',()=>{
   }
 });
 // v0.7.1: export monetary CSV fields rounded to 2 decimal places.
-$('exportCsv').addEventListener('click',()=>{
+$('exportCsv').addEventListener('click',async()=>{
  const d=recipeData();
  const exportLines=d.ingredients.filter(mmIngredientTouched).map(r=>({r,...mmIngredientCost(r)}));
  const total=exportLines.reduce((sum,line)=>sum+line.cost,0);
@@ -529,6 +532,6 @@ $('exportCsv').addEventListener('click',()=>{
   ['Actual GP (%)',actualGp===''?'':Number(actualGp).toFixed(1)],
   ['Target GP (%)',d.targetGp]
  ];
- const csv=lines.map(row=>row.map(escapeCsv).join(',')).join('\r\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(d.name||'menumargin-recipe').toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ const csv=lines.map(row=>row.map(escapeCsv).join(',')).join('\r\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});const filename=(d.name||'menumargin-recipe').toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.csv';const delivery=await mmDeliverFile(blob,filename,`Recipe CSV — ${d.name||'MenuMargin'}`);if(delivery!=='cancelled')showToast(delivery==='shared'?'CSV ready to save or share.':'CSV downloaded.');
 });
 // Linked recipes resolve the account's current exact-name supplier price.

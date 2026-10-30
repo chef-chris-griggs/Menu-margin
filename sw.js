@@ -1,11 +1,11 @@
 const CACHE_PREFIX = 'menumargin-shell-' + encodeURIComponent(new URL(self.registration.scope).pathname) + '-';
-const CACHE_NAME = CACHE_PREFIX + 'v2.0.0-paddleocr';
+const CACHE_NAME = CACHE_PREFIX + 'v2.0.1-menu-share';
 const cachedResponse = request => caches.open(CACHE_NAME).then(cache => cache.match(request));
 const SHELL = [
-  './', './index.html', './styles.css?v=1.0.5', './styles/invoice-scanner.css?v=2', './styles/recipe-price-links.css?v=2.1.1', './styles/account.css?v=2.1.1', './privacy.html', './help.html', './terms.html', './manifest.webmanifest', './icons/icon.svg',
+  './', './index.html', './styles.css?v=1.0.6', './styles/invoice-scanner.css?v=2', './styles/recipe-price-links.css?v=2.1.1', './styles/account.css?v=2.1.1', './styles/menu.css?v=2.2.0', './privacy.html', './help.html', './terms.html', './manifest.webmanifest', './icons/icon.svg',
   './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png',
   './vendor/supabase/supabase.js',
-  './js/cloud-data.js?v=2.1.1', './js/site-config.js?v=2.1.1', './js/pricing.js?v=2.1.0', './js/auth-recovery.js?v=2.1.2', './js/auth.js?v=2.1.3-email', './js/recipe.js?v=2.1.1-launch', './js/pricebook.js?v=2.1.1-launch', './js/invoice.js?v=2.1.1-launch', './js/startup.js?v=2.1.3-email', './vendor/scanner/client.js?v=2.0.0-scanner'
+  './js/cloud-data.js?v=2.1.1', './js/site-config.js?v=2.1.1', './js/pricing.js?v=2.1.0', './js/auth-recovery.js?v=2.1.2', './js/auth.js?v=2.1.3-email', './js/recipe.js?v=2.2.0-menu-share', './js/pricebook.js?v=2.2.0-menu-share', './js/invoice.js?v=2.1.1-launch', './js/startup.js?v=2.1.3-email', './js/menu.js?v=2.2.0', './vendor/scanner/client.js?v=2.0.0-scanner'
 ];
 
 self.addEventListener('install', event => {

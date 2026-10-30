@@ -36,7 +36,7 @@ function renderPriceBook(){
   actions.append(add,edit,del);card.append(info,actions);list.appendChild(card);
  });
 }
-function exportPriceBookCsv(){
+async function exportPriceBookCsv(){
  const items=readPriceBook();
  if(!items.length){pbToast('There are no supplier prices to export yet.');return}
  const lines=[['Ingredient','Supplier','Supplier product code','Items per case','Size per item','Unit','Total case size','Total case price (£)','Price per item (£)','Normalized price unit','Price per kg / litre / each (£)','VAT basis','Updated']];
@@ -47,8 +47,9 @@ function exportPriceBookCsv(){
   const rateUnit=normalized==='g'?'kg':normalized==='ml'?'litre':'each',rate=perBase*(normalized==='each'?1:1000);
   lines.push([item.name,item.supplier,item.code||'',count,size,unit,totalSize,casePrice.toFixed(2),(casePrice/count).toFixed(2),rateUnit,rate.toFixed(2),item.priceBasis||'unknown',item.updatedAt||'']);
  });
- const csv=lines.map(row=>row.map(escapeCsv).join(',')).join('\r\n'),blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');
- a.href=url;a.download=`menumargin-price-book-${new Date().toISOString().slice(0,10)}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);pbToast(`${items.length} supplier price${items.length===1?'':'s'} exported.`);
+ const csv=lines.map(row=>row.map(escapeCsv).join(',')).join('\r\n'),blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}),filename=`menumargin-price-book-${new Date().toISOString().slice(0,10)}.csv`;
+ const delivery=await mmDeliverFile(blob,filename,'MenuMargin supplier price book CSV');
+ if(delivery!=='cancelled')pbToast(delivery==='shared'?`${items.length} supplier price${items.length===1?'':'s'} ready to save or share.`:`${items.length} supplier price${items.length===1?'':'s'} exported.`);
 }
 function mmNormalizeProductKey(value){return String(value||'').normalize('NFKC').trim().toLocaleLowerCase('en-GB').replace(/\s+/g,' ')}
 function mmPriceHistoryForUpdate(previous,next,source){
