@@ -114,9 +114,10 @@ try{
  assert.ok(await page.evaluate(()=>readLibrary().some(item=>item.name.includes('(recovered copy)'))));
  checks.push('a remote deletion preserves subsequent local edits under a new recovery ID');
  await page.locator('#recipeName').fill('Unsaved before sign-out');
+ await page.locator('#tab-menu').click();
  await page.evaluate(()=>{document.querySelector('.account-settings').open=true});await page.locator('#mmForgetDevice').check();await page.evaluate(()=>mmSignOut());
  assert.equal(await page.evaluate(()=>mmUser?.id),'account-a');assert.match(await page.locator('#mmCloudStatus').textContent(),/Save your recipe/);checks.push('device removal cannot discard unsaved editor changes');
- await page.evaluate(()=>{__online=true;return saveCurrentRecipe()});await page.evaluate(()=>mmRefreshCloud(true));
+ await page.evaluate(()=>{setActiveView('costing');__online=true;return saveCurrentRecipe()});await page.evaluate(()=>mmRefreshCloud(true));
  await page.evaluate(()=>{__online=false;const records=readLibrary();records[0].name='Pending offline';writeLibrary(records)});
  await page.evaluate(()=>mmSignOut());assert.equal(await page.evaluate(()=>mmUser?.id),'account-a');assert.match(await page.locator('#mmCloudStatus').textContent(),/Device copy kept/);checks.push('device removal cannot discard queued offline changes');
  await page.evaluate(()=>{__online=true;return mmRefreshCloud(true)});
