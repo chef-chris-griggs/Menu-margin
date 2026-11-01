@@ -7,9 +7,11 @@
 <meta name="description" content="Recipe costing and supplier price book for busy kitchens.">
 <meta name="apple-mobile-web-app-title" content="MenuMargin">
 <meta name="color-scheme" content="light">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://phwdyckedcqxbojpbqgz.supabase.co wss://phwdyckedcqxbojpbqgz.supabase.co; worker-src 'self' blob:; manifest-src 'self'">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>MenuMargin — Recipe Costing</title>
+<script src="./js/security-guard.js"></script>
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icons/icon-180.png">
@@ -280,10 +282,7 @@
 </main>
 
 <div class="mobile-summary" aria-label="Quick recipe summary"><div><div class="mini-label">Cost / portion</div><div class="mini-value" id="mobilePortion">£0.00</div></div><div class="mini-right"><div class="mini-label">GP</div><div class="mini-value" id="mobileGp">—</div></div><button type="button" id="viewSummary">View cost</button></div>
-<script>
-window.addEventListener('error',event=>{const box=document.getElementById('mmGlobalError');if(!box)return;box.hidden=false;box.textContent='MenuMargin could not load part of the app. Reload this page; your saved device data is unchanged. Details: '+(event.message||'A script could not start.');},true);
-window.addEventListener('unhandledrejection',event=>{const box=document.getElementById('mmGlobalError');if(!box)return;box.hidden=false;box.textContent='A MenuMargin operation failed. Your local changes are kept. Details: '+String(event.reason?.message||event.reason||'unknown error');});
-</script>
+<script src="./js/runtime-errors.js"></script>
 <script src="./js/cloud-data.js?v=2.1.1"></script>
 <script src="./js/pricing.js?v=2.1.0"></script>
 <script src="./js/auth-recovery.js?v=2.1.2"></script>

@@ -467,6 +467,9 @@ function mmClearPrivateUi(){
   clearTimeout(mmDraftTimer);mmDraftTimer=null;
   const passwordField=document.getElementById('mmPassword');if(passwordField)passwordField.value='';
   const recoveryPassword=document.getElementById('mmNewPassword');if(recoveryPassword)recoveryPassword.value='';
+  const deleteForm=document.getElementById('mmDeleteAccountForm');if(deleteForm)deleteForm.reset();
+  const deleteButton=document.getElementById('mmDeleteAccountSubmit');if(deleteButton)deleteButton.disabled=true;
+  const deleteMessage=document.getElementById('mmDeleteAccountMessage');if(deleteMessage){deleteMessage.textContent='Enter the signed-in email and password, then type DELETE.';delete deleteMessage.dataset.state;}
   const ids=['recipeName','yield','sellingPrice','targetGp','invoiceSupplier','invoiceNumber','invoiceOrderNumber','invoiceText'];
   ids.forEach(id=>{const node=document.getElementById(id);if(node)node.value='';});
   ['ingredients','pricebookList','invoiceReviewRows'].forEach(id=>document.getElementById(id)?.replaceChildren());

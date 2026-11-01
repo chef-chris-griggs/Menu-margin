@@ -19,12 +19,12 @@ const cleanup=[],checks=[];
 const denied=r=>[401,403].includes(r.status)||(r.ok&&Array.isArray(r.value)&&r.value.length===0);
 try{
  for(const table of ['recipes','price_book']){
-  const id=randomUUID(),common={id,user_id:users[0]},record=table==='recipes'?{...common,name:'MenuMargin isolation test',recipe_data:{ingredients:[],name:'MenuMargin isolation test'}}:{...common,ingredient_name:'MenuMargin isolation test',supplier:'TEST ONLY',pack_size:1,unit:'each',pack_price:1,item_data:{name:'MenuMargin isolation test',supplier:'TEST ONLY',packBase:1,baseUnit:'each',price:1}};
+  const id=randomUUID(),common={id,user_id:users[0]},itemData={name:'MenuMargin isolation test',supplier:'TEST ONLY',packBase:1,baseUnit:'each',price:1},record=table==='recipes'?{...common,name:'MenuMargin isolation test',recipe_data:{ingredients:[],name:'MenuMargin isolation test'}}:{...common,item_data:itemData};
   const own=await request('/rest/v1/'+table,{token:a,method:'POST',body:record});assert.equal(own.ok,true,`${table}: own create must succeed (status ${own.status})`);cleanup.push({table,id});
   const route=`/rest/v1/${table}?id=eq.${id}`;
   assert.ok(denied(await request(route,{token:b})),table+': another account cannot read');
   assert.ok(denied(await request(route)),table+': anonymous cannot read');
-  const update=table==='recipes'?{name:'Unauthorized edit'}:{supplier:'Unauthorized edit'};
+  const update=table==='recipes'?{name:'Unauthorized edit'}:{item_data:{...itemData,supplier:'Unauthorized edit'}};
   assert.ok(denied(await request(route,{token:b,method:'PATCH',body:update})),table+': another account cannot update');
   assert.ok(denied(await request(route,{token:b,method:'DELETE'})),table+': another account cannot delete');
   const forgedId=randomUUID();cleanup.push({table,id:forgedId});
@@ -34,8 +34,8 @@ try{
   assert.ok([401,403].includes((await request('/rest/v1/'+table,{method:'POST',body:{...record,id:anonId}})).status),table+': anonymous cannot insert');
   assert.ok([401,403].includes((await request(route,{token:a,method:'PATCH',body:{user_id:users[1]}})).status),table+': ownership cannot be reassigned to account B');
   const after=await request(route,{token:a});assert.equal(after.ok,true);assert.equal(after.value.length,1,'Own record must remain readable');
-  assert.equal(after.value[0].user_id,users[0]);assert.equal(table==='recipes'?after.value[0].name:after.value[0].supplier,table==='recipes'?'MenuMargin isolation test':'TEST ONLY');
-  const allowed=await request(route,{token:a,method:'PATCH',body:table==='recipes'?{name:'Owner update'}:{supplier:'OWNER UPDATE'}});assert.equal(allowed.ok,true);assert.equal(allowed.value.length,1,'Owner update must affect its row');
+  assert.equal(after.value[0].user_id,users[0]);assert.equal(table==='recipes'?after.value[0].name:after.value[0].item_data?.supplier,table==='recipes'?'MenuMargin isolation test':'TEST ONLY');
+  const allowed=await request(route,{token:a,method:'PATCH',body:table==='recipes'?{name:'Owner update'}:{item_data:{...itemData,supplier:'OWNER UPDATE'}}});assert.equal(allowed.ok,true);assert.equal(allowed.value.length,1,'Owner update must affect its row');
   checks.push(table+': owner CRUD, cross-account read/update/delete/insert, owner reassignment, anonymous read/write');
  }
  console.log(JSON.stringify({passed:true,checks,scope:'Disposable account API tests only; does not audit all database functions or infrastructure.'}));

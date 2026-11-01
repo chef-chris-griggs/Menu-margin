@@ -15,7 +15,9 @@ const { chromium, webkit } = playwright;
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const debugDirectory = join(root, 'scanner-debug');
 await mkdir(debugDirectory, { recursive: true });
-const html = (await readFile(root + '/index.html', 'utf8')).replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+// This synthetic fixture adds local scripts through Playwright, which injects
+// them inline. The live-page CSP is exercised only by a hosted-page check.
+const html = (await readFile(root + '/index.html', 'utf8')).replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '').replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/i, '');
 const browserName = process.argv.includes('--webkit') || process.env.MENUMARGIN_UI_BROWSER === 'webkit' ? 'webkit' : 'chromium';
 const browser = await (browserName === 'webkit' ? webkit : chromium).launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, reducedMotion: 'reduce' });
