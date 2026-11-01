@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'menumargin-shell-' + encodeURIComponent(new URL(self.registration.scope).pathname) + '-';
-const CACHE_NAME = CACHE_PREFIX + 'v2.0.1-menu-share';
+const CACHE_NAME = CACHE_PREFIX + 'v2.0.2-scanner-csp';
 const cachedResponse = request => caches.open(CACHE_NAME).then(cache => cache.match(request));
 const SHELL = [
   './', './index.html', './styles.css?v=1.0.6', './styles/invoice-scanner.css?v=2', './styles/recipe-price-links.css?v=2.1.1', './styles/account.css?v=2.1.1', './styles/menu.css?v=2.2.0', './privacy.html', './help.html', './terms.html', './manifest.webmanifest', './icons/icon.svg',
