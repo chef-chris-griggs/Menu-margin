@@ -11,7 +11,9 @@ const context=await browser.newContext({viewport:{width:1280,height:900},reduced
 await context.route('**/*',r=>{if(new URL(r.request().url()).protocol==='blob:')return r.continue();network.push(r.request().url());return r.abort();});
 page.on('pageerror',e=>errors.push(e.message));
 try{
- const html=(await readFile(path.join(root,'index.html'),'utf8')).replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'').replace(/<link\b[^>]*>/gi,'');
+ // This synthetic fixture adds local scripts through Playwright, which injects
+ // them inline. The live-page CSP is exercised only by a hosted-page check.
+ const html=(await readFile(path.join(root,'index.html'),'utf8')).replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'').replace(/<link\b[^>]*>/gi,'').replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/i,'');
  await page.setContent(html);
  for(const css of ['styles.css','styles/invoice-scanner.css','styles/recipe-price-links.css','styles/account.css'])await page.addStyleTag({path:path.join(root,css)});
  await page.evaluate(()=>{
