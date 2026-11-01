@@ -19,5 +19,6 @@ jobs:
       - run: npm run test:recipe-prices && npm run test:recipe-prices:webkit
       - run: npm run test:accounts && npm run test:accounts:webkit
       - run: npm run test:recovery && npm run test:recovery:webkit
+      - run: npm run test:scanner:csp && npm run test:scanner:csp:webkit
       # Private invoice fixtures are deliberately absent from public CI.
       # Run the real-photo regression locally before a scanner release.

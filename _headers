@@ -3,3 +3,10 @@
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
+
+# OpenCV creates JavaScript functions inside this dedicated OCR worker.
+# Detach the inherited policy before replacing it: duplicate CSPs intersect.
+# Keep eval forbidden in documents and all other scripts/workers.
+/vendor/scanner/scanner.worker.js
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'none'; script-src 'self' 'unsafe-eval'; connect-src 'self'; worker-src 'none'

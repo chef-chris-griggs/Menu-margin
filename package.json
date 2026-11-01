@@ -10,6 +10,8 @@
     "test:review:webkit": "node tests/invoice-review.browser.mjs --webkit",
     "test:decode": "node tests/invoice-decode.browser.mjs",
     "test:decode:webkit": "node tests/invoice-decode.browser.mjs --webkit",
+    "test:scanner:csp": "node tests/scanner-csp.browser.mjs",
+    "test:scanner:csp:webkit": "node tests/scanner-csp.browser.mjs --webkit",
     "test:scanner:webkit": "node scripts/test-invoice-samples.mjs --webkit",
     "test:offline": "node tests/scanner-offline.browser.mjs",
     "test:offline:webkit": "node tests/scanner-offline.browser.mjs --webkit",
