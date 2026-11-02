@@ -110,7 +110,7 @@ document.getElementById('mmDeleteAccountForm')?.addEventListener('submit', async
     if (typeof mmClearPrivateUi === 'function') mmClearPrivateUi();
     document.getElementById('mmAuthGate').hidden = false;
     document.getElementById('mmSubscriptionGate').hidden = true;
-    document.getElementById('mmAuthMessage').textContent = 'Your MenuMargin account and cloud data have been deleted.';
+    document.getElementById('mmAuthMessage').textContent = 'Your Mise en Price account and cloud data have been deleted.';
     document.getElementById('mmDeleteAccountForm').reset();
     mmDeleteStatus('Account deleted. You can close this page.', 'success');
   } catch (error) {
