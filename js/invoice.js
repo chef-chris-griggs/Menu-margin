@@ -570,7 +570,7 @@ function invoiceDebugJson() {
     reviewedRows: invoiceReviewStates.map(state => ({ id: state.id, productCode: state.productCode, description: state.description, quantity: state.quantity, unitPrice: state.unitPrice, lineTotal: state.lineTotal, quantityBasis: state.quantityBasis, priceBasis: state.priceBasis, caseCount: state.caseCount, eachSize: state.eachSize, packUnit: state.packUnit, confirmed: state.confirmed, selected: state.selected })),
     reviewedValidation: invoiceCurrentValidation()
   };
-  invoiceDownload(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }), 'mise-en-price-positioned-ocr-debug.json');
+  invoiceDownload(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }), 'menumargin-positioned-ocr-debug.json');
 }
 function invoiceValidateImport(state) {
   const issues = [];
@@ -686,7 +686,7 @@ $('invoiceShowPhoto').addEventListener('click', () => invoiceSetMobileView('phot
 $('invoiceBackToRow').addEventListener('click', () => { invoiceSetMobileView('rows'); invoiceFocusedRow?.card.scrollIntoView({ behavior: 'smooth', block: 'center' }); });
 $('invoiceDownloadCleaned').addEventListener('click', () => {
   const page = invoiceScanResult?.pages?.find(item => Number(item.pageNumber) === invoiceCurrentPage);
-  if (page?.cleaned) invoiceDownload(page.cleaned, 'mise-en-price-cleaned-page-' + invoiceCurrentPage + '.png');
+  if (page?.cleaned) invoiceDownload(page.cleaned, 'menumargin-cleaned-page-' + invoiceCurrentPage + '.png');
 });
 $('invoiceDownloadDebug').addEventListener('click', invoiceDebugJson);
 $('selectInvoiceRows').addEventListener('click', () => { invoiceReviewStates.forEach(state => { state.selected = true; state.elements.selected.checked = true; }); invoiceUpdateSelectionSummary(); });

@@ -94,7 +94,7 @@ async function downloadAccountBackup(){
   if(draftHasContent){draft.id=currentRecipeId||mmNewUuid();const index=recipes.findIndex(item=>item.id===draft.id);if(index>=0)recipes[index]=draft;else recipes.push(draft);}
   const backup={format:'menumargin-account-backup',schemaVersion:1,exportedAt:new Date().toISOString(),recipes,priceBook:readPriceBook()};
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
-  const filename=`mise-en-price-backup-${new Date().toISOString().slice(0,10)}.json`;
+  const filename=`menumargin-backup-${new Date().toISOString().slice(0,10)}.json`;
   const delivery=await mmDeliverFile(blob,filename,'Mise en Price account backup');
   if(delivery==='cancelled')return;
   const action=delivery==='shared'?'ready to save or share':'downloaded';
@@ -532,6 +532,6 @@ $('exportCsv').addEventListener('click',async()=>{
   ['Actual GP (%)',actualGp===''?'':Number(actualGp).toFixed(1)],
   ['Target GP (%)',d.targetGp]
  ];
- const csv=lines.map(row=>row.map(escapeCsv).join(',')).join('\r\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});const filename=(d.name||'mise-en-price-recipe').toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.csv';const delivery=await mmDeliverFile(blob,filename,`Recipe CSV — ${d.name||'Mise en Price'}`);if(delivery!=='cancelled')showToast(delivery==='shared'?'CSV ready to save or share.':'CSV downloaded.');
+ const csv=lines.map(row=>row.map(escapeCsv).join(',')).join('\r\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});const filename=(d.name||'menumargin-recipe').toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.csv';const delivery=await mmDeliverFile(blob,filename,`Recipe CSV — ${d.name||'Mise en Price'}`);if(delivery!=='cancelled')showToast(delivery==='shared'?'CSV ready to save or share.':'CSV downloaded.');
 });
 // Linked recipes resolve the account's current exact-name supplier price.

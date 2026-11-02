@@ -47,7 +47,7 @@ async function exportPriceBookCsv(){
   const rateUnit=normalized==='g'?'kg':normalized==='ml'?'litre':'each',rate=perBase*(normalized==='each'?1:1000);
   lines.push([item.name,item.supplier,item.code||'',count,size,unit,totalSize,casePrice.toFixed(2),(casePrice/count).toFixed(2),rateUnit,rate.toFixed(2),item.priceBasis||'unknown',item.updatedAt||'']);
  });
- const csv=lines.map(row=>row.map(escapeCsv).join(',')).join('\r\n'),blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}),filename=`mise-en-price-price-book-${new Date().toISOString().slice(0,10)}.csv`;
+ const csv=lines.map(row=>row.map(escapeCsv).join(',')).join('\r\n'),blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}),filename=`menumargin-price-book-${new Date().toISOString().slice(0,10)}.csv`;
  const delivery=await mmDeliverFile(blob,filename,'Mise en Price supplier price book CSV');
  if(delivery!=='cancelled')pbToast(delivery==='shared'?`${items.length} supplier price${items.length===1?'':'s'} ready to save or share.`:`${items.length} supplier price${items.length===1?'':'s'} exported.`);
 }
