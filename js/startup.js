@@ -9,7 +9,7 @@ mmResolveAppBoot();
 
 if('serviceWorker' in navigator&&window.location.protocol!=='file:'){
   navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(error=>{
-    console.warn('MenuMargin offline storage could not start:',error);
+    console.warn('Mise en Price offline storage could not start:',error);
     const status=document.getElementById('mmCloudStatus');
     if(status)status.textContent='Online app ready. Offline install is unavailable in this browser.';
   });
@@ -27,7 +27,7 @@ if(window.matchMedia('(display-mode: standalone)').matches||window.navigator.sta
 }
 installButton?.addEventListener('click',async()=>{
   if(isAppleMobile){
-    alert('To install MenuMargin on iPhone or iPad, tap Share in Safari, then choose Add to Home Screen.');
+    alert('To install Mise en Price on iPhone or iPad, tap Share in Safari, then choose Add to Home Screen.');
     return;
   }
   if(!mmInstallPrompt){alert('Use your browser menu and choose Install app or Add to Home Screen.');return;}
