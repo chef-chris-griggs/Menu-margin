@@ -67,7 +67,7 @@ async function scanInvoiceFile() {
   const file = files[0];
   if (!file) { invoiceToast('Choose an invoice PDF or its photos first.'); return; }
   if (!window.MenuMarginScanner?.scanFile) {
-    invoiceToast('The local scanner files could not load. Reload Mise en Price and try again.');
+    invoiceToast('The local scanner files could not load. Reload MenuMargin and try again.');
     return;
   }
   if (files.some(item => item.size > 30 * 1024 * 1024)) { invoiceToast('Each invoice file must be smaller than 30 MB.'); return; }
