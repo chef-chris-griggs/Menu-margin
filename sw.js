@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'menumargin-shell-' + encodeURIComponent(new URL(self.registration.scope).pathname) + '-';
-const CACHE_NAME = CACHE_PREFIX + 'v2.0.2-scanner-csp';
+const CACHE_NAME = CACHE_PREFIX + 'v2.0.3-mise-en-price';
 const cachedResponse = request => caches.open(CACHE_NAME).then(cache => cache.match(request));
 const SHELL = [
   './', './index.html', './styles.css?v=1.0.6', './styles/invoice-scanner.css?v=2', './styles/recipe-price-links.css?v=2.1.1', './styles/account.css?v=2.1.1', './styles/menu.css?v=2.2.0', './privacy.html', './help.html', './terms.html', './manifest.webmanifest', './icons/icon.svg',
@@ -29,7 +29,7 @@ self.addEventListener('fetch', event => {
         event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.put(request, copy)).catch(() => {}));
       }
       return response;
-    }).catch(() => cachedResponse(request).then(response => response || (url.pathname === new URL(self.registration.scope).pathname || url.pathname.endsWith('/index.html') ? cachedResponse('./index.html') : new Response('This page is unavailable offline. Return to MenuMargin when connected.', {status:503,headers:{'content-type':'text/plain'}})))));
+    }).catch(() => cachedResponse(request).then(response => response || (url.pathname === new URL(self.registration.scope).pathname || url.pathname.endsWith('/index.html') ? cachedResponse('./index.html') : new Response('This page is unavailable offline. Return to Mise en Price when connected.', {status:503,headers:{'content-type':'text/plain'}})))));
     return;
   }
 

@@ -1,7 +1,7 @@
 {
   "id": "./",
-  "name": "MenuMargin — Recipe Costing",
-  "short_name": "MenuMargin",
+  "name": "Mise en Price — Recipe Costing",
+  "short_name": "Mise en Price",
   "description": "Recipe costing and supplier price book for busy kitchens.",
   "start_url": "./",
   "scope": "./",

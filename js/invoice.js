@@ -67,7 +67,7 @@ async function scanInvoiceFile() {
   const file = files[0];
   if (!file) { invoiceToast('Choose an invoice PDF or its photos first.'); return; }
   if (!window.MenuMarginScanner?.scanFile) {
-    invoiceToast('The local scanner files could not load. Reload MenuMargin and try again.');
+    invoiceToast('The local scanner files could not load. Reload Mise en Price and try again.');
     return;
   }
   if (files.some(item => item.size > 30 * 1024 * 1024)) { invoiceToast('Each invoice file must be smaller than 30 MB.'); return; }
@@ -570,7 +570,7 @@ function invoiceDebugJson() {
     reviewedRows: invoiceReviewStates.map(state => ({ id: state.id, productCode: state.productCode, description: state.description, quantity: state.quantity, unitPrice: state.unitPrice, lineTotal: state.lineTotal, quantityBasis: state.quantityBasis, priceBasis: state.priceBasis, caseCount: state.caseCount, eachSize: state.eachSize, packUnit: state.packUnit, confirmed: state.confirmed, selected: state.selected })),
     reviewedValidation: invoiceCurrentValidation()
   };
-  invoiceDownload(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }), 'menumargin-positioned-ocr-debug.json');
+  invoiceDownload(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }), 'mise-en-price-positioned-ocr-debug.json');
 }
 function invoiceValidateImport(state) {
   const issues = [];
@@ -686,7 +686,7 @@ $('invoiceShowPhoto').addEventListener('click', () => invoiceSetMobileView('phot
 $('invoiceBackToRow').addEventListener('click', () => { invoiceSetMobileView('rows'); invoiceFocusedRow?.card.scrollIntoView({ behavior: 'smooth', block: 'center' }); });
 $('invoiceDownloadCleaned').addEventListener('click', () => {
   const page = invoiceScanResult?.pages?.find(item => Number(item.pageNumber) === invoiceCurrentPage);
-  if (page?.cleaned) invoiceDownload(page.cleaned, 'menumargin-cleaned-page-' + invoiceCurrentPage + '.png');
+  if (page?.cleaned) invoiceDownload(page.cleaned, 'mise-en-price-cleaned-page-' + invoiceCurrentPage + '.png');
 });
 $('invoiceDownloadDebug').addEventListener('click', invoiceDebugJson);
 $('selectInvoiceRows').addEventListener('click', () => { invoiceReviewStates.forEach(state => { state.selected = true; state.elements.selected.checked = true; }); invoiceUpdateSelectionSummary(); });
