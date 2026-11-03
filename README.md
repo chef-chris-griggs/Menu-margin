@@ -1,14 +1,20 @@
-# MenuMargin
+# Mise en Price
 
 **Recipe costing, supplier prices and invoice scanning for busy kitchens.**
 
-MenuMargin helps you cost dishes, maintain an ingredient price book and see how
+Mise en Price helps you cost dishes, maintain an ingredient price book and see how
 buying-price changes affect your recipes. It works in a mobile or desktop
 browser and can be added to a phone’s Home Screen when hosted over HTTPS.
 
-This folder contains the **2.1.3 email-protection candidate**. The working scanner is
-preserved; this update adds safer cloud saves, exact-name recipe price updates,
-VAT warnings and account controls. Payment collection remains switched off.
+**Prep it. Price it. Plate it.** Formerly MenuMargin. This rebrand preserves the
+existing app address, accounts, invoice scanner, costing, backup format and billing
+configuration. Billing availability is controlled by the existing service settings;
+the rebrand does not enable or disable payments.
+
+The standalone marketing site is in [`marketing/`](marketing/). It is prepared for
+`miseenprice.co.uk`, with no domain ownership assumed. Its app links retain the
+existing Cloudflare Pages address. See the [rebrand handover](docs/REBRAND-HANDOVER.md)
+for validation, service access and domain activation steps.
 
 ## What you can do
 
@@ -55,7 +61,7 @@ Labour, overheads and waste are not included in the displayed food-cost GP.
    price and retain the previous price/pack details in history.
 
 Recognition runs **on the device** using PaddleOCR and OpenCV. A Mac service
-or paid invoice-processing API is not needed. MenuMargin does not upload the
+or paid invoice-processing API is not needed. Mise en Price does not upload the
 invoice photo or full OCR word output. Selected price-book entries, invoice
 references and price history use the account save/sync flow.
 
@@ -110,7 +116,7 @@ browser tests; the real-email retest remains a release check.
 ## VAT, saving and recovery
 
 - **Prices stay as entered.** Mark prices as including VAT, excluding VAT or
-  unconfirmed. MenuMargin warns about inclusive/unknown ingredient prices when
+  unconfirmed. Mise en Price warns about inclusive/unknown ingredient prices when
   showing GP. It does not guess a VAT rate or deduct VAT automatically.
 - **Device saves and cloud saves are different.** A device save stays queued
   until the server confirms it. Use **Refresh & sync** after reconnecting and
@@ -122,7 +128,7 @@ browser tests; the real-email retest remains a release check.
 - **Shared device?** Open **Account & privacy** to select removal of this
   account’s device copy at sign-out. Unsaved edits, pending changes and recovery
   drafts must be dealt with first. Normal sign-out keeps an account-specific
-  copy for recovery; MenuMargin does not encrypt that browser copy itself.
+  copy for recovery; Mise en Price does not encrypt that browser copy itself.
 
 Offline use depends on a cached app, cached recognition files and an available
 sign-in session. Browser storage can be removed or evicted. Do not clear site
