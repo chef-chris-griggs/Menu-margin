@@ -55,7 +55,10 @@ a claim of ownership or availability.
 
 Cloudflare and Supabase dashboard sessions were signed out during this run.
 The Stripe connector exposed only `menumargin sandbox`, not the live account.
-No credentials, payment objects or customer data were modified by this run.
+No credentials, live payment objects, subscription settings or customer data were modified.
+The existing sandbox product was renamed from MenuMargin pro to Mise en Price pro;
+a read-back confirmed the same product and price IDs, GBP 999 minor units/month
+and price configuration. No test payment or subscription was created.
 
 ### Cloudflare
 
@@ -97,7 +100,9 @@ requires access; do not claim it passed based on the frontend tests.
 
 Run `npm run test:unit` and `node scripts/check-rebrand.mjs`. The one-off rebrand
 guard compares protected code and compatibility contracts with the baseline.
-The existing GitHub regression workflow runs invoice review, recipe pricing and
+Marketing was visually checked on desktop and in 320/375/390px frames; the narrow
+layout was corrected after an overflow check. Navigation and FAQ expansion were
+checked in the browser. The existing GitHub regression workflow runs invoice review, recipe pricing and
 backups, account flows, recovery, and real OCR/CSP/service-worker upgrade tests in
 both Chromium and WebKit using synthetic data. It does not validate a real live
 payment, production customer login, real email delivery or every supplier invoice.
