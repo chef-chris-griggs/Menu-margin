@@ -147,6 +147,8 @@ body.mm-authenticated > #mmSubscriptionGate { display: none !important; }
 .auth-brand { margin-bottom: 30px; color: var(--green); }
 .auth-brand span { color: #648275; }
 #mmAuthGate h1, #mmSubscriptionGate h1 { margin: 8px 0 10px; font-size: clamp(1.7rem, 6vw, 2.35rem); line-height: 1.1; letter-spacing: -.045em; }
+#mmAuthGate #mmAuthTitle { font-size: clamp(1.2rem, 5.5vw, 2.1rem); text-wrap: balance; }
+#mmAuthTitle span { display: inline-block; }
 #mmAuthGate p, #mmSubscriptionGate p { color: var(--muted); }
 .mm-field { display: grid; gap: 6px; margin: 14px 0; }
 .mm-field label, .field label { color: var(--muted); font-size: .78rem; font-weight: 800; letter-spacing: .025em; text-transform: uppercase; }

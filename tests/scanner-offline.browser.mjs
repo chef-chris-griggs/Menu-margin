@@ -39,7 +39,7 @@ try{
   for(const name of ['scanner.worker.js','ort-wasm-simd-threaded.wasm','PP-OCRv5_mobile_det_onnx_infer.tar','en_PP-OCRv5_mobile_rec_onnx_infer.tar'])assert.ok(cached.some(p=>p.endsWith(name)),`${name} cached`);
   assert.equal(cached.some(p=>p.includes('/samples/')),false);console.log('PASS: models/runtime cached; invoice photo is absent from HTTP cache; live-app cache preserved.');
   const legal=await context.newPage();await legal.goto(origin+prefix+'privacy.html');
-  assert.match(await legal.locator('h1').textContent(),/information in MenuMargin/);await legal.close();
+  assert.match(await legal.locator('h1').textContent(),/information in Mise en Price/);await legal.close();
   const appShell=await page.evaluate(async prefix=>{const names=await caches.keys(),cache=await caches.open(names.find(name=>name.startsWith('menumargin-shell-'+encodeURIComponent(prefix)+'-')));return (await cache.match(prefix+'index.html')).text();},prefix);
   assert.ok(appShell.includes('id="recipeHeading"'));console.log('PASS: opening privacy information does not overwrite the cached app home.');
   await page.evaluate(()=>MenuMarginScanner.reset());
@@ -50,7 +50,7 @@ try{
   if(browserName==='webkit'){server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}else await context.setOffline(true);
   const offline=await page.evaluate(async()=>{const r=await MenuMarginScanner.scanFile(window.invoice,{onProgress:message=>console.log('OFFLINE:',message)});return r.rows.map(row=>[row.productCode,row.quantity,row.unitPrice,row.lineTotal]);});
   assert.deepEqual(offline,online);console.log('PASS: fresh OCR worker scans the same HEIC with '+offlineMode+'.');
-  const help=await context.newPage();await help.goto(origin+prefix+'help.html');assert.match(await help.locator('h1').textContent(),/Help with MenuMargin/);await help.close();console.log('PASS: support information opens from the offline cache.');
+  const help=await context.newPage();await help.goto(origin+prefix+'help.html');assert.match(await help.locator('h1').textContent(),/Help with Mise en Price/);await help.close();console.log('PASS: support information opens from the offline cache.');
   await page.evaluate(async()=>{
     MenuMarginScanner.reset();const controller=new AbortController();
     const pending=MenuMarginScanner.scanFile(window.invoice,{signal:controller.signal,onProgress:()=>controller.abort()});

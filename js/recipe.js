@@ -95,7 +95,7 @@ async function downloadAccountBackup(){
   const backup={format:'menumargin-account-backup',schemaVersion:1,exportedAt:new Date().toISOString(),recipes,priceBook:readPriceBook()};
   const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
   const filename=`menumargin-backup-${new Date().toISOString().slice(0,10)}.json`;
-  const delivery=await mmDeliverFile(blob,filename,'MenuMargin account backup');
+  const delivery=await mmDeliverFile(blob,filename,'Mise en Price account backup');
   if(delivery==='cancelled')return;
   const action=delivery==='shared'?'ready to save or share':'downloaded';
   showRecipesToast(`Backup ${action} with ${backup.recipes.length} recipe${backup.recipes.length===1?'':'s'} and ${backup.priceBook.length} supplier price${backup.priceBook.length===1?'':'s'}${draftHasContent?'; your unsaved recipe changes were included':''}.`);
@@ -139,9 +139,9 @@ async function restoreAccountBackup(file){
   if(!file)return;
   if(file.size>25*1024*1024){showRecipesToast('This backup is larger than 25 MB and cannot be opened here.');return;}
   let backup;
-  try{backup=JSON.parse(await file.text())}catch{showRecipesToast('That file is not valid JSON. Choose a MenuMargin backup file.');return;}
+  try{backup=JSON.parse(await file.text())}catch{showRecipesToast('That file is not valid JSON. Choose a Mise en Price backup file.');return;}
   if(backup?.format!=='menumargin-account-backup'||backup?.schemaVersion!==1||!Array.isArray(backup.recipes)||!Array.isArray(backup.priceBook)){
-    showRecipesToast('This is not a supported MenuMargin backup. Your current data has not changed.');return;
+    showRecipesToast('This is not a supported Mise en Price backup. Your current data has not changed.');return;
   }
   const incomingRecipes=backup.recipes.map(mmBackupRecipe).filter(Boolean),incomingPrices=backup.priceBook.map(mmBackupPrice).filter(Boolean);
   const skippedRecipes=backup.recipes.length-incomingRecipes.length,skippedPrices=backup.priceBook.length-incomingPrices.length;
@@ -178,7 +178,7 @@ async function restoreAccountBackup(file){
   }catch(error){
     refreshLibrary(currentRecipeId);renderPriceBook();
     showRecipesToast('The backup could not be fully saved. Some rows may already be on this device; check Recipes and Prices before retrying.');
-    console.error('MenuMargin backup restore failed:',error);return;
+    console.error('Mise en Price backup restore failed:',error);return;
   }
   refreshLibrary(currentRecipeId);renderPriceBook();
   if(mmCloudReady)await mmSyncCloud().catch(error=>console.warn('Backup data will sync when connected:',error));
@@ -349,7 +349,7 @@ async function saveCurrentRecipe(){
     if(res?.offline||(typeof mmReadPending==='function'&&mmReadPending(mmUser?.id).some(item=>item.kind==='recipes'&&item.id===data.id))){showToast(`Saved “${data.name}” on this device. Choose Refresh & sync when connected.`);updateRecipeHeader();return;}
     showToast(`Saved “${data.name}” to your cloud account.`);
     mmAuthMessage('Cloud sync working — recipe saved.');
-  }catch(e){console.error('MenuMargin cloud recipe save failed:',e);showToast(savedOnDevice?`Recipe saved on this device, but cloud save failed: ${e.message}`:`Could not save this recipe. Keep this page open and download a backup. ${e.message}`);mmAuthMessage((savedOnDevice?'CLOUD SAVE ERROR: ':'DEVICE SAVE ERROR: ')+e.message);}
+  }catch(e){console.error('Mise en Price cloud recipe save failed:',e);showToast(savedOnDevice?`Recipe saved on this device, but cloud save failed: ${e.message}`:`Could not save this recipe. Keep this page open and download a backup. ${e.message}`);mmAuthMessage((savedOnDevice?'CLOUD SAVE ERROR: ':'DEVICE SAVE ERROR: ')+e.message);}
 }
 function maybeSaveChanges(){
   if(!hasUnsavedChanges)return true;
@@ -484,7 +484,7 @@ $('printBtn').addEventListener('click',()=>{
         <tr><th>Gross profit %</th><td class="right">${gpPercent === null ? 'Not set' : gpPercent.toFixed(1) + '%'}</td></tr>
         <tr><th>Food cost %</th><td class="right">${foodPercent === null ? 'Not set' : foodPercent.toFixed(1) + '%'}</td></tr>
       </tbody></table>
-      <div class="note">Created with MenuMargin.</div>
+      <div class="note">Created with Mise en Price.</div>
     </body></html>`;
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
@@ -497,7 +497,7 @@ $('printBtn').addEventListener('click',()=>{
     // Wait for the standalone recipe page to render before opening print preview (especially Safari/iOS).
     setTimeout(() => { try { printWindow.focus(); printWindow.print(); } catch (error) { console.error('Print preview could not open:', error); } }, 700);
   } catch(error) {
-    alert('Could not prepare this recipe for printing. Please refresh MenuMargin and try again.');
+    alert('Could not prepare this recipe for printing. Please refresh Mise en Price and try again.');
     console.error(error);
   }
 });
@@ -532,6 +532,6 @@ $('exportCsv').addEventListener('click',async()=>{
   ['Actual GP (%)',actualGp===''?'':Number(actualGp).toFixed(1)],
   ['Target GP (%)',d.targetGp]
  ];
- const csv=lines.map(row=>row.map(escapeCsv).join(',')).join('\r\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});const filename=(d.name||'menumargin-recipe').toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.csv';const delivery=await mmDeliverFile(blob,filename,`Recipe CSV — ${d.name||'MenuMargin'}`);if(delivery!=='cancelled')showToast(delivery==='shared'?'CSV ready to save or share.':'CSV downloaded.');
+ const csv=lines.map(row=>row.map(escapeCsv).join(',')).join('\r\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});const filename=(d.name||'menumargin-recipe').toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.csv';const delivery=await mmDeliverFile(blob,filename,`Recipe CSV — ${d.name||'Mise en Price'}`);if(delivery!=='cancelled')showToast(delivery==='shared'?'CSV ready to save or share.':'CSV downloaded.');
 });
 // Linked recipes resolve the account's current exact-name supplier price.

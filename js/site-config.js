@@ -9,6 +9,6 @@ document.addEventListener('DOMContentLoaded',()=>{
  document.querySelectorAll('[data-policy-date]').forEach(node=>node.textContent=MM_SITE_CONFIG.policyUpdated);
  document.querySelectorAll('[data-support-email]').forEach(node=>{
   node.textContent=MM_SITE_CONFIG.supportEmail;
-  if(node.tagName==='A')node.href='mailto:'+MM_SITE_CONFIG.supportEmail+'?subject='+encodeURIComponent(node.dataset.subject||'MenuMargin support');
+  if(node.tagName==='A')node.href='mailto:'+MM_SITE_CONFIG.supportEmail+'?subject='+encodeURIComponent(node.dataset.subject||'Mise en Price support');
  });
 });
