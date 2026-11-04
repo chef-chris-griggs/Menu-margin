@@ -51,13 +51,6 @@ Deno.serve(async (request) => {
       mapping = stored;
     }
 
-    const existingSessions = await stripe.checkout.sessions.list({
-      customer: mapping.stripe_customer_id,
-      status: "open",
-      limit: 1,
-    });
-    if (existingSessions.data[0]?.url) return json(request, { url: existingSessions.data[0].url });
-
     let cursor: string | undefined;
     let hasUsedTrial = false;
     while (true) {
@@ -90,6 +83,14 @@ Deno.serve(async (request) => {
       .maybeSingle();
     if (cardlessError) throw cardlessError;
     const trialDays = hasUsedTrial || cardlessTrial ? 0 : configuredTrialDays;
+    // Never reuse a pre-existing Checkout session that may contain a free trial
+    // after the user has already consumed a card-free trial.
+    if (!cardlessTrial) {
+      const existingSessions = await stripe.checkout.sessions.list({
+        customer: mapping.stripe_customer_id, status: "open", limit: 1,
+      });
+      if (existingSessions.data[0]?.url) return json(request, { url: existingSessions.data[0].url });
+    }
     const appUrl = new URL(env("APP_URL"));
     const successUrl = new URL(appUrl);
     successUrl.searchParams.set("billing", "success");
