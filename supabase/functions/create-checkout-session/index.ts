@@ -82,7 +82,14 @@ Deno.serve(async (request) => {
     // One trial per Stripe customer prevents the same account from restarting
     // a fresh free period after canceling a previous trial.
     const configuredTrialDays = Math.max(0, Math.min(30, Number.parseInt(Deno.env.get("STRIPE_TRIAL_DAYS") ?? "14", 10) || 0));
-    const trialDays = hasUsedTrial ? 0 : configuredTrialDays;
+    // A card-free trial is already granted outside Stripe. Never stack a second trial.
+    const { data: cardlessTrial, error: cardlessError } = await admin
+      .from("menu_margin_cardless_trials")
+      .select("ends_at")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (cardlessError) throw cardlessError;
+    const trialDays = hasUsedTrial || cardlessTrial ? 0 : configuredTrialDays;
     const appUrl = new URL(env("APP_URL"));
     const successUrl = new URL(appUrl);
     successUrl.searchParams.set("billing", "success");
