@@ -5,7 +5,7 @@
   "scripts": {
     "build:scanner": "node scripts/build-scanner.mjs",
     "test:scanner": "node scripts/test-invoice-samples.mjs",
-    "test:unit": "node --test tests/invoice-positioned.test.mjs tests/invoice-values.test.mjs tests/invoice-review-logic.test.mjs tests/recipe-pricing.test.mjs tests/cloud-data.test.mjs scanner/paddleocr/ctc.test.mjs",
+    "test:unit": "node --test tests/invoice-positioned.test.mjs tests/invoice-values.test.mjs tests/invoice-review-logic.test.mjs tests/recipe-pricing.test.mjs tests/cloud-data.test.mjs tests/cardless-trial.test.mjs scanner/paddleocr/ctc.test.mjs",
     "test:review": "node tests/invoice-review.browser.mjs",
     "test:review:webkit": "node tests/invoice-review.browser.mjs --webkit",
     "test:decode": "node tests/invoice-decode.browser.mjs",
