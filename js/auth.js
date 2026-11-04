@@ -530,7 +530,7 @@ async function mmStartTrial(){
   const {data:trialEnd,error:trialError}=await mmSupabase.rpc('menu_margin_start_cardless_trial');
   if(!trialError&&trialEnd&&Date.parse(trialEnd)>Date.now()){
    message.textContent='Your free trial is active. No card is required. Opening your account…';
-   await mmEnterAccount(mmUser);return;
+   await mmEnterApp(mmUser,true);return;
   }
   // Previously used or ineligible accounts proceed to normal paid checkout.
   // The server prevents stacking a second Stripe trial after a card-free trial.
