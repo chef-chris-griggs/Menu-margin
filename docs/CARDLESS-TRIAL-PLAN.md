@@ -1,6 +1,6 @@
 # Card-free 14-day trial: implementation and safety specification
 
-Status: design only; **not deployed**. This branch must not grant trial access from browser localStorage or a client-provided signup timestamp.
+Status: implementation complete on PR #10; database migrations installed in production, but website and checkout function release still pending. This branch must not grant trial access from browser localStorage or a client-provided signup timestamp.
 
 ## Existing behaviour inspected
 - The app checks server-side `menu_margin_has_paid_access` on login and sync in `js/auth.js`.
