@@ -532,7 +532,7 @@ async function mmStartTrial(){
    message.textContent='Your free trial is active. No card is required. Opening your account…';
    await mmEnterApp(mmUser,true);return;
   }
-  if(trialError&&!String(trialError.message||'').includes('Existing billing account'))throw trialError;
+  if(trialError&&!/Existing billing account|Free trial already used/i.test(String(trialError.message||'')))throw trialError;
   // Previously used or ineligible accounts proceed to normal paid checkout.
   // The server prevents stacking a second Stripe trial after a card-free trial.
   message.textContent='Opening secure subscription checkout…';
