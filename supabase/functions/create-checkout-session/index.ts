@@ -51,15 +51,7 @@ Deno.serve(async (request) => {
       mapping = stored;
     }
 
-    const existingSessions = await stripe.checkout.sessions.list({
-      customer: mapping.stripe_customer_id,
-      status: "open",
-      limit: 1,
-    });
-    if (existingSessions.data[0]?.url) return json(request, { url: existingSessions.data[0].url });
-
     let cursor: string | undefined;
-    let hasUsedTrial = false;
     while (true) {
       const subscriptions = await stripe.subscriptions.list({
         customer: mapping.stripe_customer_id,
@@ -73,16 +65,14 @@ Deno.serve(async (request) => {
       if (hasUnresolvedSubscription) {
         return json(request, { error: "A subscription already exists for this account. Use Manage billing to update it.", code: "subscription_exists" }, 409);
       }
-      hasUsedTrial ||= subscriptions.data.some((subscription) => Boolean(subscription.trial_start || subscription.trial_end));
-      if (hasUsedTrial || !subscriptions.has_more) break;
+      if (!subscriptions.has_more) break;
       cursor = subscriptions.data.at(-1)?.id;
       if (!cursor) break;
     }
 
-    // One trial per Stripe customer prevents the same account from restarting
-    // a fresh free period after canceling a previous trial.
-    const configuredTrialDays = Math.max(0, Math.min(30, Number.parseInt(Deno.env.get("STRIPE_TRIAL_DAYS") ?? "14", 10) || 0));
-    const trialDays = hasUsedTrial ? 0 : configuredTrialDays;
+    // The 14-day free period is issued exclusively by the cardless trial RPC.
+    // Paid Checkout must never grant an additional Stripe trial, including after
+    // account deletion/recreation or a legacy open Checkout session.
     const appUrl = new URL(env("APP_URL"));
     const successUrl = new URL(appUrl);
     successUrl.searchParams.set("billing", "success");
@@ -95,7 +85,6 @@ Deno.serve(async (request) => {
       line_items: [{ price: env("STRIPE_PRICE_ID_MONTHLY"), quantity: 1 }],
       payment_method_collection: "always",
       subscription_data: {
-        ...(trialDays ? { trial_period_days: trialDays } : {}),
         metadata: { supabase_user_id: user.id },
       },
       success_url: successUrl.toString(),

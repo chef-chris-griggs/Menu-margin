@@ -524,9 +524,25 @@ async function mmSignOut(){
  finally{mmSigningOut=false;}
 }
 async function mmStartTrial(){
-  const button=document.getElementById('mmStartTrial');button.disabled=true;document.getElementById('mmBillingMessage').textContent='Opening secure Stripe Checkout…';
-  try{const {data,error}=await mmSupabase.functions.invoke('create-checkout-session');if(error)throw error;if(!data?.url)throw new Error(data?.error||'Stripe did not return a checkout link.');window.location.assign(data.url);}
-  catch(error){console.error(error);document.getElementById('mmBillingMessage').textContent='Could not open checkout. Check your connection and try again.';button.disabled=false;}
+ const button=document.getElementById('mmStartTrial'),message=document.getElementById('mmBillingMessage');
+ button.disabled=true;message.textContent='Checking your free-trial eligibility…';
+ try{
+  const {data:trialEnd,error:trialError}=await mmSupabase.rpc('menu_margin_start_cardless_trial');
+  if(!trialError&&trialEnd&&Date.parse(trialEnd)>Date.now()){
+   message.textContent='Your free trial is active. No card is required. Opening your account…';
+   await mmEnterApp(mmUser,true);return;
+  }
+  if(trialError&&!/Existing billing account|Free trial already used/i.test(String(trialError.message||'')))throw trialError;
+  // Previously used or ineligible accounts proceed to normal paid checkout.
+  // The server prevents stacking a second Stripe trial after a card-free trial.
+  message.textContent='Opening secure subscription checkout…';
+  const {data,error}=await mmSupabase.functions.invoke('create-checkout-session');
+  if(error)throw error;
+  if(!data?.url)throw new Error(data?.error||'Stripe did not return a checkout link.');
+  window.location.assign(data.url);
+ }catch(error){
+  console.error(error);message.textContent='Could not start the trial or open checkout. Check your connection and try again.';
+ }finally{button.disabled=false;}
 }
 async function mmManageBilling(button=document.getElementById('mmManageBilling'),message=document.getElementById('mmBillingMessage')){
   button.disabled=true;message.textContent='Opening secure billing settings…';
