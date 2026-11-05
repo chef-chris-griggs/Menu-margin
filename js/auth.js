@@ -1,6 +1,6 @@
 // Only the public Supabase key belongs in the browser. RLS enforces ownership.
-const MM_SUPABASE_URL = 'https://phwdyckedcqxbojpbqgz.supabase.co';
-const MM_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_q711FpfYM17f3d1J_dTJOg_XRgmOufq';
+const MM_SUPABASE_URL = 'https://bzpiosxlhdvsnzxpmqfq.supabase.co';
+const MM_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_f6NfJwi1yCcVs_QX7IIR_g_IVnqkwvh';
 const MM_AUTH_REDIRECT_URL = window.location.protocol === 'file:'
   ? 'https://chef-chris-griggs.github.io/Menu-margin/'
   : new URL('./',window.location.href).href;
