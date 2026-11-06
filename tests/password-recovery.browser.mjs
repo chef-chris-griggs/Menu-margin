@@ -33,6 +33,7 @@ try{
   await context.route('**/*',async route=>{
    const request=route.request(),url=new URL(request.url());
    if(url.origin===origin||url.protocol==='blob:')return route.continue();
+   if(url.origin==='https://static.cloudflareinsights.com'&&url.pathname==='/beacon.min.js')return route.abort();
    if(url.origin!=='https://phwdyckedcqxbojpbqgz.supabase.co')throw Error('Unexpected external request');
    const method=request.method(),entry={path:url.pathname,method,redirectTo:url.searchParams.get('redirect_to')};if(method==='OPTIONS')return route.fulfill({status:204,headers:{'access-control-allow-origin':'*','access-control-allow-methods':'GET,POST,PUT,DELETE,OPTIONS','access-control-allow-headers':'*'},body:''});requests.push(entry);
    const respond=(status,value)=>route.fulfill({status,contentType:'application/json',headers:{'access-control-allow-origin':'*'},body:JSON.stringify(value)});
