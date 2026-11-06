@@ -62,7 +62,11 @@ const server = http.createServer(async (req, res) => {
     assert.match(relative, /^(?:index\.html$|privacy\.html$|help\.html$|terms\.html$|sw\.js$|styles\.css$|manifest\.webmanifest$|icons\/|js\/|styles\/|vendor\/)/);
     const file = path.resolve(root, relative);
     assert.ok(file.startsWith(root));
-    const bytes = relative === 'sw.js' && !fixed ? sw.replace(cacheVersion, 'v2.0.1-menu-share') : await readFile(file);
+    // This offline scanner fixture must not execute third-party analytics.
+    // Production HTML remains unchanged; the scanner and CSP are still tested.
+    const bytes = relative === 'index.html'
+      ? (await readFile(file, 'utf8')).replace(/<!-- Cloudflare Web Analytics -->[\s\S]*?<!-- End Cloudflare Web Analytics -->/g, '')
+      : relative === 'sw.js' && !fixed ? sw.replace(cacheVersion, 'v2.0.1-menu-share') : await readFile(file);
     res.writeHead(200, { ...headersFor(pathname, fixed), 'content-type': types[path.extname(file)] || 'application/octet-stream', 'cache-control': 'no-store' });
     res.end(bytes);
   } catch { res.writeHead(404); res.end('Not found'); }
