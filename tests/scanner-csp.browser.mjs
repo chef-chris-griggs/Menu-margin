@@ -76,7 +76,8 @@ await context.route('**/*', route => {
   const request = route.request(), url = new URL(request.url());
   if ((url.origin === origin && request.method() === 'GET') || url.protocol === 'blob:') return route.continue();
   // The page intentionally loads an analytics beacon; keep it blocked in this offline OCR test.
-  if (url.origin === 'https://static.cloudflareinsights.com' && url.pathname === '/beacon.min.js') return route.abort();
+  if ((url.origin === 'https://static.cloudflareinsights.com' && url.pathname === '/beacon.min.js') ||
+      (url.origin === 'https://cloudflareinsights.com' && url.pathname === '/cdn-cgi/rum')) return route.abort();
   external.push(url.origin + url.pathname);
   return route.abort();
 });
