@@ -20,7 +20,10 @@ try{
  await context.route('**/*',route=>{
   const url=new URL(route.request().url());
   if(url.pathname==='/vendor/supabase/supabase.js')return route.fulfill({contentType:'text/javascript',body:'window.supabase={createClient:()=>window.__testClient};'});
-  if(url.origin===origin||url.protocol==='blob:')return route.continue();external.push(route.request().url());return route.abort();
+  if(url.origin===origin||url.protocol==='blob:')return route.continue();
+  // Analytics is intentionally external; prevent network access during offline browser tests.
+  if(url.origin==='https://static.cloudflareinsights.com'&&url.pathname==='/beacon.min.js')return route.abort();
+  external.push(route.request().url());return route.abort();
  });
  await context.addInitScript(()=>{
   let tick=0;window.__online=true;Object.defineProperty(navigator,'onLine',{get:()=>window.__online});
