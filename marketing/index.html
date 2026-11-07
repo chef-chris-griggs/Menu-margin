@@ -20,12 +20,14 @@
   <meta name="twitter:image" content="https://miseenprice.co.uk/social-preview.png">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./site.css">
+  <link rel="stylesheet" href="./one-recipe-demo.css">
+  <script src="./one-recipe-demo.js" defer></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
   <header class="nav wrap">
     <a class="brand" href="#" aria-label="Mise en Price home">Mise en <span>Price</span></a>
-    <nav aria-label="Main navigation"><a href="./one-recipe-demo.html">Free recipe demo</a><a href="#how-it-works">How it works</a><a href="./recipe-costing-software.html">Recipe costing</a><a href="./invoice-scanning-for-chefs.html">Invoice scanning</a><a href="#pricing">Pricing</a><a class="login" href="https://menu-margin.pages.dev/">Open app <span aria-hidden="true">↗</span></a></nav>
+    <nav aria-label="Main navigation"><a href="#try-recipe">Try it now</a><a href="#how-it-works">How it works</a><a href="./recipe-costing-software.html">Recipe costing</a><a href="./invoice-scanning-for-chefs.html">Invoice scanning</a><a href="#pricing">Pricing</a><a class="login" href="https://menu-margin.pages.dev/">Open app <span aria-hidden="true">↗</span></a></nav>
   </header>
   <main id="main">
     <section class="hero wrap">
@@ -34,7 +36,7 @@
         <h1>Stop guessing<br>your food costs.<br><em>Know your GP.</em></h1>
         <p class="lead">Cost every dish with confidence.<br>Spend less time on paperwork.</p>
         <p class="intro">Cost your dishes, keep supplier prices together and turn reviewed invoices into your price book. Less time on paperwork. More time at the pass.</p>
-        <a class="button" href="./one-recipe-demo.html">Try costing one recipe — free <span aria-hidden="true">↗</span></a>
+        <a class="button" href="#try-recipe">Try costing one recipe — free <span aria-hidden="true">↗</span></a>
         <p class="small">14 days free. No card required. After your trial, choose whether to subscribe for £9.99/month. No automatic charge.</p>
       </div>
       <div class="hero-visual" aria-label="Illustrative recipe costing example">
@@ -50,7 +52,11 @@
         <p class="visual-caption">Every great dish deserves a proper costing.</p>
       </div>
     </section>
-    <div class="strip"><div class="wrap"><a href="./one-recipe-demo.html">Try the free one-recipe calculator</a><a href="./recipe-costing-software.html">Recipe costing software</a><span>Supplier price book</span><a href="./invoice-scanning-for-chefs.html">Invoice scanning for chefs</a><span>Saved recipes</span></div></div>
+    <section id="try-recipe" class="wrap demo-main homepage-demo" aria-labelledby="homepage-demo-title"><p class="eyebrow">Try it before you sign up</p><h2 id="homepage-demo-title">Cost your first recipe.<br><em>See your GP instantly.</em></h2><p class="lead">Use the calculator right here. No login, no card and no commitment.</p><form id="demoForm"><div class="demo-grid"><label>Recipe name<input id="recipeName" maxlength="100" value="Roast tomato soup" required></label><label>Number of portions<input id="portions" type="number" min="1" step="1" value="10" required></label><label>Selling price per portion, excluding VAT (£)<input id="sellPrice" type="number" min="0" step="0.01" value="5.00" required></label></div>
+<h2>Ingredients</h2><p>Enter the amount used, the pack size you buy and the price for that whole pack. Use the same unit for quantity and pack size.</p><div id="ingredientRows"></div><button type="button" class="demo-secondary" id="addIngredient">+ Add ingredient</button>
+<section class="demo-results" aria-live="polite"><h2>Your recipe costing</h2><div class="demo-metrics"><div><span>Batch ingredient cost</span><strong id="batchCost">—</strong></div><div><span>Cost per portion</span><strong id="portionCost">—</strong></div><div><span>Food-cost GP per portion</span><strong id="gpValue">—</strong></div><div><span>Food-cost GP %</span><strong id="gpPercent">—</strong></div></div><p id="demoError" role="status"></p><p class="demo-note">Illustrative food-cost GP only. Use an ex-VAT selling price and ingredient prices on the same VAT basis. Excludes labour, overheads and waste.</p></section>
+</form><div class="demo-cta"><h2>Want to save your recipes and scan supplier invoices?</h2><p>Try the full Mise en Price app free for 14 days. No card required.</p><a class="button" href="https://menu-margin.pages.dev/">Start your free trial ↗</a></div></section>
+    <div class="strip"><div class="wrap"><a href="#try-recipe">Try the free one-recipe calculator</a><a href="./recipe-costing-software.html">Recipe costing software</a><span>Supplier price book</span><a href="./invoice-scanning-for-chefs.html">Invoice scanning for chefs</a><span>Saved recipes</span></div></div>
     <section id="how-it-works" class="workflow wrap section">
       <div class="section-heading"><p class="eyebrow">From delivery to dish</p><h2>One less job<br>after service.</h2><p>Keep the buying price and the recipe costing in the same place.</p></div>
       <ol class="steps">
