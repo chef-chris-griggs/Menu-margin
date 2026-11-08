@@ -43,6 +43,9 @@ async function run(browserType,viewport) {
     check((await page.locator('#gpPercent').textContent())==='94.8%','changing sale price did not update GP');
     await page.locator('#addIngredient').click();
     check(await page.locator('.demo-ingredient').count()===4,'add ingredient failed');
+    check(await page.locator('.demo-new-ingredient').count()===1,'new ingredient not highlighted');
+    check(await page.locator('#demoAddStatus').textContent()==='Ingredient added. Enter a name and pack details.','ingredient feedback not shown');
+    check(await page.locator('.demo-ingredient').last().locator('input[type="text"]').evaluate(e=>document.activeElement===e),'new ingredient name not focused');
     check((await page.locator('#demoError').textContent()).includes('Complete each ingredient'),'invalid empty row was not rejected');
     await page.locator('.demo-ingredient').last().getByRole('button',{name:'Remove ingredient'}).click();
     check(await page.locator('.demo-ingredient').count()===3,'remove ingredient failed');
