@@ -54,7 +54,7 @@ async function run(engine, width) {
     await page.getByRole('button', {name:'Cookie settings', exact:true}).click();
     await page.getByRole('button', {name:'Accept analytics', exact:true}).click();
     await page.waitForFunction(() => window.__testVendorLoads === 1);
-    check(external.length === 1 && external[0].includes('id=GTM-TSQVZHXF'), 'Only exact supplied tag loads after acceptance');
+    check(external.length === 1 && external[0].includes('id=GTM-T4NBD9N5'), 'Only exact supplied tag loads after acceptance');
     const consent = await page.evaluate(() => window.dataLayer.map(a => Array.from(a)));
     check(consent[0][0] === 'consent' && consent[0][1] === 'default' && consent[0][2].analytics_storage === 'denied', 'Default consent precedes initialization');
     check(consent[1][2].analytics_storage === 'granted' && consent[1][2].ad_storage === 'denied', 'Analytics-only consent, ads denied');
@@ -66,7 +66,7 @@ async function run(engine, width) {
     await page.getByRole('button', {name:'Cookie settings', exact:true}).click();
     await page.getByRole('button', {name:'Accept analytics', exact:true}).click();
     check(await page.locator('#mep-google-tag').count() === 1, 'Repeated acceptance never duplicates tag');
-    await context.addCookies([{name:'_ga', value:'test', url:origin}, {name:'_ga_SM4J669KZV', value:'test', url:origin}]);
+    await context.addCookies([{name:'_ga', value:'test', url:origin}, {name:'_ga_X3MGXFTE3N', value:'test', url:origin}]);
     await page.getByRole('button', {name:'Cookie settings', exact:true}).click();
     await Promise.all([page.waitForEvent('load'), page.getByRole('button', {name:'Reject analytics', exact:true}).click()]);
     await page.waitForLoadState('networkidle');
@@ -126,8 +126,8 @@ async function validateGoogleTag() {
     await page.goto(origin+'/?email=private%40example.invalid&utm_source=instagram&utm_campaign=cost_one_recipe#private-token', {waitUntil:'networkidle'});
     await page.getByRole('button', {name:'Accept analytics',exact:true}).click();
     const started = Date.now();
-    while (!hits.some(h => (h.url+h.body).includes('G-SM4J669KZV')) && Date.now()-started<20000) await new Promise(ok=>setTimeout(ok,100));
-    check(hits.some(h => (h.url+h.body).includes('G-SM4J669KZV')), 'Real tag routes to the correct GA4 measurement ID');
+    while (!hits.some(h => (h.url+h.body).includes('G-X3MGXFTE3N')) && Date.now()-started<20000) await new Promise(ok=>setTimeout(ok,100));
+    check(hits.some(h => (h.url+h.body).includes('G-X3MGXFTE3N')), 'Real tag routes to the correct GA4 measurement ID');
     await page.locator('#sellPrice').fill('9876.54');
     const interactionStarted = Date.now();
     while (!hits.some(h => (h.url+h.body).includes('calculator_interaction')) && Date.now()-interactionStarted<15000) await new Promise(ok=>setTimeout(ok,100));
