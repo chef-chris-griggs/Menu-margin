@@ -17,6 +17,23 @@ const server = createServer(async (req,res)=>{
     res.writeHead(200,{'content-type':mime[extname(target)]||'application/octet-stream','cache-control':'no-store','content-security-policy':csp}).end(contents);
   } catch {res.writeHead(404).end('Not found');}
 });
+// Verify the indexable URL inventory before testing interactions.
+const sitemap = await readFile(resolve(root,'sitemap.xml'),'utf8');
+const sitemapUrls = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map(m=>m[1]);
+const titles = new Set();
+for (const url of sitemapUrls) {
+  const pathname = new URL(url).pathname;
+  const html = await readFile(resolve(root, pathname==='/'?'index.html':pathname.slice(1)),'utf8');
+  const title = html.match(/<title>(.*?)<\/title>/s)?.[1];
+  if (!title || titles.has(title)) throw new Error('Missing or duplicate title: '+url);
+  titles.add(title);
+  if (!html.includes('href="'+url+'"')) throw new Error('Missing self canonical: '+url);
+  if (/<style[\s>]| style=/i.test(html)) throw new Error('Styles blocked by production CSP: '+url);
+  if (/noindex/i.test(html)) throw new Error('Indexable sitemap URL contains noindex: '+url);
+}
+const notFound = await readFile(resolve(root,'404.html'),'utf8');
+if (!notFound.includes('noindex, follow')) throw new Error('404 page must not be indexed');
+
 const port = await new Promise((ok,fail)=>server.listen(0,'127.0.0.1',()=>ok(server.address().port)).on('error',fail));
 const origin = 'http://127.0.0.1:'+port;
 let count=0;
@@ -79,6 +96,7 @@ async function run(browserType,viewport) {
       const seo = await browser.newPage({viewport,deviceScaleFactor:1});
       const issues = [];
       seo.on('pageerror', e=>issues.push(e.message));
+      seo.on('console', e=>{if(e.type()==='error' && /Content Security Policy|violates.*directive/i.test(e.text())) issues.push(e.text());});
       const reply = await seo.goto(origin+'/'+slug,{waitUntil:'networkidle'});
       check(reply.status()===200,slug+' HTTP status is not 200');
       check(await seo.locator('h1').count()===1,slug+' needs one H1');
@@ -98,6 +116,7 @@ async function run(browserType,viewport) {
     const templatePage = await browser.newPage({viewport,deviceScaleFactor:1});
     const templateErrors=[];
     templatePage.on('pageerror', e=>templateErrors.push(e.message));
+    templatePage.on('console', e=>{if(e.type()==='error' && /Content Security Policy|violates.*directive/i.test(e.text())) templateErrors.push(e.text());});
     const templateResponse=await templatePage.goto(origin+'/recipe-costing-spreadsheet-template.html',{waitUntil:'networkidle'});
     check(templateResponse.status()===200,'template page not found');
     check(await templatePage.locator('h1').count()===1,'template page H1 missing');
@@ -110,7 +129,8 @@ async function run(browserType,viewport) {
     check(csvBody.includes('IFERROR(')&&csvBody.includes('Ingredient cost GBP'),'CSV formulas or headers missing');
     const templateWidth=await templatePage.evaluate(()=>({scroll:document.documentElement.scrollWidth,client:document.documentElement.clientWidth}));
     check(templateWidth.scroll<=templateWidth.client+2,'template mobile overflow '+viewport.width+': '+JSON.stringify(templateWidth));
-    check(templateErrors.length===0,'template JS errors '+templateErrors.join('; '));
+    check(await templatePage.locator('.template-hero').evaluate(e=>parseFloat(getComputedStyle(e).borderRadius))===22,'template stylesheet blocked or missing');
+    check(templateErrors.length===0,'template browser errors '+templateErrors.join('; '));
     await templatePage.close();
     await page.close();
     console.log('PASS',browserType.name(),viewport.width+'x'+viewport.height,'checks',count,'screenshots',assetResults.map(x=>x.width+'x'+x.height).join(','));
