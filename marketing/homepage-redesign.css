@@ -1,0 +1,137 @@
+/* Marketing homepage redesign only. No app, auth or billing changes. */
+:root{--mep:#153e35;--mep-accent:#159642;--mep-soft:#eaf5ef;--mep-white:#fff}
+body{background:#fbfcfa}
+.nav{padding-block:18px}.nav .brand{color:var(--mep);font-size:27px}.nav .brand span:not(.mep-hat){color:#159642}.mep-hat{display:inline-block;color:#16964a;margin-right:12px;font-size:34px;line-height:0;transform:translateY(3px)}
+.homepage-hero{grid-template-columns:1fr 1.05fr;gap:35px;padding-block:60px 70px}
+.homepage-hero .hero-copy{min-width:0}
+.homepage-hero h1{font-size:clamp(44px,5vw,76px);line-height:1.04;letter-spacing:-3.5px;margin:0 0 24px}
+.homepage-hero em,.mep-features em{color:#148b48}
+.homepage-hero .eyebrow{color:#168046;margin-bottom:22px;letter-spacing:1.1px}
+.homepage-hero .lead{font-size:23px;line-height:1.32;max-width:560px}
+.homepage-hero .intro{font-size:16px;max-width:540px}
+.mep-hero-actions{display:flex;align-items:center;flex-wrap:wrap;gap:14px}
+.mep-hero-actions .button{border-radius:9px;padding:19px 22px}
+.mep-outline-button{padding:18px 20px;border:1px solid #a4b9af;border-radius:9px;font-size:15px;font-weight:800;text-decoration:none;background:white}
+.homepage-hero .small{font-size:13px;line-height:1.6;max-width:480px}
+.mep-hero-visual{background:linear-gradient(135deg,#eff9f3,#dbf0e1);border:1px solid #d8e9dd;border-radius:28px;transform:none;padding:27px 16px 20px;min-width:0}
+.mep-product-frame{background:white;border:1px solid #c9ded0;border-radius:22px;padding:15px;box-shadow:0 18px 45px #153e3522}
+.mep-frame-head{display:flex;gap:9px;align-items:center;font-size:13px;color:var(--mep);padding:0 4px 14px;border-bottom:1px solid #e2eae5}
+.mep-frame-head>span:last-child{margin-left:auto;font-size:11px;color:#58796b}.mep-frame-dot{width:10px;height:10px;border-radius:50%;background:#20aa5a}
+.mep-screen-gallery{display:flex;align-items:center;justify-content:center;gap:0;min-height:390px;padding:18px 0 0;overflow:hidden}
+.mep-screen{margin:0;background:white;border:5px solid #173c32;border-radius:24px;box-shadow:0 10px 25px #073b2729;flex:0 0 31%;min-width:0;overflow:hidden;position:relative}
+.mep-screen img{display:block;width:100%;height:320px;object-fit:cover;object-position:top}
+.mep-screen figcaption{font-size:10px;font-weight:800;color:#174235;text-align:center;background:#eef7f0;padding:10px 3px}
+.mep-screen-left{transform:translateX(13px) rotate(-7deg);z-index:1}.mep-screen-front{transform:scale(1.13);z-index:3}.mep-screen-right{transform:translateX(-13px) rotate(7deg);z-index:2}
+.mep-hero-visual .visual-caption{transform:none;margin:15px 0 0;color:#486e5f}
+.mep-benefits{background:#e9f4ec;border-block:1px solid #d7e9db}
+.mep-benefits-inner{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding-block:22px}
+.mep-benefits span{font-size:14px;line-height:1.4;color:#174234;font-weight:800;text-align:center}
+.mep-features{text-align:center;padding-block:76px 90px}
+.mep-features>.eyebrow{color:#168046;margin-bottom:14px}.mep-features h2{max-width:850px;margin:0 auto 16px;font-size:clamp(34px,4vw,53px)}
+.mep-section-intro{color:#5a6e63;margin:0 auto 36px;max-width:650px}
+.mep-feature-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;text-align:left}
+.mep-feature-grid article{background:white;border:1px solid #dce6df;border-radius:14px;padding:26px;box-shadow:0 4px 20px #153e3507}
+.mep-feature-grid article>span{display:grid;place-items:center;width:43px;height:43px;border-radius:10px;background:#e8f7ec;color:#137c3b;font-size:24px;font-weight:bold;margin-bottom:20px}
+.mep-feature-grid h3{font-size:19px;color:#153e35;margin-bottom:7px}
+.mep-feature-grid p{font-size:14px;line-height:1.55;color:#52685c;margin:0}
+.homepage-demo{scroll-margin-top:30px}
+@media(max-width:850px){.homepage-hero{grid-template-columns:1fr;gap:32px;padding-block:42px}.mep-hero-visual{max-width:680px;width:100%;margin:auto}.mep-benefits-inner{grid-template-columns:repeat(2,1fr)}.mep-feature-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:620px){.nav .brand{font-size:22px}.mep-hat{font-size:24px;margin-right:7px}.homepage-hero h1{font-size:clamp(40px,11vw,58px);letter-spacing:-2px}.homepage-hero .lead{font-size:20px}.mep-hero-actions{display:grid}.mep-hero-actions .button,.mep-outline-button{width:100%;text-align:center}.mep-benefits-inner{gap:10px}.mep-benefits span{font-size:12px}.mep-feature-grid{grid-template-columns:1fr}.mep-features{padding-block:55px}.mep-screen-gallery{min-height:300px}.mep-screen img{height:245px}.mep-screen{border-width:3px;border-radius:16px}.mep-screen figcaption{font-size:8px}.mep-hero-visual{padding:14px 9px}.mep-product-frame{padding:10px}}
+@media(prefers-reduced-motion:reduce){.mep-screen,.mep-hero-actions *{transition:none}}
+
+/* Branded logo: chef hat, GP-growth chart and full wordmark. */
+.nav .mep-logo-link,.footer .mep-logo-link{display:inline-flex;align-items:center;line-height:1}
+.mep-logo-link img{display:block;width:min(345px,36vw);height:auto;max-height:86px;object-fit:contain}
+.footer .mep-logo-link img{width:280px;max-width:100%}
+@media(max-width:850px){.nav .mep-logo-link img{width:min(290px,44vw)}}
+@media(max-width:620px){.nav .mep-logo-link img{width:min(212px,58vw)}.footer .mep-logo-link img{width:240px}}
+
+/* Premium trust and product presentation */
+:root{--mep-ink:#102e26;--mep-surface:#f5f8f5}
+body{color:var(--mep-ink)}
+.nav{background:#fff;max-width:none;width:100%;padding-left:max(40px,calc((100% - 1180px)/2));padding-right:max(40px,calc((100% - 1180px)/2));border-bottom:1px solid #e2eae4;box-shadow:0 2px 20px #0e35250b}
+.nav nav{gap:22px}
+.nav nav a{color:#294a3d}
+.nav nav a:hover{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:7px}
+.nav nav .login{background:#153e35;color:#fff;padding:12px 18px;border-radius:8px}
+.nav nav .login:hover{background:#23644d;text-decoration:none}
+.homepage-hero{padding-block:82px 86px}
+.homepage-hero h1{font-weight:800;color:#103b2e}
+.homepage-hero .eyebrow{display:inline-block;background:#e7f4eb;border-radius:100px;padding:9px 14px;letter-spacing:.6px;margin-bottom:26px}
+.homepage-hero .lead{color:#183e32}
+.homepage-hero .intro{font-size:17px;line-height:1.75}
+.mep-hero-actions .button,.price-card .button{background:#176c45;box-shadow:0 8px 18px #176c451d}
+.mep-hero-actions .button:hover,.price-card .button:hover{background:#115438}
+.mep-hero-visual{background:linear-gradient(135deg,#eef9f3 0%,#e1efe7 100%);box-shadow:0 22px 65px #123b2517}
+.mep-product-frame{box-shadow:0 12px 36px #153e351c}
+.mep-benefits{background:#103d30;color:#fff;border:0}
+.mep-benefits-inner{padding-block:20px}
+.mep-benefits span{color:#fff;font-weight:700;border-right:1px solid #ffffff2a;padding:6px 10px}
+.mep-benefits span:last-child{border:0}
+.mep-features h2{max-width:750px}
+.mep-feature-grid{gap:20px}
+.mep-feature-grid article{border-radius:16px;padding:29px;box-shadow:0 8px 24px #113b2510}
+.mep-feature-grid article>span{font-size:12px;font-weight:900;letter-spacing:1px}
+.mep-feature-grid article:hover{border-color:#9bc8a9;box-shadow:0 13px 30px #113b251c}
+.mep-proof{background:#edf5ef;border-block:1px solid #dce8df;padding-block:85px}
+.mep-proof-grid{display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:center}
+.mep-proof .eyebrow{color:#177843}
+.mep-proof-copy h2{font-size:clamp(34px,3.4vw,51px);letter-spacing:-2px}
+.mep-proof-copy p:not(.eyebrow){font-size:16px;line-height:1.75;color:#416052}
+.mep-proof-copy .mep-outline-button{display:inline-block;margin-top:12px;background:white}
+.mep-proof-panel{background:white;border:1px solid #d2e5d7;border-radius:18px;padding:30px 32px;box-shadow:0 18px 45px #0c352319}
+.mep-proof-panel .eyebrow{margin-bottom:10px}
+.mep-proof-row{padding:15px 0;display:grid;grid-template-columns:130px 1fr;gap:15px;border-bottom:1px solid #e3ece6;font-size:14px;line-height:1.5}
+.mep-proof-row strong{color:#123c2e}
+.mep-proof-row span{color:#50675a}
+.mep-proof-row a{color:#176b45;font-weight:700}
+.mep-proof-note{font-size:12px;color:#64766a;margin:20px 0 0}
+.homepage-demo{scroll-margin-top:30px}
+.homepage-demo .lead{max-width:700px}
+@media(max-width:850px){
+ .nav{padding-inline:20px}
+ .nav nav{gap:15px}
+ .mep-proof-grid{grid-template-columns:1fr;gap:30px}
+ .mep-proof{padding-block:64px}
+}
+@media(max-width:620px){
+ .nav{padding-inline:20px}
+ .nav nav{gap:10px}
+ .homepage-hero{padding-block:42px 55px}
+ .mep-benefits span{border:0}
+ .mep-benefits-inner{gap:8px}
+ .mep-proof{padding-block:50px}
+ .mep-proof-panel{padding:20px}
+ .mep-proof-row{grid-template-columns:100px 1fr;gap:10px}
+ .mep-feature-grid article:hover{box-shadow:0 8px 24px #113b2510}
+}
+
+/* Approved correction: proportional iPhone mockups for genuine app screenshots. */
+.mep-screen-gallery{align-items:center;min-height:0;padding:36px 10px 42px;overflow:visible}
+.mep-screen{flex:0 0 30%;max-width:192px;aspect-ratio:9/19.3;padding:8px;background:#101816;border:1px solid #456659;border-radius:32px;overflow:visible;position:relative;box-shadow:0 18px 35px #073b2734,inset 0 0 0 1px #263a32}
+.mep-screen:before{content:"";position:absolute;top:12px;left:50%;transform:translateX(-50%);width:35%;height:15px;background:#07100d;border-radius:0 0 13px 13px;z-index:4}
+.mep-screen:after{content:"";position:absolute;bottom:12px;left:50%;transform:translateX(-50%);width:32%;height:4px;border-radius:8px;background:#d5ded7;z-index:4}
+.mep-screen img{display:block;height:100%;width:100%;object-fit:cover;object-position:top center;border-radius:25px;background:white}
+.mep-screen figcaption{position:absolute;bottom:-26px;left:50%;transform:translateX(-50%);background:none;padding:0;font-size:11px;white-space:nowrap;color:#153e35}
+.mep-screen-left{transform:rotate(-8deg) translateX(12px) translateY(14px);z-index:1}
+.mep-screen-front{transform:scale(1.09);z-index:3}
+.mep-screen-right{transform:rotate(8deg) translateX(-12px) translateY(14px);z-index:2}
+@media(max-width:620px){
+ .mep-screen-gallery{padding:24px 2px 31px}
+ .mep-screen{flex-basis:31%;padding:5px;border-radius:20px}
+ .mep-screen img{border-radius:15px;height:100%}
+ .mep-screen:before{top:8px;height:10px;border-radius:0 0 8px 8px}
+ .mep-screen:after{bottom:8px;height:3px}
+ .mep-screen figcaption{font-size:8px;bottom:-21px}
+ .mep-screen-left{transform:rotate(-7deg) translateX(7px) translateY(9px)}
+ .mep-screen-front{transform:scale(1.04)}
+ .mep-screen-right{transform:rotate(7deg) translateX(-7px) translateY(9px)}
+}
+
+/* Lock the iPhone chassis dimensions independently of screenshot content. */
+.mep-screen{width:min(29%,170px);flex:0 0 auto;aspect-ratio:9/19.3;height:auto;align-self:center}
+.mep-screen img{position:absolute;top:8px;left:8px;width:calc(100% - 16px);height:calc(100% - 16px);object-fit:cover;object-position:top center}
+@media(max-width:620px){
+ .mep-screen{width:30%;flex:0 0 auto;aspect-ratio:9/19.3}
+ .mep-screen img{top:5px;left:5px;width:calc(100% - 10px);height:calc(100% - 10px)}
+}
