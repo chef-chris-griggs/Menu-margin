@@ -45,6 +45,7 @@ async function run(browserType,viewport) {
     const page=await browser.newPage({viewport,deviceScaleFactor:1});
     const errors=[];
     page.on('pageerror',e=>errors.push(e.message));
+    await page.addInitScript(()=>localStorage.setItem('mep-analytics-consent-v1',JSON.stringify({value:'rejected',at:Date.now()})));
     const response=await page.goto(origin+'/',{waitUntil:'networkidle'});
     check(response.status()===200,'homepage did not return 200');
     check(response.headers()['content-security-policy']?.includes("script-src 'self'"),'Cloudflare CSP does not allow local calculator JavaScript');
