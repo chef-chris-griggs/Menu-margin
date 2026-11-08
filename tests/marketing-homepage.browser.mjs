@@ -45,6 +45,7 @@ async function run(browserType,viewport) {
     const page=await browser.newPage({viewport,deviceScaleFactor:1});
     const errors=[];
     page.on('pageerror',e=>errors.push(e.message));
+    await page.addInitScript(()=>localStorage.setItem('mep-analytics-consent-v1',JSON.stringify({value:'rejected',at:Date.now()})));
     const response=await page.goto(origin+'/',{waitUntil:'networkidle'});
     check(response.status()===200,'homepage did not return 200');
     check(response.headers()['content-security-policy']?.includes("script-src 'self'"),'Cloudflare CSP does not allow local calculator JavaScript');
@@ -81,7 +82,7 @@ async function run(browserType,viewport) {
     check(trialUrls.length>=3&&trialUrls.every(x=>x.startsWith('https://menu-margin.pages.dev/')),'trial/signup links invalid');
     check(await page.locator('#pricing').isVisible(),'pricing section missing');
     check(await page.locator('#faq-title').isVisible(),'FAQ missing');
-    check(await page.locator('.mep-proof-panel a[href*="privacy.html"]').count()===1,'privacy link missing');
+    check(await page.locator('.mep-proof-panel a[href="/website-privacy"]').count()===1,'privacy link missing');
     const width=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,client:document.documentElement.clientWidth}));
     check(width.scroll<=width.client+2,'horizontal overflow at '+viewport.width+'px: '+JSON.stringify(width));
     check(errors.length===0,'browser JS errors: '+errors.join(' | '));
