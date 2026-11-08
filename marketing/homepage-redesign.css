@@ -105,3 +105,25 @@ body{color:var(--mep-ink)}
  .mep-proof-row{grid-template-columns:100px 1fr;gap:10px}
  .mep-feature-grid article:hover{box-shadow:0 8px 24px #113b2510}
 }
+
+/* Approved correction: proportional iPhone mockups for genuine app screenshots. */
+.mep-screen-gallery{align-items:center;min-height:0;padding:36px 10px 42px;overflow:visible}
+.mep-screen{flex:0 0 30%;max-width:192px;aspect-ratio:9/19.3;padding:8px;background:#101816;border:1px solid #456659;border-radius:32px;overflow:visible;position:relative;box-shadow:0 18px 35px #073b2734,inset 0 0 0 1px #263a32}
+.mep-screen:before{content:"";position:absolute;top:12px;left:50%;transform:translateX(-50%);width:35%;height:15px;background:#07100d;border-radius:0 0 13px 13px;z-index:4}
+.mep-screen:after{content:"";position:absolute;bottom:12px;left:50%;transform:translateX(-50%);width:32%;height:4px;border-radius:8px;background:#d5ded7;z-index:4}
+.mep-screen img{display:block;height:100%;width:100%;object-fit:cover;object-position:top center;border-radius:25px;background:white}
+.mep-screen figcaption{position:absolute;bottom:-26px;left:50%;transform:translateX(-50%);background:none;padding:0;font-size:11px;white-space:nowrap;color:#153e35}
+.mep-screen-left{transform:rotate(-8deg) translateX(12px) translateY(14px);z-index:1}
+.mep-screen-front{transform:scale(1.09);z-index:3}
+.mep-screen-right{transform:rotate(8deg) translateX(-12px) translateY(14px);z-index:2}
+@media(max-width:620px){
+ .mep-screen-gallery{padding:24px 2px 31px}
+ .mep-screen{flex-basis:31%;padding:5px;border-radius:20px}
+ .mep-screen img{border-radius:15px;height:100%}
+ .mep-screen:before{top:8px;height:10px;border-radius:0 0 8px 8px}
+ .mep-screen:after{bottom:8px;height:3px}
+ .mep-screen figcaption{font-size:8px;bottom:-21px}
+ .mep-screen-left{transform:rotate(-7deg) translateX(7px) translateY(9px)}
+ .mep-screen-front{transform:scale(1.04)}
+ .mep-screen-right{transform:rotate(7deg) translateX(-7px) translateY(9px)}
+}
