@@ -29,7 +29,7 @@ Destination: `https://miseenprice.co.uk/`
 - UK recipe costing app
 
 ## Free recipe calculator — immediate problem
-Destination: `https://miseenprice.co.uk/free-recipe-costing-calculator.html`
+Destination: `https://miseenprice.co.uk/free-recipe-costing-calculator`
 
 - free recipe costing calculator
 - recipe costing calculator UK
@@ -48,7 +48,7 @@ Destination: `https://miseenprice.co.uk/free-recipe-costing-calculator.html`
 - cost a recipe online
 
 ## GP and food margins — informational
-Destination: `https://miseenprice.co.uk/food-gp-calculator.html`
+Destination: `https://miseenprice.co.uk/food-gp-calculator`
 
 - food GP calculator
 - GP calculator for chefs
@@ -67,7 +67,7 @@ Destination: `https://miseenprice.co.uk/food-gp-calculator.html`
 - GP percentage restaurant formula
 
 ## Menu pricing — decision intent
-Destination: `https://miseenprice.co.uk/restaurant-menu-pricing-guide.html`
+Destination: `https://miseenprice.co.uk/restaurant-menu-pricing-guide`
 
 - restaurant menu pricing guide
 - how to price restaurant food
@@ -86,7 +86,7 @@ Destination: `https://miseenprice.co.uk/restaurant-menu-pricing-guide.html`
 - how to price restaurant specials
 
 ## Supplier cost tracking — feature intent
-Destination: `https://miseenprice.co.uk/restaurant-supplier-price-tracking.html`
+Destination: `https://miseenprice.co.uk/restaurant-supplier-price-tracking`
 
 - supplier price tracking for restaurants
 - ingredient price tracking software
@@ -105,7 +105,7 @@ Destination: `https://miseenprice.co.uk/restaurant-supplier-price-tracking.html`
 - kitchen ingredient price database
 
 ## Invoice scanning — feature intent
-Destination: `https://miseenprice.co.uk/invoice-scanning-for-chefs.html`
+Destination: `https://miseenprice.co.uk/invoice-scanning-for-chefs`
 
 - restaurant invoice scanning software
 - scan supplier invoices for chefs
@@ -124,7 +124,7 @@ Destination: `https://miseenprice.co.uk/invoice-scanning-for-chefs.html`
 - invoice scanning recipe costing
 
 ## Catering — role-specific intent
-Destination: `https://miseenprice.co.uk/catering-recipe-costing.html`
+Destination: `https://miseenprice.co.uk/catering-recipe-costing`
 
 - catering food cost per head
 - catering recipe costing
@@ -143,7 +143,7 @@ Destination: `https://miseenprice.co.uk/catering-recipe-costing.html`
 - catering menu costing guide
 
 ## Spreadsheet template — downloadable resource
-Destination: `https://miseenprice.co.uk/recipe-costing-spreadsheet-template.html`
+Destination: `https://miseenprice.co.uk/recipe-costing-spreadsheet-template`
 
 - recipe costing spreadsheet template
 - free recipe costing template

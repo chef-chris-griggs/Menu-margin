@@ -11,7 +11,8 @@ const mime = { '.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-
 const server = createServer(async (req,res)=>{
   try {
     const pathname = decodeURIComponent(new URL(req.url,'http://localhost').pathname);
-    const target = resolve(root, '.' + (pathname==='/'?'/index.html':pathname));
+    const filePath = pathname==='/'?'/index.html':(!extname(pathname)?pathname+'.html':pathname);
+    const target = resolve(root, '.' + filePath);
     if (!(target === root || target.startsWith(root+sep))) {res.writeHead(403).end();return;}
     const contents = await readFile(target);
     res.writeHead(200,{'content-type':mime[extname(target)]||'application/octet-stream','cache-control':'no-store','content-security-policy':csp}).end(contents);
@@ -23,7 +24,7 @@ const sitemapUrls = [...sitemap.matchAll(/<loc>(.*?)<\/loc>/g)].map(m=>m[1]);
 const titles = new Set();
 for (const url of sitemapUrls) {
   const pathname = new URL(url).pathname;
-  const html = await readFile(resolve(root, pathname==='/'?'index.html':pathname.slice(1)),'utf8');
+  const html = await readFile(resolve(root, pathname==='/'?'index.html':pathname.slice(1)+'.html'),'utf8');
   const title = html.match(/<title>(.*?)<\/title>/s)?.[1];
   if (!title || titles.has(title)) throw new Error('Missing or duplicate title: '+url);
   titles.add(title);
@@ -101,7 +102,7 @@ async function run(browserType,viewport) {
       check(reply.status()===200,slug+' HTTP status is not 200');
       check(await seo.locator('h1').count()===1,slug+' needs one H1');
       check(await seo.locator('h1').isVisible(),slug+' H1 not visible');
-      check(await seo.locator('link[rel="canonical"]').getAttribute('href')==='https://miseenprice.co.uk/'+slug,slug+' canonical changed');
+      check(await seo.locator('link[rel="canonical"]').getAttribute('href')==='https://miseenprice.co.uk/'+slug.replace(/\.html$/,''),slug+' canonical changed');
       check(await seo.locator('img[src="./miseenprice-logo.svg"]').first().isVisible(),slug+' branded logo missing');
       check(await seo.locator('link[href="./seo-premium.css"]').count()===1,slug+' premium stylesheet missing');
       const shot=await seo.locator('.premium-visual img').first().evaluate(i=>({ready:i.complete,width:i.naturalWidth,visible:!!i.getClientRects().length}));
@@ -120,7 +121,7 @@ async function run(browserType,viewport) {
     const templateResponse=await templatePage.goto(origin+'/recipe-costing-spreadsheet-template.html',{waitUntil:'networkidle'});
     check(templateResponse.status()===200,'template page not found');
     check(await templatePage.locator('h1').count()===1,'template page H1 missing');
-    check(await templatePage.locator('link[rel="canonical"]').getAttribute('href')==='https://miseenprice.co.uk/recipe-costing-spreadsheet-template.html','template canonical wrong');
+    check(await templatePage.locator('link[rel="canonical"]').getAttribute('href')==='https://miseenprice.co.uk/recipe-costing-spreadsheet-template','template canonical wrong');
     check(await templatePage.locator('img[src="./miseenprice-logo.svg"]').first().isVisible(),'template brand missing');
     check(await templatePage.locator('a[href="./recipe-costing-template.csv"]').count()===1,'CSV download link missing');
     const csvResponse=await templatePage.request.get(origin+'/recipe-costing-template.csv');
