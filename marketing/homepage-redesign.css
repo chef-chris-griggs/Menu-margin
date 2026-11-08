@@ -38,3 +38,10 @@ body{background:#fbfcfa}
 @media(max-width:850px){.homepage-hero{grid-template-columns:1fr;gap:32px;padding-block:42px}.mep-hero-visual{max-width:680px;width:100%;margin:auto}.mep-benefits-inner{grid-template-columns:repeat(2,1fr)}.mep-feature-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:620px){.nav .brand{font-size:22px}.mep-hat{font-size:24px;margin-right:7px}.homepage-hero h1{font-size:clamp(40px,11vw,58px);letter-spacing:-2px}.homepage-hero .lead{font-size:20px}.mep-hero-actions{display:grid}.mep-hero-actions .button,.mep-outline-button{width:100%;text-align:center}.mep-benefits-inner{gap:10px}.mep-benefits span{font-size:12px}.mep-feature-grid{grid-template-columns:1fr}.mep-features{padding-block:55px}.mep-screen-gallery{min-height:300px}.mep-screen img{height:245px}.mep-screen{border-width:3px;border-radius:16px}.mep-screen figcaption{font-size:8px}.mep-hero-visual{padding:14px 9px}.mep-product-frame{padding:10px}}
 @media(prefers-reduced-motion:reduce){.mep-screen,.mep-hero-actions *{transition:none}}
+
+/* Branded logo: chef hat, GP-growth chart and full wordmark. */
+.nav .mep-logo-link,.footer .mep-logo-link{display:inline-flex;align-items:center;line-height:1}
+.mep-logo-link img{display:block;width:min(345px,36vw);height:auto;max-height:86px;object-fit:contain}
+.footer .mep-logo-link img{width:280px;max-width:100%}
+@media(max-width:850px){.nav .mep-logo-link img{width:min(290px,44vw)}}
+@media(max-width:620px){.nav .mep-logo-link img{width:min(212px,58vw)}.footer .mep-logo-link img{width:240px}}
