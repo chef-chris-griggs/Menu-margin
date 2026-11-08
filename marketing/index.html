@@ -20,36 +20,50 @@
   <meta name="twitter:image" content="https://miseenprice.co.uk/social-preview.png">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./site.css">
+  <link rel="stylesheet" href="./homepage-redesign.css">
   <link rel="stylesheet" href="./one-recipe-demo.css">
   <script src="./one-recipe-demo.js" defer></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
   <header class="nav wrap">
-    <a class="brand" href="#" aria-label="Mise en Price home">Mise en <span>Price</span></a>
-    <nav aria-label="Main navigation"><a href="#try-recipe">Try it now</a><a href="#how-it-works">How it works</a><a href="./recipe-costing-software.html">Recipe costing</a><a href="./invoice-scanning-for-chefs.html">Invoice scanning</a><a href="#pricing">Pricing</a><a class="login" href="https://menu-margin.pages.dev/">Open app <span aria-hidden="true">↗</span></a></nav>
+    <a class="brand" href="#" aria-label="Mise en Price home"><span class="mep-hat" aria-hidden="true">♧</span>Mise en <span>Price</span></a>
+    <nav aria-label="Main navigation"><a href="#features">Features</a><a href="#how-it-works">How it works</a><a href="./recipe-costing-software.html">Recipe costing</a><a href="./invoice-scanning-for-chefs.html">Invoice scanning</a><a href="#pricing">Pricing</a><a class="login" href="https://menu-margin.pages.dev/">Open app <span aria-hidden="true">↗</span></a></nav>
   </header>
   <main id="main">
-    <section class="hero wrap">
+    <section class="hero wrap homepage-hero" aria-labelledby="hero-title">
       <div class="hero-copy">
-        <p class="eyebrow"><span class="status-dot"></span> Recipe costing for busy kitchens</p>
-        <h1>Stop guessing<br>your food costs.<br><em>Know your GP.</em></h1>
-        <p class="lead">Cost every dish with confidence.<br>Spend less time on paperwork.</p>
-        <p class="intro">Cost your dishes, keep supplier prices together and turn reviewed invoices into your price book. Less time on paperwork. More time at the pass.</p>
-        <a class="button" href="#try-recipe">Try costing one recipe — free <span aria-hidden="true">↗</span></a>
-        <p class="small">14 days free. No card required. After your trial, choose whether to subscribe for £9.99/month. No automatic charge.</p>
+        <p class="eyebrow">RECIPE COSTING &amp; MENU PRICING FOR PROFESSIONAL KITCHENS</p>
+        <h1 id="hero-title">Know your food costs.<br><em>Price with confidence.</em></h1>
+        <p class="lead">Recipe costing software built for chefs, caterers and independent restaurants.</p>
+        <p class="intro">Cost recipes, calculate GP, manage supplier prices and scan invoices — in one simple tool designed around real kitchen work.</p>
+        <div class="mep-hero-actions"><a class="button" href="https://menu-margin.pages.dev/">Start your free 14-day trial <span aria-hidden="true">→</span></a><a class="mep-outline-button" href="#how-it-works">See how it works</a></div>
+        <p class="small"><strong>14 days free · No card required.</strong> Then £9.99/month if you choose to subscribe. No automatic charge.</p>
       </div>
-      <div class="hero-visual" aria-label="Illustrative recipe costing example">
-        <div class="ticket">
-          <div class="ticket-top"><span>Mise en Price</span><span>01 / COST</span></div>
-          <p class="eyebrow">On the menu</p>
-          <h2>Know your<br>numbers.<span class="orange">*</span></h2>
-          <div class="dish-line"><strong>Roast tomato soup</strong><span>10 portions</span></div>
-          <dl class="cost-lines"><div><dt>Batch ingredient cost</dt><dd>£12.50</dd></div><div><dt>Cost per portion</dt><dd>£1.25</dd></div><div><dt>Selling price, ex VAT</dt><dd>£5.00</dd></div></dl>
-          <div class="gp-line"><div><span>FOOD-COST GP</span><strong>75<span>%</span></strong></div><span class="check" aria-hidden="true">✓</span></div>
-          <p class="example-note">*Illustrative example, not an app screenshot. GP is before labour, overheads and waste.</p>
+      <div class="hero-visual mep-hero-visual">
+        <div class="mep-product-frame">
+          <div class="mep-frame-head"><span class="mep-frame-dot"></span><strong>Mise en Price</strong><span>Real app views</span></div>
+          <div class="mep-screen-gallery">
+            <figure class="mep-screen mep-screen-left"><img src="./screenshots/invoice-scan.webp" alt="Actual Mise en Price invoice scan screen showing invoice import options" width="220" height="460" loading="eager"><figcaption>Scan invoices</figcaption></figure>
+            <figure class="mep-screen mep-screen-front"><img src="./screenshots/recipe-costing.webp" alt="Actual Mise en Price recipe costing screen with ingredients and portion controls" width="220" height="460" loading="eager"><figcaption>Cost recipes</figcaption></figure>
+            <figure class="mep-screen mep-screen-right"><img src="./screenshots/price-book.webp" alt="Actual Mise en Price supplier price book with ingredient prices" width="220" height="460" loading="eager"><figcaption>Manage supplier prices</figcaption></figure>
+          </div>
         </div>
-        <p class="visual-caption">Every great dish deserves a proper costing.</p>
+        <p class="visual-caption">The real app, shown on mobile. No fictional dashboard.</p>
+      </div>
+    </section>
+    <div class="mep-benefits"><div class="wrap mep-benefits-inner"><span>✓ Built for working chefs</span><span>✓ Understand cost per portion</span><span>✓ Protect your margins</span><span>✓ Keep prices organised</span></div></div>
+    <section id="features" class="wrap mep-features section" aria-labelledby="features-heading">
+      <p class="eyebrow">ALL YOUR COSTING TOOLS IN ONE PLACE</p>
+      <h2 id="features-heading">Everything you need to <em>cost, price and manage food.</em></h2>
+      <p class="mep-section-intro">Less spreadsheet work. More control over what each dish really costs.</p>
+      <div class="mep-feature-grid">
+        <article><span aria-hidden="true">◫</span><h3>Recipe costing</h3><p>Work out ingredient costs, batch costs and accurate cost per portion.</p></article>
+        <article><span aria-hidden="true">%</span><h3>GP &amp; menu pricing</h3><p>Check gross profit and work backwards from your target GP.</p></article>
+        <article><span aria-hidden="true">▤</span><h3>Supplier price book</h3><p>Keep suppliers, pack sizes and buying prices in one place.</p></article>
+        <article><span aria-hidden="true">▣</span><h3>Invoice scanner</h3><p>Read supplier invoices and review products before importing prices.</p></article>
+        <article><span aria-hidden="true">▥</span><h3>Saved recipe library</h3><p>Save recipes to your account and retrieve them when needed.</p></article>
+        <article><span aria-hidden="true">↧</span><h3>Print &amp; export</h3><p>Export CSVs, print recipes and download an account backup.</p></article>
       </div>
     </section>
     <section id="try-recipe" class="wrap demo-main homepage-demo" aria-labelledby="homepage-demo-title"><p class="eyebrow">Try it before you sign up</p><h2 id="homepage-demo-title">Cost your first recipe.<br><em>See your GP instantly.</em></h2><p class="lead">Use the calculator right here. No login, no card and no commitment.</p><form id="demoForm"><div class="demo-grid"><label>Recipe name<input id="recipeName" maxlength="100" value="Roast tomato soup" required></label><label>Number of portions<input id="portions" type="number" min="1" step="1" value="10" required></label><label>Selling price per portion, excluding VAT (£)<input id="sellPrice" type="number" min="0" step="0.01" value="5.00" required></label></div>
