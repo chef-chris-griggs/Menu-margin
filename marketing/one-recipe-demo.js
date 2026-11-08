@@ -5,4 +5,15 @@ function addRow(data=['','1','kg','1','kg','0']){const row=document.createElemen
 function toBase(q,u){return q*({kg:1000,g:1,l:1000,ml:1,each:1}[u]||NaN)}
 function family(u){return ['kg','g'].includes(u)?'weight':['l','ml'].includes(u)?'volume':'each'}
 function calculate(){const portions=Number(document.getElementById('portions').value),sell=Number(document.getElementById('sellPrice').value);let total=0,error='';const list=[...rows.children];if(!Number.isInteger(portions)||portions<1||!Number.isFinite(sell)||sell<0)error='Enter a valid portion count and selling price.';if(!list.length)error='Add at least one ingredient.';for(const row of list){const [name,used,unit,pack,packUnit,price]=[...row.querySelectorAll('input,select')].map(e=>e.value),u=Number(used),p=Number(pack),c=Number(price);if(!name.trim()||!Number.isFinite(u)||u<=0||!Number.isFinite(p)||p<=0||!Number.isFinite(c)||c<0){error='Complete each ingredient with positive quantities and a non-negative pack price.';break}if(family(unit)!==family(packUnit)){error='Ingredient and pack units must match (weight, volume or each).';break}total+=toBase(u,unit)/toBase(p,packUnit)*c}if(!Number.isFinite(total))error='Check your quantities and pack prices.';const portion=total/portions,gp=sell-portion;document.getElementById('demoError').textContent=error;for(const [id,val] of [['batchCost',total],['portionCost',portion],['gpValue',gp]])document.getElementById(id).textContent=error?'—':money(val);document.getElementById('gpPercent').textContent=error?'—':sell>0?(gp/sell*100).toFixed(1)+'%':'N/A'}
-document.getElementById('addIngredient').addEventListener('click',()=>addRow());document.getElementById('demoForm').addEventListener('submit',e=>e.preventDefault());['portions','sellPrice'].forEach(id=>document.getElementById(id).addEventListener('input',calculate));examples.forEach(addRow);
+document.getElementById('addIngredient').addEventListener('click',()=>{
+  addRow();
+  const newRow=rows.lastElementChild;
+  if(!newRow)return;
+  newRow.classList.add('demo-new-ingredient');
+  // The new ingredient sits ABOVE the button; keep it in view on iPhone.
+  newRow.scrollIntoView({block:'center',behavior:'instant'});
+  const nameInput=newRow.querySelector('input[type="text"]');
+  if(nameInput){try{nameInput.focus({preventScroll:true})}catch{nameInput.focus()}}
+  const status=document.getElementById('demoAddStatus');
+  if(status)status.textContent='Ingredient added. Enter a name and pack details.';
+});document.getElementById('demoForm').addEventListener('submit',e=>e.preventDefault());['portions','sellPrice'].forEach(id=>document.getElementById(id).addEventListener('input',calculate));examples.forEach(addRow);
