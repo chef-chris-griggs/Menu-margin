@@ -32,7 +32,7 @@ async function run(browserType,viewport) {
     const assetResults=await page.locator('.mep-screen img').evaluateAll(imgs=>imgs.map(i=>({url:i.getAttribute('src'),ok:i.complete&&i.naturalWidth>0,width:i.naturalWidth,height:i.naturalHeight})));
     check(assetResults.length===3 && assetResults.every(x=>x.ok),'real screenshot assets missing: '+JSON.stringify(assetResults));
     check(await page.locator('.mep-screen').count()===3,'iPhone frames missing');
-    const ratio=await page.locator('.mep-screen').first().evaluate(e=>{const r=e.getBoundingClientRect();return r.height/r.width});
+    const ratio=await page.locator('.mep-screen').first().evaluate(e=>e.offsetHeight/e.offsetWidth);
     check(ratio>=1.8&&ratio<=2.7,'unrealistic iPhone mockup ratio '+ratio);
     check(await page.locator('#demoForm').isVisible(),'real free recipe calculator not visible');
     await page.waitForFunction(()=>document.querySelector('#gpPercent')?.textContent?.includes('%'));
