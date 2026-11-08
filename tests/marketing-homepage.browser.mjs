@@ -95,6 +95,23 @@ async function run(browserType,viewport) {
       check(issues.length===0,slug+' JavaScript errors '+issues.join('; '));
       await seo.close();
     }
+    const templatePage = await browser.newPage({viewport,deviceScaleFactor:1});
+    const templateErrors=[];
+    templatePage.on('pageerror', e=>templateErrors.push(e.message));
+    const templateResponse=await templatePage.goto(origin+'/recipe-costing-spreadsheet-template.html',{waitUntil:'networkidle'});
+    check(templateResponse.status()===200,'template page not found');
+    check(await templatePage.locator('h1').count()===1,'template page H1 missing');
+    check(await templatePage.locator('link[rel="canonical"]').getAttribute('href')==='https://miseenprice.co.uk/recipe-costing-spreadsheet-template.html','template canonical wrong');
+    check(await templatePage.locator('img[src="./miseenprice-logo.svg"]').first().isVisible(),'template brand missing');
+    check(await templatePage.locator('a[href="./recipe-costing-template.csv"]').count()===1,'CSV download link missing');
+    const csvResponse=await templatePage.request.get(origin+'/recipe-costing-template.csv');
+    check(csvResponse.status()===200,'CSV file not served');
+    const csvBody=await csvResponse.text();
+    check(csvBody.includes('IFERROR(')&&csvBody.includes('Ingredient cost GBP'),'CSV formulas or headers missing');
+    const templateWidth=await templatePage.evaluate(()=>({scroll:document.documentElement.scrollWidth,client:document.documentElement.clientWidth}));
+    check(templateWidth.scroll<=templateWidth.client+2,'template mobile overflow '+viewport.width+': '+JSON.stringify(templateWidth));
+    check(templateErrors.length===0,'template JS errors '+templateErrors.join('; '));
+    await templatePage.close();
     await page.close();
     console.log('PASS',browserType.name(),viewport.width+'x'+viewport.height,'checks',count,'screenshots',assetResults.map(x=>x.width+'x'+x.height).join(','));
   } finally {await browser.close();}
