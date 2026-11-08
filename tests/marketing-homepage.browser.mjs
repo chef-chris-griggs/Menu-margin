@@ -67,6 +67,34 @@ async function run(browserType,viewport) {
     const width=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,client:document.documentElement.clientWidth}));
     check(width.scroll<=width.client+2,'horizontal overflow at '+viewport.width+'px: '+JSON.stringify(width));
     check(errors.length===0,'browser JS errors: '+errors.join(' | '));
+    const seoPages = [
+      'free-recipe-costing-calculator.html',
+      'restaurant-menu-pricing-guide.html',
+      'restaurant-supplier-price-tracking.html',
+      'catering-recipe-costing.html',
+      'recipe-costing-software.html',
+      'invoice-scanning-for-chefs.html'
+    ];
+    for (const slug of seoPages) {
+      const seo = await browser.newPage({viewport,deviceScaleFactor:1});
+      const issues = [];
+      seo.on('pageerror', e=>issues.push(e.message));
+      const reply = await seo.goto(origin+'/'+slug,{waitUntil:'networkidle'});
+      check(reply.status()===200,slug+' HTTP status is not 200');
+      check(await seo.locator('h1').count()===1,slug+' needs one H1');
+      check(await seo.locator('h1').isVisible(),slug+' H1 not visible');
+      check(await seo.locator('link[rel="canonical"]').getAttribute('href')==='https://miseenprice.co.uk/'+slug,slug+' canonical changed');
+      check(await seo.locator('img[src="./miseenprice-logo.svg"]').first().isVisible(),slug+' branded logo missing');
+      check(await seo.locator('link[href="./seo-premium.css"]').count()===1,slug+' premium stylesheet missing');
+      const shot=await seo.locator('.premium-visual img').first().evaluate(i=>({ready:i.complete,width:i.naturalWidth,visible:!!i.getClientRects().length}));
+      check(shot.ready&&shot.width>0&&shot.visible,slug+' product screenshot not loaded');
+      check(await seo.locator('a[href="./#try-recipe"]').count()>=1,slug+' free calculator link missing');
+      check(await seo.locator('a[href="https://menu-margin.pages.dev/"]').count()>=1,slug+' app trial link missing');
+      const layout=await seo.evaluate(()=>({scroll:document.documentElement.scrollWidth,client:document.documentElement.clientWidth}));
+      check(layout.scroll<=layout.client+2,slug+' overflows '+viewport.width+'px: '+JSON.stringify(layout));
+      check(issues.length===0,slug+' JavaScript errors '+issues.join('; '));
+      await seo.close();
+    }
     await page.close();
     console.log('PASS',browserType.name(),viewport.width+'x'+viewport.height,'checks',count,'screenshots',assetResults.map(x=>x.width+'x'+x.height).join(','));
   } finally {await browser.close();}
