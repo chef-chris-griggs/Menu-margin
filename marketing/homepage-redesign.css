@@ -127,3 +127,11 @@ body{color:var(--mep-ink)}
  .mep-screen-front{transform:scale(1.04)}
  .mep-screen-right{transform:rotate(7deg) translateX(-7px) translateY(9px)}
 }
+
+/* Lock the iPhone chassis dimensions independently of screenshot content. */
+.mep-screen{width:min(29%,170px);flex:0 0 auto;aspect-ratio:9/19.3;height:auto;align-self:center}
+.mep-screen img{position:absolute;top:8px;left:8px;width:calc(100% - 16px);height:calc(100% - 16px);object-fit:cover;object-position:top center}
+@media(max-width:620px){
+ .mep-screen{width:30%;flex:0 0 auto;aspect-ratio:9/19.3}
+ .mep-screen img{top:5px;left:5px;width:calc(100% - 10px);height:calc(100% - 10px)}
+}
