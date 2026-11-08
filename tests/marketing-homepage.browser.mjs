@@ -4,6 +4,9 @@ import { resolve, extname, sep } from 'node:path';
 import { chromium, webkit } from 'playwright';
 
 const root = resolve('marketing');
+const cloudflareHeaders = await readFile(resolve(root,'_headers'),'utf8');
+const csp = cloudflareHeaders.match(/Content-Security-Policy:\s*([^\r\n]+)/)?.[1];
+if (!csp) throw new Error('Cloudflare CSP header missing');
 const mime = { '.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.webp':'image/webp','.png':'image/png','.svg':'image/svg+xml','.xml':'application/xml' };
 const server = createServer(async (req,res)=>{
   try {
@@ -11,7 +14,7 @@ const server = createServer(async (req,res)=>{
     const target = resolve(root, '.' + (pathname==='/'?'/index.html':pathname));
     if (!(target === root || target.startsWith(root+sep))) {res.writeHead(403).end();return;}
     const contents = await readFile(target);
-    res.writeHead(200,{'content-type':mime[extname(target)]||'application/octet-stream','cache-control':'no-store'}).end(contents);
+    res.writeHead(200,{'content-type':mime[extname(target)]||'application/octet-stream','cache-control':'no-store','content-security-policy':csp}).end(contents);
   } catch {res.writeHead(404).end('Not found');}
 });
 const port = await new Promise((ok,fail)=>server.listen(0,'127.0.0.1',()=>ok(server.address().port)).on('error',fail));
@@ -26,6 +29,7 @@ async function run(browserType,viewport) {
     page.on('pageerror',e=>errors.push(e.message));
     const response=await page.goto(origin+'/',{waitUntil:'networkidle'});
     check(response.status()===200,'homepage did not return 200');
+    check(response.headers()['content-security-policy']?.includes("script-src 'self'"),'Cloudflare CSP does not allow local calculator JavaScript');
     check(await page.title() === 'Recipe Costing Software for UK Chefs | Mise en Price','wrong homepage title');
     check(await page.locator('img[src="./miseenprice-logo.svg"]').count()>=1,'missing branded logo');
     check(await page.locator('#hero-title').isVisible(),'missing homepage headline');
