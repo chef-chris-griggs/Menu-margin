@@ -29,7 +29,7 @@ try{
   let tick=0;window.__online=true;Object.defineProperty(navigator,'onLine',{get:()=>window.__online});
   const price={id:'10000000-0000-4000-8000-000000000001',name:'Butter',supplier:'Bidfood',code:'B1',price:10,packBase:1000,baseUnit:'g',sourcePackSize:1,sourceUnit:'kg',caseCount:1,unitPackSize:1,unitPackUnit:'kg',priceBasis:'ex_vat'};
   window.__db={recipes:[{id:'20000000-0000-4000-8000-000000000001',user_id:'account-a',name:'Mash',recipe_data:{name:'Mash',yield:4,sellingPrice:5,targetGp:70,ingredients:[{name:'Butter',qty:100,qtyUnit:'g',pack:1000,packUnit:'g',price:10,priceEntered:true}]},updated_at:'2026-10-01T00:00:00Z'}],price_book:[{id:price.id,user_id:'account-a',item_data:price,updated_at:'2026-10-01T00:00:00Z'}]};
-  window.__testClient={auth:{getSession:async()=>({data:{session:null}}),onAuthStateChange(){},signOut:async()=>window.__signOutError?{error:{message:'test sign-out failure'}}:{error:null}},rpc:async()=>({data:false,error:null}),from(table){
+  window.__testClient={auth:{getSession:async()=>({data:{session:null}}),onAuthStateChange(){},signOut:async()=>{window.__signOutCalls=(window.__signOutCalls||0)+1;return window.__signOutError?{error:{message:'test sign-out failure'}}:{error:null}}},rpc:async()=>({data:false,error:null}),from(table){
    let action='read',body=null,start=0,end=Infinity;const filters=[];
    const query={select(){return query},eq(key,value){filters.push([key,value]);return query},order(){return query},range(a,b){start=a;end=b;return query},abortSignal(){return query},update(value){action='update';body=value;return query},delete(){action='delete';return query},upsert(value){action='upsert';body=value;return query},maybeSingle(){query.single=true;return query},then(resolve,reject){
     (async()=>{
@@ -124,11 +124,23 @@ try{
  await page.evaluate(()=>{__online=false;const records=readLibrary();records[0].name='Pending offline';writeLibrary(records)});
  await page.evaluate(()=>mmSignOut());assert.equal(await page.evaluate(()=>mmUser?.id),'account-a');assert.match(await page.locator('#mmCloudStatus').textContent(),/Device copy kept/);checks.push('device removal cannot discard queued offline changes');
  await page.evaluate(()=>{__online=true;return mmRefreshCloud(true)});
+ // Blur can schedule a debounced recovery draft after an earlier programmatic save.
+ // Settle that real event, then save and sync before testing the auth-service failure.
+ await page.locator('#recipeName').blur();
+ await page.evaluate(()=>new Promise(resolve=>setTimeout(resolve,250)));
+ await page.evaluate(()=>saveCurrentRecipe());
+ await page.evaluate(()=>mmRefreshCloud(true));
+ assert.equal(await page.evaluate(()=>hasUnsavedChanges),false);
+ assert.equal(await page.evaluate(()=>mmReadPending().length),0);
+ assert.equal(await page.evaluate(()=>!!mmRawJson(mmDraftKey(mmUser.id),null)?.recipe),false);
+ const signOutCalls=await page.evaluate(()=>window.__signOutCalls||0);
  await page.evaluate(()=>{localStorage.setItem(mmAccountCacheKey(MM_LIBRARY_KEY,'account-b'),JSON.stringify([{id:'b',name:'Other account'}]));__signOutError=true;return mmSignOut()});
- assert.equal(await page.evaluate(()=>mmUser?.id),'account-a');checks.push('failed session sign-out keeps account state and device data');
+ assert.equal(await page.evaluate(()=>mmUser?.id),'account-a');
+ assert.equal(await page.evaluate(()=>window.__signOutCalls),signOutCalls+1);
+ assert.match(await page.locator('#mmCloudStatus').textContent(),/test sign-out failure/);checks.push('failed session sign-out keeps account state and device data');
  await page.evaluate(()=>{__signOutError=false;return mmSignOut()});
  // WebKit can settle the async sign-out UI one turn after the action promise.
- await page.waitForFunction(()=>mmUser===null,{timeout:10000});
+ await page.waitForFunction(()=>mmUser===null,undefined,{timeout:10000});
  assert.equal(await page.evaluate(()=>mmUser),null);assert.equal(await page.locator('#mmAuthGate').isVisible(),true);
  assert.equal(await page.evaluate(()=>localStorage.getItem(mmAccountCacheKey(MM_LIBRARY_KEY,'account-a'))),null);assert.match(await page.evaluate(()=>localStorage.getItem(mmAccountCacheKey(MM_LIBRARY_KEY,'account-b'))),/Other account/);
  assert.equal(await page.locator('#ingredients tr').count(),0);checks.push('successful shared-device sign-out clears private UI and only that account’s local copy');

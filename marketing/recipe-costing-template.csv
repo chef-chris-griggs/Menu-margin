@@ -1,0 +1,5 @@
+Recipe,Ingredient,Quantity used,Pack quantity,Pack price GBP,Ingredient cost GBP,Portions,Cost per portion GBP,Sell price ex VAT GBP,Ingredient GP percent
+Roast tomato soup,Tomatoes,1500,3000,6.00,"=IFERROR(C2/D2*E2,0)",10,"=IFERROR(SUM(F$2:F$5)/G2,0)",5.00,"=IFERROR((I2-H2)/I2,0)"
+Roast tomato soup,Onions,200,1000,1.20,"=IFERROR(C3/D3*E3,0)",10,,,
+Roast tomato soup,Stock,500,1000,1.50,"=IFERROR(C4/D4*E4,0)",10,,,
+Roast tomato soup,Oil,50,1000,4.50,"=IFERROR(C5/D5*E5,0)",10,,,
