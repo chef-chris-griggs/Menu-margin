@@ -66,3 +66,9 @@ body .footer .brand{color:#153e35}
 @media(max-width:850px){.premium-hero,.hero.wrap{grid-template-columns:1fr!important;gap:24px!important}.premium-visual{max-width:560px;width:100%;margin:auto}.premium-visual img{height:300px}.premium-hero{margin-top:22px}.premium-card{flex-direction:column;align-items:flex-start}.workflow .steps{grid-template-columns:1fr!important}}
 @media(max-width:650px){body :is(.seo-nav,.seo-header,header.nav){padding:13px 18px;gap:8px;flex-wrap:wrap}body :is(.seo-nav,.seo-header,header.nav) .premium-logo img{width:168px}body :is(.seo-nav,.seo-header,header.nav) nav{gap:8px}body :is(.seo-nav,.seo-header,header.nav) nav a{font-size:11px}body :is(.seo-nav,.seo-header,header.nav) nav a:not(.premium-nav-cta){display:none}body main :is(.seo-wrap,.wrap-seo,.seo-shell){padding-inline:17px}body main h1{font-size:clamp(32px,9vw,46px)}.premium-hero{padding:24px 19px;border-radius:17px;margin:20px 0 30px}.premium-visual{padding:11px}.premium-visual img{height:260px}.premium-card{padding:18px}body .hero.wrap{width:calc(100% - 30px);padding:24px 19px}.workflow .steps li{padding:18px}body main :is(.seo-panel,.panel-seo,.seo-box){padding:17px}body main table{font-size:13px}body main th,body main td{padding:9px 6px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+/* Keep legacy software-page headlines inside narrow mobile viewports. */
+body main .hero.wrap .hero-copy{min-width:0}
+body main .hero.wrap .hero-copy h1{font-size:clamp(36px,4.8vw,64px);line-height:1.1;letter-spacing:-.045em;overflow-wrap:break-word}
+body .hero.wrap .hero-visual{min-width:0}
+@media(max-width:650px){body main .hero.wrap .hero-copy h1{font-size:clamp(34px,9vw,46px);letter-spacing:-.04em}body .hero.wrap .hero-visual{width:100%;max-width:100%;padding:0}}
