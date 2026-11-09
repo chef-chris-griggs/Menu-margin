@@ -64,6 +64,18 @@ async function run(browserType,viewport) {
     check((await page.locator('#gpPercent').textContent())==='89.6%','initial demo GP incorrect');
     await page.locator('#sellPrice').fill('10');
     check((await page.locator('#gpPercent').textContent())==='94.8%','changing sale price did not update GP');
+    const firstPrice=page.locator('.demo-ingredient').first().locator('input[type="number"]').nth(2);
+    await firstPrice.fill('');
+    check((await page.locator('#demoError').textContent()).includes('pack price'),'blank pack price was silently treated as free');
+    for (const id of ['batchCost','portionCost','gpValue','gpPercent']) {
+      check((await page.locator('#'+id).textContent())==='—','blank pack price left a misleading '+id);
+    }
+    await firstPrice.fill('0');
+    check((await page.locator('#demoError').textContent())==='','intentional zero pack price was rejected');
+    check((await page.locator('#batchCost').textContent())==='£2.00','intentional zero pack price calculated incorrectly');
+    await firstPrice.fill('8');
+    check((await page.locator('#batchCost').textContent())==='£5.20','batch cost did not recover after restoring pack price');
+    check((await page.locator('#gpPercent').textContent())==='94.8%','GP did not recover after restoring pack price');
     await page.locator('#addIngredient').click();
     check(await page.locator('.demo-ingredient').count()===4,'add ingredient failed');
     check(await page.locator('.demo-new-ingredient').count()===1,'new ingredient not highlighted');
