@@ -140,7 +140,7 @@ async function run(browserType,viewport) {
     const csvResponse=await templatePage.request.get(origin+'/recipe-costing-template.csv');
     check(csvResponse.status()===200,'CSV file not served');
     const csvBody=await csvResponse.text();
-    check(csvBody.includes('IFERROR(')&&csvBody.includes('Ingredient cost GBP'),'CSV formulas or headers missing');
+    check(csvBody.includes('Ingredient cost GBP') && csvBody.includes('IF(COUNT(C2:E2)<>3') && csvBody.includes('COUNT(F2:F5)<>4') && csvBody.includes('I2<=0'), 'CSV guarded costing formulas or headers missing');
     const templateWidth=await templatePage.evaluate(()=>({scroll:document.documentElement.scrollWidth,client:document.documentElement.clientWidth}));
     check(templateWidth.scroll<=templateWidth.client+2,'template mobile overflow '+viewport.width+': '+JSON.stringify(templateWidth));
     check(await templatePage.locator('.template-hero').evaluate(e=>parseFloat(getComputedStyle(e).borderRadius))===22,'template stylesheet blocked or missing');
