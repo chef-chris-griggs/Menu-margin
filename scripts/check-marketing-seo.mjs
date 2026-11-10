@@ -31,6 +31,14 @@ for (const url of urls) {
   assert(!/<meta\s+name="robots"\s+content="[^"]*noindex/i.test(html), `Sitemap contains noindex page: ${path}`);
 }
 
+const redirects = readFileSync(join(root, '_redirects'), 'utf8');
+const redirectRules = redirects.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith('#'));
+for (const url of urls.filter((item) => item !== origin + '/')) {
+  const canonicalPath = new URL(url).pathname;
+  const expected = `${canonicalPath}.html ${canonicalPath} 301`;
+  assert(redirectRules.includes(expected), `Missing permanent .html to canonical redirect: ${expected}`);
+}
+
 const homepage = readFileSync(join(root, 'index.html'), 'utf8');
 assert(!/href="#"/.test(homepage), 'Homepage contains empty-fragment links; use / for home');
 console.log(`SEO checks passed for ${urls.length} sitemap pages, canonicals, titles, descriptions, H1s, and robots.txt`);
