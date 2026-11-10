@@ -21,7 +21,8 @@
     "test:accounts:webkit": "node tests/account-flow.browser.mjs --webkit",
     "test:account-isolation": "node scripts/test-account-isolation.mjs",
     "test:recovery": "node tests/password-recovery.browser.mjs",
-    "test:recovery:webkit": "node tests/password-recovery.browser.mjs --webkit"
+    "test:recovery:webkit": "node tests/password-recovery.browser.mjs --webkit",
+    "test:seo": "node scripts/check-marketing-seo.mjs"
   },
   "dependencies": {
     "@paddleocr/paddleocr-js": "0.4.2",
