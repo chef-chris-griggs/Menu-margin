@@ -78,6 +78,12 @@ async function run(browserType,viewport) {
     await page.locator('#portions').fill('');
     check((await page.locator('#demoError').textContent()).includes('valid portion count'),'blank portions accepted as zero');
     check((await page.locator('#gpPercent').textContent())==='—','blank portions displayed GP');
+    await page.locator('#portions').fill('0');
+    check((await page.locator('#demoError').textContent()).includes('valid portion count'),'zero portions accepted');
+    check((await page.locator('#gpPercent').textContent())==='—','zero portions displayed GP');
+    await page.locator('#portions').fill('1.5');
+    check((await page.locator('#demoError').textContent()).includes('valid portion count'),'fractional portions accepted');
+    check((await page.locator('#gpPercent').textContent())==='—','fractional portions displayed GP');
     await page.locator('#portions').fill('10');
     check((await page.locator('#gpPercent').textContent())==='94.8%','restored portions GP incorrect');
     const firstPrice=page.locator('.demo-ingredient').first().locator('input[type="number"]').nth(2);
