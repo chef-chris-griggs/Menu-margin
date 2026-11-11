@@ -55,3 +55,23 @@ test('privileged functions use restricted search paths', () => {
     for (const [header] of functions) assert.match(header, /security definer\s+set search_path = ''/i);
   }
 });
+
+test('RLS optimisation preserves owner and paid-access checks', () => {
+  const sql = read('supabase/migrations/20261111211500_optimize_rls_policy_performance.sql');
+  for (const table of ['recipes', 'price_book']) {
+    assert.match(sql, new RegExp('create policy "menu margin subscription required" on public\\.' + table));
+    assert.match(sql, /as restrictive for all to public/i);
+    assert.match(sql, /using \(\(select auth\.uid\(\)\) is not null and \(select public\.menu_margin_has_paid_access\(\)\)\)/i);
+    assert.match(sql, /with check \(\(select auth\.uid\(\)\) is not null and \(select public\.menu_margin_has_paid_access\(\)\)\)/i);
+  }
+  assert.match(sql, /Missing owner or subscription policy/);
+  assert.match(sql, /Unexpected owner\/subscription policy mode/);
+  for (const operation of ['view','create','update','delete']) {
+    assert.match(sql, new RegExp('drop policy if exists "Users can ' + operation + ' their own recipes" on public\\.recipes', 'i'));
+  }
+  for (const operation of ['view','add to','update','delete']) {
+    assert.match(sql, new RegExp('drop policy if exists "Users can ' + operation + ' their own price book" on public\\.price_book', 'i'));
+  }
+  assert.doesNotMatch(sql, /drop policy.*"menu margin owner (rows|boundary)"/i);
+  assert.doesNotMatch(sql, /revoke .* on public\.(recipes|price_book)/i);
+});
