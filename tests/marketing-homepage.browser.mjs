@@ -64,6 +64,28 @@ async function run(browserType,viewport) {
     check((await page.locator('#gpPercent').textContent())==='89.6%','initial demo GP incorrect');
     await page.locator('#sellPrice').fill('10');
     check((await page.locator('#gpPercent').textContent())==='94.8%','changing sale price did not update GP');
+    // Blank and zero ex-VAT prices cannot produce a meaningful GP percentage.
+    for (const value of ['', '0']) {
+      await page.locator('#sellPrice').fill(value);
+      check((await page.locator('#demoError').textContent()).includes('selling price greater than zero'),'blank or zero selling price incorrectly accepted: '+JSON.stringify(value));
+      for (const id of ['batchCost','portionCost','gpValue','gpPercent']) {
+        check((await page.locator('#'+id).textContent())==='—','invalid sale price displayed misleading '+id);
+      }
+    }
+    await page.locator('#sellPrice').fill('10');
+    check((await page.locator('#demoError').textContent())==='','valid selling price did not recover');
+    check((await page.locator('#gpPercent').textContent())==='94.8%','restored selling price GP incorrect');
+    await page.locator('#portions').fill('');
+    check((await page.locator('#demoError').textContent()).includes('valid portion count'),'blank portions accepted as zero');
+    check((await page.locator('#gpPercent').textContent())==='—','blank portions displayed GP');
+    await page.locator('#portions').fill('0');
+    check((await page.locator('#demoError').textContent()).includes('valid portion count'),'zero portions accepted');
+    check((await page.locator('#gpPercent').textContent())==='—','zero portions displayed GP');
+    await page.locator('#portions').fill('1.5');
+    check((await page.locator('#demoError').textContent()).includes('valid portion count'),'fractional portions accepted');
+    check((await page.locator('#gpPercent').textContent())==='—','fractional portions displayed GP');
+    await page.locator('#portions').fill('10');
+    check((await page.locator('#gpPercent').textContent())==='94.8%','restored portions GP incorrect');
     const firstPrice=page.locator('.demo-ingredient').first().locator('input[type="number"]').nth(2);
     await firstPrice.fill('');
     check((await page.locator('#demoError').textContent()).includes('pack price'),'blank pack price was silently treated as free');

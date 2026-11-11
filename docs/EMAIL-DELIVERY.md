@@ -1,58 +1,33 @@
-# Authentication email delivery
+# Authentication email delivery — Mise en Price
 
-The contact inbox is `admin.menumargin@gmail.com`. Receiving support emails at
-that inbox is separate from configuring Supabase to send signup confirmations
-and password-reset messages to customers.
+## Production setup observed 11 November 2026
 
-## Current situation
+- The owner added and verified **miseenprice.co.uk** in Resend, region Ireland. DKIM and the two CNAME sending records were marked verified in Resend.
+- The owner configured Supabase Auth custom SMTP for the production project with sender `no-reply@miseenprice.co.uk`, sender name Mise en Price, host `smtp.resend.com`, port `465`, username `resend`, and a private Resend API key as password. The Supabase UI reported the settings successfully saved.
+- **Critical outstanding test:** Actual email delivery, signup confirmation, redirect to the deployed app, sign-in, and password-reset recovery have **not** been proved using an external mailbox. Treat the signup funnel as unverified until those checks pass.
+- Do not put Resend API keys or other secrets into GitHub, chat, browser code or screenshots.
+- The existing support inbox `admin.menumargin@gmail.com` is separate from outgoing Supabase Auth emails. Do not change its routing without verifying replacement support delivery.
+- Cloudflare email routing and existing records must be retained. The suggested DMARC record should be checked against existing policy before adding it.
 
-The owner reported an email rate-limit error during reset testing. We have not
-inspected the project's SMTP configuration or its remaining quota. Do not keep
-requesting emails while the server is rate limiting them. The error alone does
-not identify the exact remaining wait.
+## Launch verification checklist (disposable mailbox, no customer data)
 
-Supabase currently documents two emails per hour across a project using the
-built-in sender, plus a default 60-second per-user reset-request interval. The
-built-in sender is also restricted to project-team recipients and is intended
-for setup/testing, rather than public customer authentication:
-[rate limits](https://supabase.com/docs/guides/auth/rate-limits),
-[custom SMTP](https://supabase.com/docs/guides/auth/auth-smtp).
+1. Confirm that Supabase Authentication has custom SMTP enabled and the settings saved. Keep email confirmation enabled.
+2. Verify the actual production **Site URL** and allowlisted redirect URLs match the current deployed Cloudflare Pages application. Avoid obsolete GitHub Pages or temporary test redirect paths.
+3. From the public marketing site, click **Start your free 14-day trial**. Follow the link to the real app and register a fresh, controlled address not present on the Supabase project team.
+4. Confirm exactly one signup-confirmation email arrives from `no-reply@miseenprice.co.uk`; check spam, the clicked link's host and the resulting application session.
+5. Confirm the new account is confirmed and can start the free cardless 14-day trial **once**. Check a recipe can be saved and retrieved after sign-out/sign-in.
+6. Use **Forgot password?** for that disposable account. Verify an actual email, the correct reset screen, password update and subsequent sign-in.
+7. Review Supabase Auth logs and Resend email logs for failed delivery, quota, sender authentication or incorrect redirect evidence. Respect per-user rate limits; do not repeatedly retry.
+8. Confirm email-sending limits and abuse controls (including CAPTCHA feasibility) are appropriate before increasing traffic.
+9. Record dated outcomes and screenshots with any secrets or customer details hidden. A saved SMTP setting is **not** proof of working customer registration.
 
-MenuMargin 2.1.3 prevents double-click sends, keeps a 60-second local resend
-cooldown across reloads, and explains server email-quota errors. It never
-automatically resends. The local cooldown does not lift the server quota, and
-the app does not claim the server limit resets when its countdown finishes.
+## Prior context
 
-## Owner setup before public signup
+The earlier Supabase built-in sender was restricted to project-team addresses and an extremely low hourly limit. This is why custom SMTP was established.
 
-1. Check Supabase Authentication's SMTP settings to identify the current sender.
-   If no production sender is configured, arrange one before inviting customers.
-2. Choose a domain you control and a sending service supporting SMTP. Verify
-   the sender and configure the provider's required DNS records (SPF/DKIM and
-   an appropriate DMARC policy). Keep the Gmail inbox for support if desired.
-   No domain purchase or provider account has been made by this work.
-3. Put the provider's SMTP host, port, username, credential and verified sender
-   address into **Supabase's custom SMTP settings**. Keep the credential out of
-   browser code, this repository, screenshots and chat.
-4. Review the project's email rate limit against the provider's actual allowance.
-   Configuring custom SMTP does not remove all sending or endpoint limits.
-   Keep account verification enabled; disabling it is not a delivery fix.
-5. Retain the production Site URL. The owner added this private test redirect:
+The browser client already includes a resend cooldown and simulated password-recovery tests, but those are not substitutes for the real-email end-to-end checks above.
 
-       https://menumargin-launch-phone-test.chrisgriggs2021.chatgpt.site/**
-
-   For the GitHub production deployment, allow its exact app and recovery URLs:
-
-       https://chef-chris-griggs.github.io/Menu-margin/
-       https://chef-chris-griggs.github.io/Menu-margin/?auth=recovery
-
-   Reset templates must use Supabase's verification/confirmation link and honor
-   the requested redirect, rather than hard-coding a different app. See
-   [redirect configuration](https://supabase.com/docs/guides/auth/redirect-urls).
-6. After the service is ready, test actual signup/verification and password reset
-   for a disposable account. Open the newest email in the intended browser,
-   confirm the password form appears, set a new password and sign in again.
-   Also verify sender identity, spam delivery, expiry and support requests.
-
-The real-email reset check remains pending. Passing the intercepted browser
-fixtures establishes client behavior, not real SMTP delivery or quota capacity.
+References:
+- [Supabase custom SMTP](https://supabase.com/docs/guides/auth/auth-smtp)
+- [Supabase redirect URLs](https://supabase.com/docs/guides/auth/redirect-urls)
+- [Supabase Auth rate limits](https://supabase.com/docs/guides/auth/rate-limits)
