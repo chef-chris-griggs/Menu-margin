@@ -384,7 +384,7 @@ function mmShowSubscriptionGate(user){
   document.getElementById('mmBillingMessage').textContent=state==='success'
     ?'Checkout is complete. Stripe is confirming your subscription. Choose Check access to refresh your account.'
     :state==='cancelled'?'Checkout was cancelled. Your account is unchanged. Choose Check access or return to subscription options.'
-    :'Your account is ready. Start the trial to access recipes and the supplier price book.';
+    :'Choose Continue to check if your first 14-day free trial is available. If your trial has ended, you can choose a £9.99/month subscription at secure checkout.';
 }
 function mmLoadCurrentAccountData(result){
   const list=result?.recipes||mmReadUserCache(MM_LIBRARY_KEY,mmUser.id);
@@ -549,7 +549,8 @@ async function mmStartTrial(){
   if(trialError&&!/Existing billing account|Free trial already used/i.test(String(trialError.message||'')))throw trialError;
   // Previously used or ineligible accounts proceed to normal paid checkout.
   // The server prevents stacking a second Stripe trial after a card-free trial.
-  message.textContent='Opening secure subscription checkout…';
+  document.getElementById('mmSubscriptionTitle').textContent='Continue with a subscription';
+  message.textContent='Your free trial is unavailable or has already been used. Opening secure checkout for £9.99/month. You will only be charged if you confirm your subscription.';
   const {data,error}=await mmSupabase.functions.invoke('create-checkout-session');
   if(error)throw error;
   if(!data?.url)throw new Error(data?.error||'Stripe did not return a checkout link.');
