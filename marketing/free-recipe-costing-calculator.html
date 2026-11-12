@@ -17,6 +17,8 @@
   <link rel="stylesheet" href="./site.css">
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"Free Recipe Costing Calculator for UK Chefs","url":"https://miseenprice.co.uk/free-recipe-costing-calculator","description":"Learn to calculate recipe cost, cost per portion and ingredient-based gross profit. Use the free Mise en Price calculator.","isPartOf":{"@type":"WebSite","name":"Mise en Price","url":"https://miseenprice.co.uk/"}}</script>
   <link rel="stylesheet" href="./seo-premium.css">
+  <link rel="stylesheet" href="./one-recipe-demo.css">
+  <script src="./one-recipe-demo.js?v=20261109-blank-price" defer></script>
   <link rel="stylesheet" href="./analytics.css">
   <script src="./analytics.js?v=GTM-WZXW5M6L" defer></script>
 </head>
@@ -27,9 +29,13 @@
       <p class="seo-eyebrow">Free tool for professional kitchens</p>
       <h1>Free recipe costing calculator for UK chefs</h1>
       <p class="seo-lead">Know what each dish really costs. Enter the ingredients you use, what you pay for each pack and how many portions the recipe makes. Calculate batch cost, cost per portion and ingredient-based GP without creating an account.</p>
-      <a class="seo-cta" href="./#try-recipe">Open the free recipe calculator →</a>
+      <a class="seo-cta" href="#try-recipe">Open the free recipe calculator →</a>
       <p class="seo-note">Free one-recipe calculator · No sign-up · No payment card · Figures entered by you</p>
     <div class="premium-benefits"><span>For professional kitchens</span><span>No card needed for free calculator</span></div></div><aside class="premium-visual" aria-label="Mise en Price product screenshot"><div class="premium-visual-head"><span class="premium-visual-dot" aria-hidden="true"></span>Mise en Price <small>REAL COSTING SCREEN</small></div><img src="./screenshots/recipe-costing.webp" alt="Genuine Mise en Price app screenshot showing recipe costing controls" width="420" height="550" loading="lazy"><p class="premium-visual-caption">Cost a recipe in minutes · Actual application screen</p></aside></section>
+    <section id="try-recipe" class="demo-main homepage-demo" aria-labelledby="calculator-demo-title"><p class="eyebrow">Try it before you sign up</p><h2 id="calculator-demo-title">Cost your first recipe.<br><em>See your GP instantly.</em></h2><p class="lead">Use the calculator right here. No login, no card and no commitment.</p><form id="demoForm"><div class="demo-grid"><label>Recipe name<input id="recipeName" maxlength="100" value="Roast tomato soup" required></label><label>Number of portions<input id="portions" type="number" min="1" step="1" value="10" required></label><label>Selling price per portion, excluding VAT (£)<input id="sellPrice" type="number" min="0" step="0.01" value="5.00" required></label></div>
+<h2>Ingredients</h2><p>Enter the amount used, the pack size you buy and the price for that whole pack. Use the same unit for quantity and pack size.</p><div id="ingredientRows"></div><button type="button" class="demo-secondary" id="addIngredient">+ Add ingredient</button><p id="demoAddStatus" class="demo-add-status" role="status" aria-live="polite"></p>
+<section class="demo-results" aria-live="polite"><h2>Your recipe costing</h2><div class="demo-metrics"><div><span>Batch ingredient cost</span><strong id="batchCost">—</strong></div><div><span>Cost per portion</span><strong id="portionCost">—</strong></div><div><span>Food-cost GP per portion</span><strong id="gpValue">—</strong></div><div><span>Food-cost GP %</span><strong id="gpPercent">—</strong></div></div><p id="demoError" role="status"></p><p class="demo-note">Illustrative food-cost GP only. Use an ex-VAT selling price and ingredient prices on the same VAT basis. Excludes labour, overheads and waste.</p></section>
+</form><div class="demo-cta"><h2>Want to save your recipes and scan supplier invoices?</h2><p>Try the full Mise en Price app free for 14 days. No card required.</p><a class="button" href="https://menu-margin.pages.dev/">Start your free trial ↗</a></div></section>
     <section class="seo-panel" aria-labelledby="steps">
       <h2 id="steps">How to calculate your recipe cost</h2>
       <ol>
@@ -68,7 +74,7 @@
       <h2>Want to save recipes and manage supplier prices?</h2>
       <p>The full Mise en Price app adds a recipe library, supplier price book, invoice scanning and exports. Try it for 14 days without a card; afterwards, choose whether to subscribe for £9.99 per month. There is no automatic charge when the trial ends.</p>
       <a class="seo-cta" href="https://menu-margin.pages.dev/">Start a free 14-day trial →</a>
-      <p><a href="./#try-recipe">Or use the free calculator first</a></p>
+      <p><a href="#try-recipe">Or use the free calculator first</a></p>
     </section>
   <section class="seo-box"><h2>Prefer a spreadsheet?</h2><p>Download our <a href="./recipe-costing-spreadsheet-template">free recipe costing spreadsheet template</a> for a worked ingredient-cost example you can edit in Excel or Google Sheets.</p></section>
 </main>
