@@ -159,7 +159,11 @@ async function run(browserType,viewport) {
         check(await seo.locator('.demo-ingredient').count()===3,slug+' remove-ingredient action failed');
         check((await seo.locator('#gpPercent').textContent())==='89.6%',slug+' GP did not recover');
       } else {
-        check(await seo.locator('a[href="./#try-recipe"]').count()>=1,slug+' free calculator link missing');
+        if (['restaurant-menu-pricing-guide.html','food-gp-calculator.html'].includes(slug)) {
+          check(await seo.locator('a[href="./free-recipe-costing-calculator#try-recipe"]').count()>=1,slug+' dedicated calculator link missing');
+        } else {
+          check(await seo.locator('a[href="./#try-recipe"]').count()>=1,slug+' free calculator link missing');
+        }
       }
       check(await seo.locator('a[href="https://menu-margin.pages.dev/"]').count()>=1,slug+' app trial link missing');
       const layout=await seo.evaluate(()=>({scroll:document.documentElement.scrollWidth,client:document.documentElement.clientWidth}));
