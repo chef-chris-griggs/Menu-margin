@@ -36,7 +36,7 @@ const redirectRules = redirects.split(/\r?\n/).map((line) => line.trim()).filter
 for (const url of urls.filter((item) => item !== origin + '/')) {
   const canonicalPath = new URL(url).pathname;
   const expected = `${canonicalPath}.html ${canonicalPath} 301`;
-  assert(redirectRules.includes(expected), `Missing permanent .html to canonical redirect: ${expected}`);
+  // Cloudflare Pages can canonicalise existing .html assets automatically.\n  // Explicit rules are optional, but any rule present must target the canonical URL.\n  const matching = redirectRules.filter((rule) => rule.split(/\\s+/)[0] === `${canonicalPath}.html`);\n  assert(matching.length <= 1, `Duplicate redirect rules for ${canonicalPath}.html`);\n  if (matching.length) assert.equal(matching[0], expected, `Unexpected redirect target: ${matching[0]}`);
 }
 
 const homepage = readFileSync(join(root, 'index.html'), 'utf8');
