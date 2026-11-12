@@ -402,6 +402,18 @@ function mmLoadCurrentAccountData(result){
   if(recoveredDraft)hasUnsavedChanges=true;
   refreshLibrary(currentRecipeId);renderPriceBook();
 }
+// The dashboard link is shown only after a successful owner-gated RPC.
+// The server's founder grant remains the sole authority; this is display logic only.
+async function mmRefreshOwnerDashboardLink(userId){
+  const link=document.getElementById('mmOwnerDashboardLink');
+  if(!link)return;
+  link.hidden=true;
+  try{
+    const {error}=await mmSupabase.rpc('menu_margin_owner_signup_metrics');
+    if(mmUser?.id===userId&&document.body.classList.contains('mm-authenticated')&&!mmSigningOut)
+      link.hidden=Boolean(error);
+  }catch{link.hidden=true;}
+}
 function mmEnterApp(user,force=false){
   if(!user||mmRecoveryMode!=='none')return Promise.resolve();
   if(!mmAppBooted)return mmAppBootPromise.then(()=>mmEnterApp(user,force));
@@ -443,6 +455,7 @@ function mmEnterApp(user,force=false){
     document.getElementById('mmManageBillingAccount').hidden=!mmBillingEnabled;
     document.getElementById('mmRetryStartup').hidden=true;
     mmLoadCurrentAccountData(result);
+    void mmRefreshOwnerDashboardLink(user.id);
     if(offlineAccess||mmCloudOffline)mmAuthMessage('Offline mode — local changes are safe here and will sync when the connection returns.');
     else mmAuthMessage('Signed in. Cloud sync is working.');
   })().catch(error=>{
@@ -487,6 +500,7 @@ function mmClearPrivateUi(){
   document.getElementById('invoiceFile').value='';
   document.getElementById('backupFile').value='';
   document.getElementById('mmMigrationNotice').hidden=true;
+  const ownerLink=document.getElementById('mmOwnerDashboardLink');if(ownerLink)ownerLink.hidden=true;
   document.getElementById('mmAccountLabel').textContent='Signed out';
   document.getElementById('mmCloudStatus').textContent='Sign in to open your private data.';
   document.body.classList.remove('mm-authenticated','mm-payment-required');
