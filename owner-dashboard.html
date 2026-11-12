@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://phwdyckedcqxbojpbqgz.supabase.co wss://phwdyckedcqxbojpbqgz.supabase.co">
+<title>Owner dashboard | Mise en Price</title>
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="./styles/owner-dashboard.css">
+<script src="./vendor/supabase/supabase.js" defer></script>
+<script src="./js/owner-dashboard.js" defer></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap header-inner">
+    <a class="brand" href="./">Mise en <span>Price</span></a>
+    <span class="private-label">Private owner reporting</span>
+    <a class="back" href="./">Back to app</a>
+  </div>
+</header>
+<main class="wrap">
+  <section class="intro"><p class="eyebrow">BUSINESS PERFORMANCE</p><h1>Signup dashboard</h1><p>Actual registrations and trials from Mise en Price. Numbers include owner and test activity; they are not automatically new customers.</p></section>
+  <section id="login" class="panel" hidden aria-labelledby="login-heading">
+    <h2 id="login-heading">Owner sign in</h2>
+    <p>Sign in with your authorised Mise en Price owner account. Other accounts cannot view these figures.</p>
+    <form id="loginForm">
+      <label>Email address<input id="email" type="email" autocomplete="email" required></label>
+      <label>Password<input id="password" type="password" autocomplete="current-password" required></label>
+      <button type="submit">Sign in</button>
+    </form>
+  </section>
+  <section id="dashboard" hidden aria-label="Owner metrics">
+    <div class="toolbar"><p id="updated" aria-live="polite"></p><button type="button" id="refresh">Refresh figures</button></div>
+    <div class="metrics">
+      <article class="panel"><p>Registered accounts</p><strong id="registered">–</strong><small>All accounts, including tests</small></article>
+      <article class="panel"><p>Verified emails</p><strong id="verified">–</strong><small>Email confirmed</small></article>
+      <article class="panel"><p>Active free trials</p><strong id="trials">–</strong><small>No-card 14-day trials</small></article>
+      <article class="panel"><p>Active paid subscriptions</p><strong id="paid">–</strong><small>From mirrored subscription records</small></article>
+    </div>
+    <div class="metrics secondary">
+      <article class="panel"><p>New registrations today</p><strong id="todayReg">–</strong></article>
+      <article class="panel"><p>Registrations yesterday</p><strong id="yesterdayReg">–</strong></article>
+      <article class="panel"><p>Trials started today</p><strong id="todayTrials">–</strong></article>
+      <article class="panel"><p>Trials started yesterday</p><strong id="yesterdayTrials">–</strong></article>
+    </div>
+    <section class="panel"><div class="section-head"><div><h2>Last 14 days</h2><p>Daily registrations and no-card trial starts · Europe/London</p></div><div class="legend"><span class="dot reg"></span> Registrations <span class="dot trial"></span> Trials</div></div><div id="trend" class="trend" role="img" aria-label="Daily registration and free-trial counts"></div></section>
+    <section class="panel summary"><h2>Account breakdown</h2><div><span>Total no-card trials started</span><strong id="allTrials">–</strong></div><div><span>Stripe subscriptions still trialing</span><strong id="stripeTrials">–</strong></div><div><span>Complimentary founder owner grants</span><strong id="owners">–</strong></div><p>Stripe subscriptions are reported from Supabase's billing mirror; verify actual payments in Stripe. Owner/test accounts are included in gross signup counts and must not be treated as customer acquisition.</p></section>
+  </section>
+  <p id="status" role="status" aria-live="polite">Checking owner access…</p>
+</main>
+</body>
+</html>
