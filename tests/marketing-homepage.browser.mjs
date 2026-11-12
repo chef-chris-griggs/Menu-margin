@@ -142,7 +142,25 @@ async function run(browserType,viewport) {
       check(await seo.locator('link[href="./seo-premium.css"]').count()===1,slug+' premium stylesheet missing');
       const shot=await seo.locator('.premium-visual img').first().evaluate(i=>({ready:i.complete,width:i.naturalWidth,visible:!!i.getClientRects().length}));
       check(shot.ready&&shot.width>0&&shot.visible,slug+' product screenshot not loaded');
-      check(await seo.locator('a[href="./#try-recipe"]').count()>=1,slug+' free calculator link missing');
+      if (slug === 'free-recipe-costing-calculator.html') {
+        check(await seo.locator('a[href="#try-recipe"]').count()>=1,slug+' in-page calculator link missing');
+        check(await seo.locator('#demoForm').isVisible(),slug+' real calculator not visible');
+        await seo.waitForFunction(()=>document.querySelector('#gpPercent')?.textContent?.includes('%'));
+        check((await seo.locator('#batchCost').textContent())==='£5.20',slug+' incorrect initial batch cost');
+        check((await seo.locator('#gpPercent').textContent())==='89.6%',slug+' incorrect initial GP');
+        await seo.locator('#addIngredient').click();
+        check(await seo.locator('.demo-ingredient').count()===4,slug+' add-ingredient action failed');
+        await seo.locator('.demo-ingredient').last().locator('input[type="text"]').fill('Butter');
+        check((await seo.locator('#demoError').textContent())==='',slug+' valid added ingredient rejected');
+        await seo.locator('#sellPrice').fill('0');
+        check((await seo.locator('#demoError').textContent()).includes('selling price greater than zero'),slug+' zero selling price accepted');
+        await seo.locator('#sellPrice').fill('5');
+        await seo.locator('.demo-ingredient').last().locator('.demo-remove').click();
+        check(await seo.locator('.demo-ingredient').count()===3,slug+' remove-ingredient action failed');
+        check((await seo.locator('#gpPercent').textContent())==='89.6%',slug+' GP did not recover');
+      } else {
+        check(await seo.locator('a[href="./#try-recipe"]').count()>=1,slug+' free calculator link missing');
+      }
       check(await seo.locator('a[href="https://menu-margin.pages.dev/"]').count()>=1,slug+' app trial link missing');
       const layout=await seo.evaluate(()=>({scroll:document.documentElement.scrollWidth,client:document.documentElement.clientWidth}));
       check(layout.scroll<=layout.client+2,slug+' overflows '+viewport.width+'px: '+JSON.stringify(layout));
