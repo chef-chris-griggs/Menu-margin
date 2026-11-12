@@ -1,9 +1,7 @@
-# Keep legacy .html links on the canonical, extensionless marketing URLs.
-# The canonical URLs are the only ones listed in sitemap.xml.
+# Cloudflare Pages provides automatic clean-URL handling for .html files.
+# Avoid competing explicit rules for the three URLs Google reported as redirect errors.
+# Remaining legacy rules are unchanged pending live redirect-chain verification.
 /free-recipe-costing-calculator.html /free-recipe-costing-calculator 301
-/recipe-costing-software.html /recipe-costing-software 301
-/invoice-scanning-for-chefs.html /invoice-scanning-for-chefs 301
-/food-gp-calculator.html /food-gp-calculator 301
 /restaurant-menu-pricing-guide.html /restaurant-menu-pricing-guide 301
 /restaurant-supplier-price-tracking.html /restaurant-supplier-price-tracking 301
 /catering-recipe-costing.html /catering-recipe-costing 301
