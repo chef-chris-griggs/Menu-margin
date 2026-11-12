@@ -4,7 +4,7 @@
 
 - The owner added and verified **miseenprice.co.uk** in Resend, region Ireland. DKIM and the two CNAME sending records were marked verified in Resend.
 - The owner configured Supabase Auth custom SMTP for the production project with sender `no-reply@miseenprice.co.uk`, sender name Mise en Price, host `smtp.resend.com`, port `465`, username `resend`, and a private Resend API key as password. The Supabase UI reported the settings successfully saved.
-- **Critical outstanding test:** Actual email delivery, signup confirmation, redirect to the deployed app, sign-in, and password-reset recovery have **not** been proved using an external mailbox. Treat the signup funnel as unverified until those checks pass.
+- **Owner-reported test update (11 November 2026):** The owner confirmed that signup emails arrived with Mise en Price branding, forgot-password email/recovery worked, and two additional checks were successful. These are owner-reported manual checks, not independently verified end-to-end CI results. The complete new-user signup → confirmation → trial → recipe persistence → billing journey and redirect/expiry edge cases remain unverified; do not mark the full funnel passed.
 - Do not put Resend API keys or other secrets into GitHub, chat, browser code or screenshots.
 - The existing support inbox `admin.menumargin@gmail.com` is separate from outgoing Supabase Auth emails. Do not change its routing without verifying replacement support delivery.
 - Cloudflare email routing and existing records must be retained. The suggested DMARC record should be checked against existing policy before adding it.
