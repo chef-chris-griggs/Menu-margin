@@ -34,3 +34,10 @@ test('deleted account cannot restart a cardless trial with same verified email',
  const auth=read('js/auth.js');
  assert.match(auth,/Free trial already used/);
 });
+
+test('paid checkout messaging does not incorrectly promise another free trial',()=>{
+ const auth=read('js/auth.js');
+ assert.match(auth,/Checkout is complete\. Stripe is confirming your subscription\./);
+ assert.match(auth,/Checkout was cancelled\. Your account is unchanged\./);
+ assert.doesNotMatch(auth,/Stripe is confirming your trial/);
+});

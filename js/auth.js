@@ -382,8 +382,8 @@ function mmShowSubscriptionGate(user){
   document.getElementById('mmBillingWelcome').textContent='Signed in as '+(user.email||'your account')+'.';
   const state=new URL(window.location.href).searchParams.get('billing');
   document.getElementById('mmBillingMessage').textContent=state==='success'
-    ?'Checkout is complete. Stripe is confirming your trial; choose Check access in a moment.'
-    :state==='cancelled'?'Checkout was cancelled. Your account is unchanged; you can start the trial whenever you are ready.'
+    ?'Checkout is complete. Stripe is confirming your subscription. Choose Check access to refresh your account.'
+    :state==='cancelled'?'Checkout was cancelled. Your account is unchanged. Choose Check access or return to subscription options.'
     :'Your account is ready. Start the trial to access recipes and the supplier price book.';
 }
 function mmLoadCurrentAccountData(result){
