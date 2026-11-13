@@ -4,6 +4,7 @@ import path from 'node:path';
 import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import {chromium,webkit} from 'playwright';
+import {parseRecipeText} from '../js/recipe-scan-parser.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url));
 const types={'.js':'text/javascript','.mjs':'text/javascript','.wasm':'application/wasm','.json':'application/json','.tar':'application/octet-stream'};
 const server=http.createServer(async(req,res)=>{
@@ -36,6 +37,11 @@ try{
  assert.match(result.text,/chicken/i);
  assert.match(result.text,/onions/i);
  assert.match(result.text,/1000|1[Oo]{3}/i);
+ const parsed=parseRecipeText(result.text);
+ assert.deepEqual(parsed.ingredients.map(row=>[row.name.toLowerCase(),row.qty,row.qtyUnit]),[
+  ['chicken breast',1000,'g'],['onions',500,'g'],['coconut milk',800,'ml']
+ ],'Photographed quantities must survive OCR and recipe parsing intact');
+ assert.equal(parsed.yield,10);
  assert.deepEqual(errors,[]);
  console.log('PASS real local OCR returns recipe lines',result.text.slice(0,250));
 }finally{await browser.close();server.close();}
