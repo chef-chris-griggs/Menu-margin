@@ -28,6 +28,7 @@ jobs:
             echo "Browser OCR bundle already current."
           else
             git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Build accurate recipe OCR bundle"
+            git restore -- vendor/scanner/assets.json
             for attempt in 1 2 3; do
               git fetch origin fix/recipe-ocr-accurate-lines
               git rebase origin/fix/recipe-ocr-accurate-lines
