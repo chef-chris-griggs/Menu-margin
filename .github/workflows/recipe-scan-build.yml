@@ -6,13 +6,13 @@ permissions:
   contents: read
 jobs:
   build-recipe-scanner:
-    if: github.event.pull_request.head.repo.full_name == 'chef-chris-griggs/Menu-margin' && github.event.pull_request.head.ref == 'feature/recipe-photo-scanner-foundation'
+    if: github.event.pull_request.head.repo.full_name == 'chef-chris-griggs/Menu-margin' && github.event.pull_request.head.ref == 'fix/recipe-ocr-accurate-lines'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: feature/recipe-photo-scanner-foundation
+          ref: fix/recipe-ocr-accurate-lines
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
@@ -21,5 +21,5 @@ jobs:
       - run: npm run build:scanner
       - name: Check parser and scanner unit tests
         run: npm run test:unit
-      - name: Ensure checked-in scanner JavaScript matches its source
+      - name: Verify browser scanner matches reviewed source
         run: git diff --exit-code -- vendor/scanner/client.js vendor/scanner/scanner.worker.js
