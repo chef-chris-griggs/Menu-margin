@@ -38,6 +38,7 @@ try{
  for(const item of ['pricing.js','recipe.js','pricebook.js'])await page.addScriptTag({url:origin+'/js/'+item});
  await page.evaluate(()=>loadRecipe({name:'',yield:10,sellingPrice:0,targetGp:70,ingredients:[]}));
  await page.addScriptTag({url:origin+'/js/recipe-scan-ui.mjs',type:'module'});
+ await page.locator('#recipeScanPanel summary').click();
  await page.locator('#recipeScanFile').setInputFiles({name:'recipe.jpg',mimeType:'image/jpeg',buffer:Buffer.from([255,216,255,217])});
  await page.locator('#recipeScanStart').click();
  await page.locator('#recipeScanReview').waitFor({state:'visible'});
