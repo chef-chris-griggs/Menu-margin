@@ -9,6 +9,7 @@ const types={'.js':'text/javascript','.mjs':'text/javascript','.wasm':'applicati
 const server=http.createServer(async(req,res)=>{
  try{
   const target=decodeURIComponent(new URL(req.url,'http://localhost').pathname).slice(1);
+  if(!target){res.setHeader('content-type','text/html');res.end('<!doctype html><html><head><title>Recipe OCR test</title></head><body></body></html>');return;}
   if(!target.startsWith('vendor/scanner/'))throw Error('unapproved');
   const full=path.resolve(root,target);if(!full.startsWith(path.join(root,'vendor/scanner/')))throw Error();
   res.setHeader('content-type',types[path.extname(full)]||'application/octet-stream');
@@ -21,7 +22,7 @@ const browser=await (process.argv.includes('--webkit')?webkit:chromium).launch({
 const page=await browser.newPage();page.setDefaultTimeout(120000);
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
 try{
- await page.goto(origin+'/blank');
+ await page.goto(origin);
  await page.addScriptTag({url:origin+'/vendor/scanner/client.js'});
  const result=await page.evaluate(async()=>{
   const canvas=document.createElement('canvas');canvas.width=1200;canvas.height=1250;
