@@ -6,13 +6,13 @@ permissions:
   contents: write
 jobs:
   build-recipe-scanner:
-    if: github.event.pull_request.head.repo.full_name == 'chef-chris-griggs/Menu-margin' && github.event.pull_request.head.ref == 'feature/recipe-photo-scanner-foundation'
+    if: github.event.pull_request.head.repo.full_name == 'chef-chris-griggs/Menu-margin' && github.event.pull_request.head.ref == 'fix/recipe-ocr-quantity-row-grouping'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: feature/recipe-photo-scanner-foundation
+          ref: fix/recipe-ocr-quantity-row-grouping
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
@@ -29,9 +29,9 @@ jobs:
           else
             git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Rebuild recipe scanner browser OCR bundle"
             for attempt in 1 2 3; do
-              git fetch origin feature/recipe-photo-scanner-foundation
-              git rebase origin/feature/recipe-photo-scanner-foundation
-              if git push origin HEAD:refs/heads/feature/recipe-photo-scanner-foundation; then
+              git fetch origin fix/recipe-ocr-quantity-row-grouping
+              git rebase origin/fix/recipe-ocr-quantity-row-grouping
+              if git push origin HEAD:refs/heads/fix/recipe-ocr-quantity-row-grouping; then
                 exit 0
               fi
               sleep 2
