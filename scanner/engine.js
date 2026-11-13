@@ -2,6 +2,7 @@ import { PaddleOCR, initOpenCvRuntime } from './paddleocr/index.ts';
 import { preprocessImage } from './preprocess.js';
 import { extractPage } from './table.js';
 import { refineUnreadableCells } from './refine.js';
+import { recipeLinesFromOcr } from './recipe-lines.js';
 
 const assetsBase=new URL('./',self.location.href);
 let runtimePromise=null,busy=false;
@@ -45,12 +46,10 @@ self.addEventListener('message',async event=>{
     if(mode==='recipe'){
       // Preserve OCR lines without invoking invoice-only table detection.
       // Low-confidence words are explicitly flagged for human review.
-      const lines=(ocrResult?.items||[]).map((line,index)=>({
-        index,text:(line.words||[]).map(word=>word.text).join(' ').trim(),
-        confidence:(line.words||[]).length?Math.min(...line.words.map(word=>Number(word.score)||0)):0
-      })).filter(line=>line.text);
+      const grouped=recipeLinesFromOcr(ocrResult?.items||[]);
+      const lines=grouped.lines;
       const clean={width:prepared.pixels.width,height:prepared.pixels.height,data:prepared.pixels.data.buffer};
-      self.postMessage({id,type:'result',page:{pageNumber,lines,warnings:prepared.info.warnings||[],mode:'recipe'},cleaned:clean},[clean.data]);
+      self.postMessage({id,type:'result',page:{pageNumber,lines,warnings:[...(prepared.info.warnings||[]),...grouped.warnings],mode:'recipe'},cleaned:clean},[clean.data]);
       return;
     }
     progress('Detecting table columns and checking the invoice arithmetic…');
