@@ -6,7 +6,7 @@ const section=/^(ingredients?|method|instructions?|directions?|preparation)\s*:?
 const action=/^(step\s*\d+|preheat|heat|cook|mix|stir|bake|simmer|serve|add)\b/i;
 function number(s){const f=/^(\d+)\/(\d+)$/.exec(s);return f?Number(f[1])/Number(f[2]):Number(s.replace(",","."));}
 function ingredient(line){
- const raw=line.replace(/^\s*(?:[-•*]|\d+[.)])\s*/,"").trim();
+ const raw=line.replace(/^\s*(?:[-•*]\s*|\d+[.)]\s+)/,"").trim();
  const first=amount.exec(raw),last=first?null:tail.exec(raw),m=first||last;
  if(m){
   const qty=number(first?m[1]:m[2]),unit=UNIT[(first?m[2]:m[3]).toLowerCase()],name=(first?m[3]:m[1]).trim();
