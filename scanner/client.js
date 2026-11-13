@@ -6,7 +6,7 @@ let worker=null,requestId=0,scanning=false;
 export const engineVersion='2.0.0-positioned-paddleocr';
 function getWorker(){if(!worker)worker=new Worker(new URL('scanner.worker.js',assetsBase),{type:'module',name:'MenuMargin local PaddleOCR'});return worker;}
 export function reset(){worker?.terminate();worker=null;}
-function recognise(pixels,pageNumber,{onProgress,signal}={}){
+function recognise(pixels,pageNumber,{onProgress,signal,mode='invoice'}={}){
   return new Promise((resolve,reject)=>{
     const target=getWorker(),id=++requestId;
     const cleanup=()=>{target.removeEventListener('message',message);target.removeEventListener('error',fail);signal?.removeEventListener('abort',abort);};
@@ -15,7 +15,7 @@ function recognise(pixels,pageNumber,{onProgress,signal}={}){
     const message=event=>{if(event.data?.id!==id)return;if(event.data.type==='progress')onProgress?.(event.data.message);else if(event.data.type==='result'){cleanup();resolve(event.data);}else if(event.data.type==='error'){cleanup();reset();reject(new Error(event.data.error));}};
     target.addEventListener('message',message);target.addEventListener('error',fail);signal?.addEventListener('abort',abort,{once:true});
     if(signal?.aborted){abort();return;}
-    target.postMessage({id,pageNumber,pixels:{width:pixels.width,height:pixels.height,data:pixels.data.buffer}},[pixels.data.buffer]);
+    target.postMessage({id,pageNumber,mode,pixels:{width:pixels.width,height:pixels.height,data:pixels.data.buffer}},[pixels.data.buffer]);
   });
 }
 function canvasBlob(canvas,type='image/png'){return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Could not prepare the scanner debug image.')),type));}
@@ -53,3 +53,25 @@ export async function scanFiles(files,{onProgress,signal}={}){
   }finally{scanning=false;}
 }
 export async function scanFile(file,options){return scanFiles([file],options);}
+
+/** Raw on-device recipe OCR, independent of invoice table classification. */
+export async function scanRecipeFile(file,{onProgress,signal}={}){
+  if(scanning)throw new Error('A document scan is already running.');
+  if(!file||file.size>30*1024*1024)throw new Error('Choose a recipe photo or PDF smaller than 30 MB.');
+  scanning=true;
+  const pages=[];
+  try{
+    for await(const decoded of decodeFilePages(file,{assetsBase,onProgress,signal,pageStart:pages.length+1})){
+      if(pages.length>=12)throw new Error('Recipe exceeds 12 pages.');
+      const response=await recognise(decoded.pixels,pages.length+1,{onProgress,signal,mode:'recipe'});
+      pages.push(response.page);
+    }
+    if(!pages.length)throw new Error('No recipe pages could be read.');
+    const lines=pages.flatMap(p=>p.lines||[]);
+    const lowConfidence=lines.filter(line=>line.confidence<0.65);
+    return {
+      text:lines.map(line=>line.text).join('\n'),pages:pages.length,
+      lines,warnings:lowConfidence.length?[lowConfidence.length+' OCR line(s) need careful checking.']:[]
+    };
+  }finally{scanning=false;}
+}

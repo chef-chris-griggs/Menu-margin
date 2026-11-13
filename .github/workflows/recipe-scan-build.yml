@@ -1,0 +1,25 @@
+name: Recipe scanner branch bundle
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+jobs:
+  build-recipe-scanner:
+    if: github.event.pull_request.head.repo.full_name == 'chef-chris-griggs/Menu-margin' && github.event.pull_request.head.ref == 'feature/recipe-photo-scanner-foundation'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feature/recipe-photo-scanner-foundation
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run build:scanner
+      - name: Check parser and scanner unit tests
+        run: npm run test:unit
+      - name: Ensure checked-in scanner JavaScript matches its source
+        run: git diff --exit-code -- vendor/scanner/client.js vendor/scanner/scanner.worker.js

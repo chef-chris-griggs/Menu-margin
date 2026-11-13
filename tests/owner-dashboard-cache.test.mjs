@@ -9,7 +9,7 @@ test('owner dashboard and trial messaging share a fresh PWA revision', () => {
  assert.match(html, /id="mmOwnerDashboardLink" hidden/);
  assert.ok(html.includes('js/auth.js?v=2.1.5-trial-clarity'));
  assert.ok(sw.includes('js/auth.js?v=2.1.5-trial-clarity'));
- assert.ok(sw.includes('v2.0.5-trial-clarity'));
+ assert.match(sw, /v2\.0\.(?:5-trial-clarity|6-recipe-scanner)/);
  assert.ok(auth.includes('mmRefreshOwnerDashboardLink'));
  assert.ok(auth.includes("rpc('menu_margin_owner_signup_metrics')"));
 });

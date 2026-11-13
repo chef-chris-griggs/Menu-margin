@@ -25,7 +25,7 @@ async function runtime(progress){
   return runtimePromise;
 }
 self.addEventListener('message',async event=>{
-  const {id,pixels,pageNumber=1}=event.data||{};if(!id||!pixels)return;
+  const {id,pixels,pageNumber=1,mode='invoice'}=event.data||{};if(!id||!pixels)return;
   const progress=message=>self.postMessage({id,type:'progress',message});
   if(busy){self.postMessage({id,type:'error',error:'The local scanner is already reading another page.'});return;}
   busy=true;let prepared=null;
@@ -41,6 +41,17 @@ self.addEventListener('message',async event=>{
       for(let wi=0;wi<(line.words||[]).length;wi++){
         const w=line.words[wi];words.push({id:`p${pageNumber}-l${li}-w${wi}`,text:w.text,confidence:w.score,poly:w.poly,lineId:`p${pageNumber}-l${li}`,positionSource:w.positionSource,startStep:w.startStep,endStep:w.endStep,alignmentClipped:w.alignmentClipped,characters:(line.characters||[]).filter(c=>c.startStep>=w.startStep&&c.endStep<=w.endStep)});
       }
+    }
+    if(mode==='recipe'){
+      // Preserve OCR lines without invoking invoice-only table detection.
+      // Low-confidence words are explicitly flagged for human review.
+      const lines=(ocrResult?.items||[]).map((line,index)=>({
+        index,text:(line.words||[]).map(word=>word.text).join(' ').trim(),
+        confidence:(line.words||[]).length?Math.min(...line.words.map(word=>Number(word.score)||0)):0
+      })).filter(line=>line.text);
+      const clean={width:prepared.pixels.width,height:prepared.pixels.height,data:prepared.pixels.data.buffer};
+      self.postMessage({id,type:'result',page:{pageNumber,lines,warnings:prepared.info.warnings||[],mode:'recipe'},cleaned:clean},[clean.data]);
+      return;
     }
     progress('Detecting table columns and checking the invoice arithmetic…');
     const first=extractPage(words,{width:prepared.pixels.width,height:prepared.pixels.height,verticalRules:prepared.verticalRules,pageNumber});
