@@ -6,7 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {createRequire} from 'node:module';
 const root=fileURLToPath(new URL('../',import.meta.url)),require=createRequire(import.meta.url),pw=require('playwright');
 const browserName=process.argv.includes('--webkit')?'webkit':'chromium',checks=[],errors=[],prefix='/Menu-margin/';
-const types={'.js':'text/javascript','.css':'text/css','.html':'text/html','.json':'application/json','.svg':'image/svg+xml','.webmanifest':'application/manifest+json','.png':'image/png'};
+const types={'.mjs':'text/javascript','.js':'text/javascript','.css':'text/css','.html':'text/html','.json':'application/json','.svg':'image/svg+xml','.webmanifest':'application/manifest+json','.png':'image/png'};
 const server=http.createServer(async(req,res)=>{
  try{
   const url=new URL(req.url,'http://localhost');if(!url.pathname.startsWith(prefix))throw Error();
