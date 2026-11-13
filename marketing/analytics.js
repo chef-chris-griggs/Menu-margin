@@ -4,7 +4,7 @@
   if (window.__mepAnalyticsBooted) return;
   window.__mepAnalyticsBooted = true;
   const key = 'mep-analytics-consent-v1';
-  const measurementId = 'G-D02CJ4WE8W';
+  const measurementId = 'G-E2DHD366MW';
   const maxAge = 180 * 24 * 60 * 60 * 1000;
   let allowed = false, loaded = false, usedCalculator = false;
   let banner, settings;
@@ -48,9 +48,10 @@
       ads_data_redaction: true, user_data: {}, cookie_expires: maxAge / 1000
     });
     gtag('js', new Date());
+    gtag('config', measurementId, {send_page_view: true});
     const script = document.createElement('script');
     script.async = true;
-    script.src = 'https://www.googletagmanager.com/gtm.js?id=GTM-WZXW5M6L';
+    script.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(measurementId);
     script.id = 'mep-google-tag';
     document.head.append(script);
   }
