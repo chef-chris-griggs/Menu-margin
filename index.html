@@ -158,6 +158,27 @@
       <button type="button" class="secondary" id="printBtn"><svg><use href="#icon-print"/></svg> Print</button>
       <button type="button" id="saveRecipe"><svg><use href="#icon-save"/></svg> Save recipe</button>
     </div>
+    <details class="panel" id="recipeScanPanel" style="margin:1rem 0;padding:1rem">
+      <summary><strong>Scan a recipe photo or PDF</strong></summary>
+      <p>Read a printed recipe locally, review quantities, then import into costing. Handwriting may require corrections.</p>
+      <div class="actions" style="display:flex;flex-wrap:wrap;gap:.6rem;align-items:center">
+        <label for="recipeScanFile">Recipe document</label>
+        <input id="recipeScanFile" type="file" accept="image/jpeg,image/png,image/heic,image/heif,application/pdf,.jpg,.jpeg,.png,.heic,.heif,.pdf">
+        <button id="recipeScanStart" type="button">Read recipe</button>
+        <button id="recipeScanCancel" type="button" class="secondary">Cancel</button>
+      </div>
+      <p id="recipeScanStatus" role="status" aria-live="polite">Select a photo or PDF to begin.</p>
+      <div id="recipeScanReview" hidden>
+        <h2>Review scanned recipe</h2>
+        <p>Check all recognised ingredients and quantities against your original. Prices will be matched after import.</p>
+        <div class="recipe-top">
+          <div class="field"><label for="recipeScanName">Recipe name</label><input id="recipeScanName" autocomplete="off"></div>
+          <div class="field"><label for="recipeScanYield">Portions</label><input id="recipeScanYield" type="number" min="1" step="1"></div>
+        </div>
+        <div class="table-wrap"><table class="ingredient-table"><thead><tr><th>Ingredient</th><th>Quantity</th><th>Unit</th><th>Check</th></tr></thead><tbody id="recipeScanRows"></tbody></table></div>
+        <button id="recipeScanImport" type="button">Import into costing</button>
+      </div>
+    </details>
     <div id="toast" class="toast app-toast" role="status" aria-live="polite" hidden></div>
     <div class="costing-layout" id="costingLayout">
       <section class="panel recipe-details-panel" aria-labelledby="recipeDetailsTitle">
@@ -295,6 +316,7 @@
 <script src="./js/pricebook.js?v=2.2.0-menu-share"></script>
 <script src="./vendor/scanner/client.js?v=2.0.0-scanner"></script>
 <script src="./js/invoice.js?v=2.1.1-launch"></script>
+<script type="module" src="./js/recipe-scan-ui.mjs?v=0.1.0"></script>
 <script src="./js/startup.js?v=2.1.3-email"></script>
 <script src="./js/menu.js?v=2.2.0"></script>
 </body>
