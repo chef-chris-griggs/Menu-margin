@@ -54,7 +54,7 @@ async function run(engine, width) {
     await page.getByRole('button', {name:'Cookie settings', exact:true}).click();
     await page.getByRole('button', {name:'Accept analytics', exact:true}).click();
     await page.waitForFunction(() => window.__testVendorLoads === 1);
-    check(external.length === 1 && external[0].includes('id=GTM-WZXW5M6L'), 'Only exact supplied tag loads after acceptance');
+    check(external.length === 1 && external[0].includes('id=G-E2DHD366MW'), 'Only the new GA4 tag loads after acceptance');
     const consent = await page.evaluate(() => window.dataLayer.map(a => Array.from(a)));
     check(consent[0][0] === 'consent' && consent[0][1] === 'default' && consent[0][2].analytics_storage === 'denied', 'Default consent precedes initialization');
     check(consent[1][2].analytics_storage === 'granted' && consent[1][2].ad_storage === 'denied', 'Analytics-only consent, ads denied');
@@ -126,8 +126,8 @@ async function validateGoogleTag() {
     await page.goto(origin+'/?email=private%40example.invalid&utm_source=instagram&utm_campaign=cost_one_recipe#private-token', {waitUntil:'networkidle'});
     await page.getByRole('button', {name:'Accept analytics',exact:true}).click();
     const started = Date.now();
-    while (!hits.some(h => (h.url+h.body).includes('G-D02CJ4WE8W')) && Date.now()-started<20000) await new Promise(ok=>setTimeout(ok,100));
-    check(hits.some(h => (h.url+h.body).includes('G-D02CJ4WE8W')), 'Real tag routes to the correct GA4 measurement ID');
+    while (!hits.some(h => (h.url+h.body).includes('G-E2DHD366MW')) && Date.now()-started<20000) await new Promise(ok=>setTimeout(ok,100));
+    check(hits.some(h => (h.url+h.body).includes('G-E2DHD366MW')), 'Real tag routes to the correct GA4 measurement ID');
     await page.locator('#sellPrice').fill('9876.54');
     const interactionStarted = Date.now();
     while (!hits.some(h => (h.url+h.body).includes('calculator_interaction')) && Date.now()-interactionStarted<15000) await new Promise(ok=>setTimeout(ok,100));
