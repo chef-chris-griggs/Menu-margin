@@ -23,6 +23,7 @@ jobs:
       - run: node tests/marketing-analytics.browser.mjs
       - run: npm run test:unit
       - run: node tests/recipe-scan-ui.browser.mjs && node tests/recipe-scan-ui.browser.mjs --webkit
+      - run: node tests/recipe-scan-ocr.browser.mjs
       - run: npm run test:review && npm run test:review:webkit
       - run: npm run test:recipe-prices && npm run test:recipe-prices:webkit
       - run: npm run test:accounts && npm run test:accounts:webkit
