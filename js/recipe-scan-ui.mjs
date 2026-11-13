@@ -23,7 +23,8 @@ function review(){
   UNITS.forEach(value=>{const option=document.createElement('option');option.value=value;option.textContent=value;select.append(option)});
   select.value=item.qtyUnit||'';unit.append(select);
   notice.textContent=item.needsReview?'Check original':'Review';
-  tr.append(name,qty,unit,notice);body.append(tr);
+  const remove=document.createElement('td');const button=document.createElement('button');button.type='button';button.className='secondary';button.textContent='Remove';button.setAttribute('aria-label','Remove scanned ingredient '+(index+1));button.addEventListener('click',()=>tr.remove());remove.append(button);
+  tr.append(name,qty,unit,notice,remove);body.append(tr);
  });
  el('recipeScanReview').hidden=false;
  const messages=[...parsed.warnings];
@@ -55,7 +56,7 @@ function importRecipe(){
    qtyUnit:unitCell.querySelector('select').value};
  });
  if(!items.length||items.some(x=>!x.name||!Number.isFinite(x.qty)||x.qty<=0||!UNITS.includes(x.qtyUnit))){
-  status('Complete every ingredient quantity and unit before importing. Remove incorrect OCR rows by editing the source and rescanning.');return;
+  status('Complete every ingredient quantity and unit before importing. Remove incorrect OCR rows or correct them in the review table.');return;
  }
  if(typeof mmUser==='undefined'||!mmUser){status('Sign in to import a recipe.');return;}
  if(typeof hasUnsavedChanges!=='undefined'&&hasUnsavedChanges&&!window.confirm('Replace your current unsaved recipe with the scanned recipe?'))return;
