@@ -35,5 +35,5 @@ export function parseRecipeText(text){
 export function prepareRecipeImport(parsed){
  if(!parsed||!Array.isArray(parsed.ingredients))throw Error("Invalid recipe scan.");
  return {name:String(parsed.name||"Scanned recipe").slice(0,120),yield:Number.isInteger(parsed.yield)&&parsed.yield>0?parsed.yield:1,sellingPrice:0,targetGp:70,
- ingredients:parsed.ingredients.map(item=>({name:String(item.name||"").slice(0,200),qty:Number.isFinite(item.qty)&&item.qty>0?item.qty:0,qtyUnit:UNIT[item.qtyUnit]?item.qtyUnit:"g",pack:0,packUnit:"g",price:0,priceEntered:false,priceBookId:null,priceLinkMode:"auto",priceBasis:"unknown"}))};
+ ingredients:parsed.ingredients.map(item=>({name:String(item.name||"").slice(0,200),qty:Number.isFinite(item.qty)&&item.qty>0?item.qty:0,qtyUnit:UNIT[item.qtyUnit]?item.qtyUnit:"g",pack:0,packUnit:(["ml","l"].includes(item.qtyUnit)?"ml":item.qtyUnit==="each"?"each":"g"),price:0,priceEntered:false,priceBookId:null,priceLinkMode:"auto",priceBasis:"unknown"}))};
 }
