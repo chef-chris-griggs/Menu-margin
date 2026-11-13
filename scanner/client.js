@@ -69,9 +69,9 @@ export async function scanRecipeFile(file,{onProgress,signal}={}){
     if(!pages.length)throw new Error('No recipe pages could be read.');
     const lines=pages.flatMap(p=>p.lines||[]);
     const lowConfidence=lines.filter(line=>line.confidence<0.65);
-    return {
-      text:lines.map(line=>line.text).join('\n'),pages:pages.length,
-      lines,warnings:lowConfidence.length?[lowConfidence.length+' OCR line(s) need careful checking.']:[]
-    };
+    const warnings=pages.flatMap(page=>page.warnings||[]);
+    if(lowConfidence.length)warnings.push(lowConfidence.length+' OCR line(s) need careful checking.');
+    return {text:lines.map(line=>line.text).join('\n'),pages:pages.length,lines,warnings};
+
   }finally{scanning=false;}
 }
