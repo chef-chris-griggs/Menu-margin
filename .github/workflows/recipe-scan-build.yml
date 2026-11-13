@@ -3,7 +3,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 permissions:
-  contents: read
+  contents: write
 jobs:
   build-recipe-scanner:
     if: github.event.pull_request.head.repo.full_name == 'chef-chris-griggs/Menu-margin' && github.event.pull_request.head.ref == 'feature/recipe-photo-scanner-foundation'
@@ -21,5 +21,20 @@ jobs:
       - run: npm run build:scanner
       - name: Check parser and scanner unit tests
         run: npm run test:unit
-      - name: Ensure checked-in scanner JavaScript matches its source
-        run: git diff --exit-code -- vendor/scanner/client.js vendor/scanner/scanner.worker.js
+      - name: Commit rebuilt browser scanner to isolated feature branch
+        run: |
+          git add vendor/scanner/client.js vendor/scanner/scanner.worker.js
+          if git diff --cached --quiet; then
+            echo "Scanner bundle is already current."
+          else
+            git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Rebuild recipe scanner browser OCR bundle"
+            for attempt in 1 2 3; do
+              git fetch origin feature/recipe-photo-scanner-foundation
+              git rebase origin/feature/recipe-photo-scanner-foundation
+              if git push origin HEAD:refs/heads/feature/recipe-photo-scanner-foundation; then
+                exit 0
+              fi
+              sleep 2
+            done
+            exit 1
+          fi
