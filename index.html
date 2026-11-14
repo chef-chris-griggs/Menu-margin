@@ -28,6 +28,7 @@
 <link rel="stylesheet" href="./styles/recipe-scan.css?v=0.4.0-manual-prices">
 <link rel="stylesheet" href="./styles/app-ios.css?v=1.1.0-official-logo">
 <link rel="stylesheet" href="./styles/first-use.css?v=1.0.0">
+<link rel="stylesheet" href="./styles/price-impact.css?v=1.0.0">
 </head>
 <body data-active-view="costing">
 <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -153,6 +154,7 @@
         <h2 id="menuHelpTitle">Help &amp; information</h2>
         <div class="menu-link-list">
           <button type="button" id="firstUseShow" class="secondary" hidden>Recipe guide</button>
+          <button type="button" id="priceImpactShow" class="secondary" hidden>Supplier price alerts</button>
           <button type="button" id="mmMenuInstall" class="secondary" hidden>Install app</button>
           <a href="./owner-dashboard.html" id="mmOwnerDashboardLink" hidden>Owner dashboard — signups &amp; trials</a>
           <a href="./help.html">Help &amp; contact</a>
@@ -269,6 +271,19 @@
       <p>Cost your first dish, then save it — it will appear here on every device you sign in to.</p>
       <button type="button" id="recipeEmptyStart">Cost a recipe</button>
     </div>
+    <section id="priceImpactPanel" class="panel price-impact" aria-labelledby="priceImpactTitle" tabindex="-1" hidden>
+      <h2 id="priceImpactTitle">Supplier price alerts</h2>
+      <p id="priceImpactBasis" class="price-impact-basis"></p>
+      <p id="priceImpactStatus" class="price-impact-status" role="status" aria-live="polite"></p>
+      <details id="priceImpactDetails" hidden>
+        <summary>Review affected recipes</summary>
+        <label for="priceImpactFilter">Show recipes</label>
+        <select id="priceImpactFilter"><option value="all">All changes</option><option value="increase">Cost increases</option><option value="review">Price checks</option><option value="decrease">Cost decreases</option></select>
+        <div id="priceImpactList" class="price-impact-list"></div>
+        <button type="button" id="priceImpactMore" class="secondary price-impact-more" hidden>Show more recipes</button>
+        <p class="price-impact-note">Alerts do not change your recipes or selling prices. Review a dish and save it when you are ready to record its current prices. GP is after food cost, before labour, waste and overheads.</p>
+      </details>
+    </section>
     <div id="recipeCards" class="recipe-cards" hidden></div>
     <div class="legacy-recipe-controls" hidden>
       <select id="recipeSelect"><option value="">No saved recipes yet</option></select>
@@ -278,6 +293,7 @@
 
   <section id="view-pricebook" class="app-view" role="tabpanel" aria-labelledby="tab-pricebook" hidden>
     <div class="page-heading"><div><h1>Your prices</h1><p class="page-subtitle">The ingredients you buy, ready for your next dish.</p></div></div>
+    <aside id="priceImpactNotice" class="price-impact-notice" aria-label="Recipe price changes" hidden><p id="priceImpactNoticeText"></p><button type="button" class="secondary" id="priceImpactNoticeOpen">Review recipes</button></aside>
     <details class="ios-price-editor" id="pricebookEditor" open><summary><svg><use href="#icon-add"/></svg><span>Add a supplier price</span><svg class="ios-disclosure-icon"><use href="#icon-chevron"/></svg></summary>
     <section class="panel pricebook-panel" aria-labelledby="pricebookTitle">
       <div class="section-heading"><div><h2 id="pricebookTitle">Add a supplier price</h2><p class="section-help">The pack you actually buy: cases, the size of each item, and the case price.</p></div></div>
@@ -367,5 +383,7 @@
 <script src="./js/menu.js?v=2.2.0"></script>
 <script src="./js/app-ui.js?v=1.0.0"></script>
 <script src="./js/first-use.js?v=1.0.0"></script>
+<script src="./js/price-impact.js?v=1.0.0"></script>
+<script src="./js/price-impact-ui.js?v=1.0.0"></script>
 </body>
 </html>
