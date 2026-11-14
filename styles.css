@@ -115,6 +115,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 .brand { color: #fff; font-size: 1.72rem; font-weight: 850; letter-spacing: -.055em; white-space: nowrap; }
 .brand span { color: #d9ebe0; }
+.official-brand { min-width: 0; max-width: 260px; flex: 0 1 260px; }
+.official-logo { display: block; width: 100%; max-width: 100%; height: auto; }
 #mmAccountBar { display: none; min-width: 0; align-items: center; justify-content: flex-end; gap: 12px; flex-wrap: wrap; }
 body.mm-authenticated .app-header #mmAccountBar { display: flex; }
 .account-label { max-width: 200px; overflow: hidden; color: #e0eee6; font-size: .82rem; text-overflow: ellipsis; white-space: nowrap; }
