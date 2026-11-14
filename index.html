@@ -27,6 +27,7 @@
 <!-- End Cloudflare Web Analytics -->
 <link rel="stylesheet" href="./styles/recipe-scan.css?v=0.4.0-manual-prices">
 <link rel="stylesheet" href="./styles/app-ios.css?v=1.1.0-official-logo">
+<link rel="stylesheet" href="./styles/first-use.css?v=1.0.0">
 </head>
 <body data-active-view="costing">
 <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -102,6 +103,28 @@
 </nav>
 
 <main id="appMain">
+  <aside id="firstUseGuide" class="first-use-guide" aria-labelledby="firstUseTitle" hidden>
+    <details id="firstUseDetails" open>
+      <summary><span id="firstUseTitle">Your first costed recipe</span><span id="firstUseProgress" role="status" aria-live="polite">0 of 4 done</span><svg aria-hidden="true"><use href="#icon-chevron"/></svg></summary>
+      <div class="first-use-body">
+        <h2 id="firstUseNext">Add ingredient prices</h2>
+        <p id="firstUseHint">Use supplier prices or enter your own pack prices as you cost the recipe.</p>
+        <div class="first-use-actions">
+          <button type="button" id="firstUseNextAction" data-guide-action="next">Add supplier prices</button>
+          <button type="button" id="firstUseManual" class="secondary" data-guide-action="manual">Use own pack prices</button>
+        </div>
+        <div class="first-use-footer">
+          <details class="first-use-all"><summary>See all four steps</summary><ol>
+            <li data-guide-step="0"><button type="button" data-guide-action="step-0"><span class="first-use-step-state" aria-hidden="true">1</span><span>Add ingredient prices</span><span class="first-use-step-label">To do</span></button></li>
+            <li data-guide-step="1"><button type="button" data-guide-action="step-1"><span class="first-use-step-state" aria-hidden="true">2</span><span>Build your recipe</span><span class="first-use-step-label">To do</span></button></li>
+            <li data-guide-step="2"><button type="button" data-guide-action="step-2"><span class="first-use-step-state" aria-hidden="true">3</span><span>Enter your selling price</span><span class="first-use-step-label">To do</span></button></li>
+            <li data-guide-step="3"><button type="button" data-guide-action="step-3"><span class="first-use-step-state" aria-hidden="true">4</span><span>Save your recipe</span><span class="first-use-step-label">To do</span></button></li>
+          </ol></details>
+          <button type="button" class="text-button" data-guide-action="hide" aria-label="Hide the recipe guide for this visit">Not now</button>
+        </div>
+      </div>
+    </details>
+  </aside>
   <section id="view-menu" class="app-view" role="tabpanel" aria-labelledby="tab-menu" hidden>
     <div class="page-heading"><div><h1>More</h1><p class="page-subtitle">Account settings, exports, and useful links.</p></div></div>
     <div class="menu-grid">
@@ -129,6 +152,7 @@
       <section class="panel menu-card" aria-labelledby="menuHelpTitle">
         <h2 id="menuHelpTitle">Help &amp; information</h2>
         <div class="menu-link-list">
+          <button type="button" id="firstUseShow" class="secondary" hidden>Recipe guide</button>
           <button type="button" id="mmMenuInstall" class="secondary" hidden>Install app</button>
           <a href="./owner-dashboard.html" id="mmOwnerDashboardLink" hidden>Owner dashboard — signups &amp; trials</a>
           <a href="./help.html">Help &amp; contact</a>
@@ -342,5 +366,6 @@
 <script src="./js/startup.js?v=2.1.3-email"></script>
 <script src="./js/menu.js?v=2.2.0"></script>
 <script src="./js/app-ui.js?v=1.0.0"></script>
+<script src="./js/first-use.js?v=1.0.0"></script>
 </body>
 </html>

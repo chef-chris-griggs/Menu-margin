@@ -24,6 +24,7 @@ jobs:
       - run: npm run check:scanner-bundle
       - run: npm run test:unit
       - run: node tests/app-ios.browser.mjs && node tests/app-ios.browser.mjs --webkit
+      - run: node tests/first-use.browser.mjs && node tests/first-use.browser.mjs --webkit
       - run: node tests/recipe-scan-ui.browser.mjs && node tests/recipe-scan-ui.browser.mjs --webkit
       - run: npm run test:recipe-e2e && npm run test:recipe-e2e:webkit
       - run: node tests/recipe-scan-ocr.browser.mjs && node tests/recipe-scan-ocr.browser.mjs --webkit
