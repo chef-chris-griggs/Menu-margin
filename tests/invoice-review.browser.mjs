@@ -25,8 +25,11 @@ const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 try {
   await page.setContent(html);
-  await page.addStyleTag({ path: root + '/styles.css' });
-  await page.addStyleTag({ path: root + '/styles/invoice-scanner.css' });
+  // Use the same complete stylesheet stack as the app. Missing the app layer
+  // left the official logo at its intrinsic 1254px width in this isolated page.
+  for (const file of ['styles.css','styles/invoice-scanner.css','styles/recipe-price-links.css','styles/account.css','styles/menu.css','styles/recipe-scan.css','styles/app-ios.css']) await page.addStyleTag({ path: root + '/' + file });
+  // setContent has no origin for relative images; display the actual logo bytes.
+  await page.locator('.official-logo').evaluateAll((images,src)=>images.forEach(image=>image.src=src),'data:image/jpeg;base64,'+(await readFile(root+'/icons/miseenprice-logo.jpg')).toString('base64'));
   await page.addScriptTag({path:root+'/js/pricing.js'});
   await page.evaluate(() => {
     // Exercise the real scroll targets without racing smooth-scroll animation
@@ -53,6 +56,7 @@ try {
   });
   await page.addScriptTag({ path: root + '/js/pricebook.js' });
   await page.addScriptTag({ path: root + '/js/invoice.js' });
+  await page.addScriptTag({ path: root + '/js/app-ui.js' });
   await page.evaluate(async () => {
     const canvas = document.createElement('canvas'); canvas.width = 600; canvas.height = 900;
     const ctx = canvas.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 600, 900);
