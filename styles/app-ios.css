@@ -54,3 +54,22 @@
 @media screen and (max-width:700px){.pricebook-toolbar>#pbExport{display:none}.pricebook-search{width:100%}}
 @media print{#costingLayout td.ingredient-card-action,.ios-recipe-tools,.ios-quick-actions{display:none!important}}
 @media screen and (min-width:901px){.costing-layout{grid-template-rows:min-content 1fr;align-items:start}}
+/* The owner's supplied artwork is displayed unchanged. Only its empty outer
+   background is framed by the image viewport; the hat, name and strapline fit. */
+@media screen{
+ .official-brand{display:block;overflow:hidden;background:#003c2b;border-radius:20px;line-height:0;white-space:normal}
+ .official-logo{display:block;width:100%;height:auto;aspect-ratio:1254 / 840;object-fit:cover;object-position:50% 43%;border:0}
+ .app-header .app-brand{flex:0 1 260px;max-width:260px;min-width:0}
+ .auth-brand.official-brand{width:100%;max-width:390px;margin:0 auto 23px;border-radius:19px}
+ #mmAuthGate,#mmSubscriptionGate{margin-top:24px}
+ body:not(.mm-authenticated){padding-bottom:24px}
+}
+@media screen and (max-width:700px){
+ .app-header{display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:9px 12px;align-items:center;padding:14px 18px 3px}
+ .app-header .app-brand{grid-column:1;grid-row:1;width:min(100%,260px);max-width:260px}
+ .app-header .ios-account-button{grid-column:2;grid-row:1;align-self:start;margin-top:7px}
+ .app-header #mmAccountBar{grid-column:1 / -1;grid-row:2;justify-content:flex-start}
+ .app-header .cloud-status{max-width:none;text-align:left;font-size:.7rem}
+ #mmAuthGate,#mmSubscriptionGate{padding:20px;margin-top:16px}
+ .auth-brand.official-brand{margin-bottom:18px}
+}

@@ -1,6 +1,6 @@
 {
   "id": "./",
-  "name": "Mise en Price — Recipe Costing",
+  "name": "Mise en Price \u2014 Recipe Costing",
   "short_name": "Mise en Price",
   "description": "Recipe costing and supplier price book for busy kitchens.",
   "start_url": "./",
@@ -9,8 +9,11 @@
   "background_color": "#f4f6f3",
   "theme_color": "#153e35",
   "icons": [
-    {"src": "./icons/icon-180.png", "sizes": "180x180", "type": "image/png", "purpose": "any"},
-    {"src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
-    {"src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+    {
+      "src": "./icons/miseenprice-logo.jpg",
+      "sizes": "1254x1254",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
   ]
 }
