@@ -10,7 +10,7 @@
   ['Enter your selling price','Use the actual selling price per portion, excluding VAT, to see your gross profit.','Enter selling price'],
   ['Save your recipe','Review your costing, then choose Save recipe to add this dish to your library.','Save recipe']
  ];
- let account=null,savedIds=new Set(),hasBookPrices=false,cacheDirty=true,visibleForVisit=false,finishedId=null,scheduled=false,current=null;
+ let account=null,savedIds=new Set(),hasBookPrices=false,cacheDirty=true,visibleForVisit=false,pendingStart=true,finishedId=null,scheduled=false,current=null;
  const text=(id,value)=>{const node=byId(id);if(node&&node.textContent!==value)node.textContent=value;};
  const numeric=value=>(typeof value==='number'||typeof value==='string'&&value.trim()!=='')&&Number.isFinite(Number(value));
  const validPack=(name,pack,price,unit,entered=true)=>Boolean(String(name||'').trim()&&entered&&numeric(pack)&&Number(pack)>0&&numeric(price)&&Number(price)>=0&&['g','kg','ml','l','each'].includes(unit));
@@ -20,16 +20,18 @@
  function readyAccount(){return !(typeof mmHydrating!=='undefined'&&mmHydrating)?signedAccount():null;}
  function refresh(){
   const id=signedAccount();show.hidden=!readyAccount();
-  if(!id){visible(false);account=null;savedIds.clear();hasBookPrices=false;cacheDirty=true;current=null;finishedId=null;visibleForVisit=false;return null;}
+  if(!id){visible(false);account=null;savedIds.clear();hasBookPrices=false;cacheDirty=true;current=null;finishedId=null;visibleForVisit=false;pendingStart=true;return null;}
   if(!readyAccount()){visible(false);cacheDirty=true;return null;}
   const changed=id!==account;
-  if(changed){account=id;savedIds.clear();hasBookPrices=false;cacheDirty=true;finishedId=null;current=null;}
+  if(changed){account=id;savedIds.clear();hasBookPrices=false;cacheDirty=true;finishedId=null;current=null;visibleForVisit=false;pendingStart=true;details.open=false;panel.querySelector('.first-use-all').open=false;}
   if(cacheDirty){
    savedIds=new Set(readLibrary().map(item=>item.id));
    hasBookPrices=readPriceBook().some(item=>['g','ml','each'].includes(item.baseUnit)&&validPack(item.name,item.packBase,item.price,item.baseUnit));
    cacheDirty=false;
   }
-  if(changed){visibleForVisit=savedIds.size===0;details.open=visibleForVisit;panel.querySelector('.first-use-all').open=false;text('firstUseTitle',visibleForVisit?'Your first costed recipe':'Recipe guide');}
+  // An empty offline cache does not prove that this is a new customer account.
+  const offline=typeof mmCloudOffline!=='undefined'&&mmCloudOffline;
+  if(pendingStart&&(savedIds.size>0||!offline)){pendingStart=false;visibleForVisit=savedIds.size===0;details.open=visibleForVisit;text('firstUseTitle',visibleForVisit?'Your first costed recipe':'Recipe guide');}
   // Regular chefs who have not requested help do not need an extra editor scan.
   if(!visibleForVisit){visible(false);current={id};return current;}
   // Do not call rows() or recipeData(): those also render supplier bindings.
@@ -86,12 +88,12 @@
   const button=event.target.closest('[data-guide-action]');if(!button)return;
   const state=refresh();if(!state?.done)return;
   const action=button.dataset.guideAction;
-  if(action==='hide'){visibleForVisit=false;visible(false);document.querySelector('.nav-tab[aria-selected="true"]')?.focus({preventScroll:true});return;}
+  if(action==='hide'){visibleForVisit=false;pendingStart=false;visible(false);document.querySelector('.nav-tab[aria-selected="true"]')?.focus({preventScroll:true});return;}
   if(action==='manual'){details.open=false;syncChrome();recipeFocus(true);return;}
   go(action==='next'?state.next:Number(action.slice(5)),state);
  });
  show.addEventListener('click',()=>{
-  if(!refresh())return;visibleForVisit=true;finishedId=null;text('firstUseTitle','Recipe guide');
+  if(!refresh())return;visibleForVisit=true;pendingStart=false;finishedId=null;text('firstUseTitle','Recipe guide');
   byId('tab-costing').click();refresh();details.open=true;syncChrome();focus(details.querySelector('summary'));
  });
  details.addEventListener('toggle',syncChrome);

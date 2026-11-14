@@ -7,7 +7,9 @@ This optional guide helps a signed-in chef reach a saved, costed recipe:
 3. Enter the actual selling price per portion.
 4. Choose Save recipe.
 
-It appears automatically only when the current account has no saved recipes.
+It appears automatically only when the current account is known to have no saved
+recipes. An empty offline cache is not treated as proof of a new account; help
+remains available explicitly and an online library refresh can settle that state.
 Returning chefs can open it from More → Recipe guide. Not now hides it for the
 current visit; no preference, customer record or additional account setting is
 stored. It collapses while following a step and moves aside after the first save.

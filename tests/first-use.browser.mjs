@@ -108,6 +108,15 @@ try{
  await page.locator('#tab-menu').click();await page.locator('#firstUseShow').click();await progress(4);
  assert.equal(await page.locator('#recipeName').inputValue(),'Returning chef recipe');assert.equal(await page.evaluate(()=>readPriceBook()[0].supplier),'TEST supplier B');
  checks.push('Returning accounts remain uncluttered; reopening help preserves their existing recipe and their own supplier book');
+ await page.evaluate(()=>{__online=false;return mmEnterApp({id:'account-d',email:'offline-chef@example.invalid'});});
+ await page.waitForFunction(()=>mmUser?.id==='account-d'&&mmCloudOffline);await page.locator('#firstUseGuide').waitFor({state:'hidden'});assert.equal(await page.evaluate(()=>readLibrary().length),0);
+ await page.evaluate(()=>{__online=true;return mmRefreshCloud(true);});await page.locator('#firstUseGuide').waitFor({state:'visible'});await progress(0);
+ await page.evaluate(()=>{__online=false;return mmEnterApp({id:'account-e',email:'explicit-offline-help@example.invalid'});});
+ await page.waitForFunction(()=>mmUser?.id==='account-e'&&mmCloudOffline);await page.locator('#firstUseGuide').waitFor({state:'hidden'});
+ await page.locator('#tab-menu').click();await page.locator('#firstUseShow').click();await progress(0);assert.equal(await page.locator('#firstUseGuide').isVisible(),true);
+ await page.locator('[data-guide-action="hide"]').click();await page.evaluate(()=>{__online=true;return mmRefreshCloud(true);});await page.locator('#firstUseGuide').waitFor({state:'hidden'});
+ assert.equal(await page.evaluate(()=>readLibrary().length),0);
+ checks.push('An unknown empty offline cache never triggers automatic onboarding; explicit offline help and its dismissal survive reconnect without creating recipes');
  await page.evaluate(()=>mmEnterApp({id:'account-c',email:'another-new-chef@example.invalid'}));await page.locator('#firstUseGuide').waitFor({state:'visible'});await progress(0);
  assert.equal(await page.locator('#recipeName').inputValue(),'');assert.equal(await page.evaluate(()=>readPriceBook().length),0);
  await page.locator('#firstUseNextAction').click();assert.equal(await page.locator('#pricebookEditor').evaluate(node=>node.open),true);assert.equal(await page.locator('#pbName').evaluate(node=>node===document.activeElement),true);
