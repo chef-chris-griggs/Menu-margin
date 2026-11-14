@@ -2,6 +2,7 @@ import { PaddleOCR, initOpenCvRuntime } from './paddleocr/index.ts';
 import { preprocessImage } from './preprocess.js';
 import { extractPage } from './table.js';
 import { refineUnreadableCells } from './refine.js';
+import { rereadInvoiceMetadata } from './invoice-metadata.js';
 import { recipeLinesFromOcr } from './recipe-lines.js';
 
 const assetsBase=new URL('./',self.location.href);
@@ -33,7 +34,7 @@ self.addEventListener('message',async event=>{
   try{
     const {cv,ocr}=await runtime(progress);
     progress('Finding the paper edges and removing shadows…');
-    prepared=preprocessImage(cv,{width:pixels.width,height:pixels.height,data:new Uint8ClampedArray(pixels.data)});
+    prepared=preprocessImage(cv,{width:pixels.width,height:pixels.height,data:new Uint8ClampedArray(pixels.data)},{preserveText:mode==='recipe'});
     progress('Reading positioned words with PaddleOCR on this device…');
     const [ocrResult]=await ocr.predict(prepared.mat,{textRecScoreThresh:0});
     const words=[];
@@ -55,11 +56,12 @@ self.addEventListener('message',async event=>{
     progress('Detecting table columns and checking the invoice arithmetic…');
     const first=extractPage(words,{width:prepared.pixels.width,height:prepared.pixels.height,verticalRules:prepared.verticalRules,pageNumber});
     const refined=await refineUnreadableCells(ocr,prepared,words,first,{pageNumber,progress});
-    const result=refined.page;result.rawWords=refined.words;result.refinements=refined.refinements;
+    const metadataWords=await rereadInvoiceMetadata(cv,ocr,prepared,{pageNumber,progress});
+    const result=extractPage(refined.words,{width:prepared.pixels.width,height:prepared.pixels.height,verticalRules:prepared.verticalRules,pageNumber,metadataWords});result.metadataWords=metadataWords;result.rawWords=refined.words;result.refinements=refined.refinements;
     result.preprocessing=prepared.info;result.metrics=ocrResult?.metrics||{};result.lineDetections=(ocrResult?.items||[]).map(line=>({poly:line.poly,score:line.score,wordCount:line.words?.length||0}));
     result.warnings.push(...prepared.info.warnings);
     const clean={width:prepared.pixels.width,height:prepared.pixels.height,data:prepared.pixels.data.buffer};
     self.postMessage({id,type:'result',page:result,cleaned:clean},[clean.data]);
   }catch(error){self.postMessage({id,type:'error',error:error?.message||String(error)});}
-  finally{prepared?.mat?.delete();prepared?.binaryMat?.delete();busy=false;}
+  finally{prepared?.mat?.delete();prepared?.binaryMat?.delete();prepared?.grayMat?.delete();busy=false;}
 });

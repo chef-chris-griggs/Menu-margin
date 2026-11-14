@@ -242,7 +242,7 @@ function mmRenderIngredientPricing(tr,index){
  const basis=tr.querySelector('.ingredient-vat-basis');basis.value=tr.dataset.priceBasis||'unknown';basis.disabled=result.status==='linked';
  const linked=result.status==='linked';tr.querySelector('.pack').readOnly=linked;tr.querySelector('.price').readOnly=linked;tr.querySelector('.pack-unit').disabled=linked;
  const box=tr.querySelector('.ingredient-price-link');box.hidden=!String(data.name||'').trim();box.dataset.state=result.status;
- tr.querySelector('.price-link-status').textContent=result.message;
+ tr.querySelector('.price-link-status').textContent=data.priceLinkMode==='manual'&&data.priceEntered===false?'Price missing — enter the pack size and pack price below.':result.message;
  const toggle=tr.querySelector('.price-link-toggle');toggle.textContent=data.priceLinkMode==='manual'?'Use price book':'Use own price';toggle.hidden=!linked&&!data.priceBookId&&data.priceLinkMode!=='manual';
  const select=tr.querySelector('.price-link-choice');select.replaceChildren();select.hidden=result.candidates.length<2;
  if(!select.hidden){
@@ -308,11 +308,13 @@ function calculate(){
    tr.querySelectorAll('.qty-unit,.pack-unit').forEach(el=>{el.style.borderColor=result.incompatible?'#a63d40':'';el.setAttribute('aria-invalid',result.incompatible?'true':'false')});
   }
  });
- const portions=Math.max(1,Math.floor(Number($('yield').value)||1)),portion=total/portions,price=Math.max(0,Number($('sellingPrice').value)||0),gp=price>0?price-portion:0,gpp=price>0?(gp/price)*100:null,food=price>0?(portion/price)*100:null,target=Math.min(99.9,Math.max(1,Number($('targetGp').value)||70)),targetPrice=portion/(1-target/100);
- $('batchCost').textContent=money(total);$('batchDetail').textContent=`Across ${portions} portion${portions===1?'':'s'}`;$('portionCost').textContent=money(portion);$('grossProfit').textContent=price>0?money(gp):'—';$('foodCostPct').textContent=food===null?'—':food.toFixed(1)+'%';$('gpPct').textContent=gpp===null?'—':gpp.toFixed(1)+'%';$('targetPrice').textContent=money(targetPrice);
- $('mobilePortion').textContent=money(portion);$('mobileGp').textContent=gpp===null?'—':gpp.toFixed(1)+'%';
+ const completeCosting=list.some(mmIngredientTouched)&&!incomplete&&!invalid&&!mismatch;
+ const portions=Math.max(1,Math.floor(Number($('yield').value)||1)),portion=total/portions,price=Math.max(0,Number($('sellingPrice').value)||0),gp=completeCosting&&price>0?price-portion:null,gpp=gp!==null?(gp/price)*100:null,food=gp!==null?(portion/price)*100:null,target=Math.min(99.9,Math.max(1,Number($('targetGp').value)||70)),targetPrice=portion/(1-target/100);
+ $('batchCost').textContent=money(total);$('batchDetail').textContent=(completeCosting?'':'Partial cost — complete all ingredient prices. ')+`Across ${portions} portion${portions===1?'':'s'}`;$('portionCost').textContent=completeCosting?money(portion):'—';$('grossProfit').textContent=gp!==null?money(gp):'—';$('foodCostPct').textContent=food===null?'—':food.toFixed(1)+'%';$('gpPct').textContent=gpp===null?'—':gpp.toFixed(1)+'%';$('targetPrice').textContent=completeCosting?money(targetPrice):'—';$('useTarget').disabled=!completeCosting;
+ $('mobilePortion').textContent=completeCosting?money(portion):'—';$('mobileGp').textContent=gpp===null?'—':gpp.toFixed(1)+'%';
  const status=$('status');status.className='status';
  if(!list.some(r=>mmIngredientCost(r).complete)){status.textContent='Add ingredient names, quantities and pack prices to calculate a meaningful GP.'}
+ else if(!completeCosting){status.textContent='Costing incomplete — finish every ingredient before calculating GP.'}
  else if(price<=0){status.textContent='Enter a selling price to see your GP.'}
  else if(gpp<0){status.classList.add('bad');status.textContent='Warning: your food cost is higher than your selling price.'}
  else if(gpp<target){status.classList.add('bad');status.textContent=`Below your ${target}% GP target by ${(target-gpp).toFixed(1)} percentage points.`}
@@ -441,17 +443,18 @@ $('printBtn').addEventListener('click',()=>{
     const total = printLines.reduce((sum, line) => sum + line.cost, 0);
     const printMismatchCount = printLines.filter(line=>line.incompatible).length;
     const printIncompleteCount = printLines.filter(line=>!line.complete).length;
+    const printComplete=printLines.length>0&&printLines.every(line=>line.complete&&!line.incompatible&&!line.invalid);
     const portions = Math.max(1, Number(d.yield) || 1);
     const portionCost = total / portions;
     const sellPrice = Number(d.sellingPrice) || 0;
     const gpValue = sellPrice - portionCost;
-    const gpPercent = sellPrice > 0 ? (gpValue / sellPrice) * 100 : null;
-    const foodPercent = sellPrice > 0 ? (portionCost / sellPrice) * 100 : null;
+    const gpPercent = printComplete&&sellPrice > 0 ? (gpValue / sellPrice) * 100 : null;
+    const foodPercent = printComplete&&sellPrice > 0 ? (portionCost / sellPrice) * 100 : null;
     const target = Math.min(99.9, Math.max(1, Number(d.targetGp) || 70));
     const targetPrice = portionCost / (1 - target / 100);
     const ingredientRows = printLines.map(line => {
       const r=line.r, costLabel=line.incompatible?'Check units':line.complete?moneyPrint(line.cost):'Incomplete';
-      return `<tr><td>${escapeHtml(r.name || '—')}</td><td>${escapeHtml(r.qty)} ${escapeHtml(r.qtyUnit||'g')}</td><td>${escapeHtml(r.pack)} ${escapeHtml(r.packUnit||'g')}</td><td>${moneyPrint(r.price)}</td><td>${costLabel}</td></tr>`;
+      return `<tr><td>${escapeHtml(r.name || '—')}</td><td>${escapeHtml(r.qty)} ${escapeHtml(r.qtyUnit||'g')}</td><td>${escapeHtml(r.pack)} ${escapeHtml(r.packUnit||'g')}</td><td>${r.priceEntered===false?'Not priced':moneyPrint(r.price)}</td><td>${costLabel}</td></tr>`;
     }).join('');
     const printWarnings=[];
     if(printMismatchCount)printWarnings.push(`${printMismatchCount} ingredient line${printMismatchCount===1?' has':'s have'} incompatible units and was excluded from the total.`);
@@ -469,8 +472,8 @@ $('printBtn').addEventListener('click',()=>{
       <div class="sub">Batch yield: ${escapeHtml(portions)} portions</div>
       <div class="stats">
         <div class="stat"><div class="label">Batch cost</div><div class="value">${moneyPrint(total)}</div></div>
-        <div class="stat"><div class="label">Cost per portion</div><div class="value">${moneyPrint(portionCost)}</div></div>
-        <div class="stat"><div class="label">Target selling price (${escapeHtml(target)}% GP)</div><div class="value">${moneyPrint(targetPrice)}</div></div>
+        <div class="stat"><div class="label">Cost per portion</div><div class="value">${printComplete?moneyPrint(portionCost):'Incomplete'}</div></div>
+        <div class="stat"><div class="label">Target selling price (${escapeHtml(target)}% GP)</div><div class="value">${printComplete?moneyPrint(targetPrice):'Incomplete'}</div></div>
       </div>
       <h2>Ingredients</h2>
       <table><thead><tr><th>Ingredient</th><th>Qty used</th><th>Pack size</th><th>Pack price</th><th>Ingredient cost</th></tr></thead><tbody>${ingredientRows || '<tr><td colspan="5">No ingredients added</td></tr>'}</tbody></table>
@@ -478,9 +481,9 @@ $('printBtn').addEventListener('click',()=>{
       <h2>Costing summary</h2>
       <table><tbody>
         <tr><th>Batch cost</th><td class="right">${moneyPrint(total)}</td></tr>
-        <tr><th>Cost per portion</th><td class="right">${moneyPrint(portionCost)}</td></tr>
+        <tr><th>Cost per portion</th><td class="right">${printComplete?moneyPrint(portionCost):'Incomplete'}</td></tr>
         <tr><th>Selling price per portion</th><td class="right">${sellPrice > 0 ? moneyPrint(sellPrice) : 'Not set'}</td></tr>
-        <tr><th>Gross profit per portion</th><td class="right">${sellPrice > 0 ? moneyPrint(gpValue) : 'Not set'}</td></tr>
+        <tr><th>Gross profit per portion</th><td class="right">${!printComplete?'Incomplete':sellPrice > 0 ? moneyPrint(gpValue) : 'Not set'}</td></tr>
         <tr><th>Gross profit %</th><td class="right">${gpPercent === null ? 'Not set' : gpPercent.toFixed(1) + '%'}</td></tr>
         <tr><th>Food cost %</th><td class="right">${foodPercent === null ? 'Not set' : foodPercent.toFixed(1) + '%'}</td></tr>
       </tbody></table>
@@ -507,28 +510,29 @@ $('exportCsv').addEventListener('click',async()=>{
  const exportLines=d.ingredients.filter(mmIngredientTouched).map(r=>({r,...mmIngredientCost(r)}));
  const total=exportLines.reduce((sum,line)=>sum+line.cost,0);
  const mismatchCount=exportLines.filter(line=>line.incompatible).length,incompleteCount=exportLines.filter(line=>!line.complete).length;
+ const exportComplete=exportLines.length>0&&exportLines.every(line=>line.complete&&!line.incompatible&&!line.invalid);
  const portions=Math.max(1,Number(d.yield)||1);
  const costPerPortion=total/portions;
  const sellingPrice=Math.max(0,Number(d.sellingPrice)||0);
  const profitPerPortion=sellingPrice-costPerPortion;
  const batchRevenue=sellingPrice*portions;
  const batchProfit=batchRevenue-total;
- const actualGp=sellingPrice>0?(profitPerPortion/sellingPrice)*100:'';
+ const actualGp=exportComplete&&sellingPrice>0?(profitPerPortion/sellingPrice)*100:'';
  const lines=[
   ['Recipe',d.name],
   ['Portions',portions],
   [],
   ['Ingredient','Quantity used','Pack size','Pack price (£)','Cost used (£)'],
-  ...exportLines.map(line=>{const r=line.r;return [r.name,`${r.qty} ${r.qtyUnit||'g'}`,`${r.pack} ${r.packUnit||'g'}`,(Number(r.price)||0).toFixed(2),line.incompatible?'CHECK UNITS':line.complete?line.cost.toFixed(2):'INCOMPLETE']}),
+  ...exportLines.map(line=>{const r=line.r;return [r.name,`${r.qty} ${r.qtyUnit||'g'}`,`${r.pack} ${r.packUnit||'g'}`,r.priceEntered===false?'':(Number(r.price)||0).toFixed(2),line.incompatible?'CHECK UNITS':line.complete?line.cost.toFixed(2):'INCOMPLETE']}),
   ...(mismatchCount?[[],['Warning',`${mismatchCount} ingredient line(s) use incompatible units and were excluded from totals.`]]:[]),
   ...(incompleteCount?[[],['Warning',`${incompleteCount} incomplete ingredient line(s) were excluded from totals.`]]:[]),
   [],
   ['Batch revenue (£)',sellingPrice>0?batchRevenue.toFixed(2):''],
   ['Total batch cost (£)',total.toFixed(2)],
-  ['Batch profit (£)',sellingPrice>0?batchProfit.toFixed(2):''],
-  ['Cost per portion (£)',costPerPortion.toFixed(2)],
+  ['Batch profit (£)',exportComplete&&sellingPrice>0?batchProfit.toFixed(2):''],
+  ['Cost per portion (£)',exportComplete?costPerPortion.toFixed(2):''],
   ['Selling price per portion (£)',sellingPrice>0?sellingPrice.toFixed(2):''],
-  ['Profit per portion (£)',sellingPrice>0?profitPerPortion.toFixed(2):''],
+  ['Profit per portion (£)',exportComplete&&sellingPrice>0?profitPerPortion.toFixed(2):''],
   ['Actual GP (%)',actualGp===''?'':Number(actualGp).toFixed(1)],
   ['Target GP (%)',d.targetGp]
  ];

@@ -21,13 +21,17 @@ jobs:
       - run: npm run test:seo
       - run: node tests/marketing-homepage.browser.mjs
       - run: node tests/marketing-analytics.browser.mjs
+      - run: npm run check:scanner-bundle
       - run: npm run test:unit
+      - run: node tests/app-ios.browser.mjs && node tests/app-ios.browser.mjs --webkit
       - run: node tests/recipe-scan-ui.browser.mjs && node tests/recipe-scan-ui.browser.mjs --webkit
-      - run: node tests/recipe-scan-ocr.browser.mjs
+      - run: npm run test:recipe-e2e && npm run test:recipe-e2e:webkit
+      - run: node tests/recipe-scan-ocr.browser.mjs && node tests/recipe-scan-ocr.browser.mjs --webkit
       - run: npm run test:review && npm run test:review:webkit
       - run: npm run test:recipe-prices && npm run test:recipe-prices:webkit
       - run: npm run test:accounts && npm run test:accounts:webkit
       - run: npm run test:recovery && npm run test:recovery:webkit
       - run: npm run test:scanner:csp && npm run test:scanner:csp:webkit
+      - run: npm run test:decode -- --skip-private && npm run test:decode:webkit -- --skip-private
       # Private invoice fixtures are deliberately absent from public CI.
       # Run the real-photo regression locally before a scanner release.

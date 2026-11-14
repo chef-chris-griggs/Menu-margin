@@ -33,5 +33,8 @@ for(const file of [
 const models=JSON.parse(await readFile(`${out}/models/manifest.json`,'utf8'));
 const files=['client.js','scanner.worker.js','heic-decoder.js','ort-wasm-simd-threaded.wasm','ort-wasm-simd-threaded.mjs',...models.assets.map(a=>`models/${a.name}`)];
 const assets=[];for(const file of files){const data=await readFile(`${out}/${file}`);assets.push({file,bytes:data.length,sha256:createHash('sha256').update(data).digest('hex')});}
-await writeFile(`${out}/assets.json`,JSON.stringify({engineVersion:'2.0.0-positioned-paddleocr',builtAt:new Date().toISOString(),assets},null,2));
+const previous=await readFile(`${out}/assets.json`,'utf8').then(JSON.parse).catch(()=>null);
+const engineVersion='2.0.0-positioned-paddleocr';
+const builtAt=previous?.engineVersion===engineVersion&&JSON.stringify(previous.assets)===JSON.stringify(assets)?previous.builtAt:new Date().toISOString();
+await writeFile(`${out}/assets.json`,JSON.stringify({engineVersion,builtAt,assets},null,2));
 console.log('All scanner assets are self-hosted. Invoice contents are never sent to a remote OCR API.');

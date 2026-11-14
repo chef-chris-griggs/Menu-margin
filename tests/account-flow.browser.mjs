@@ -51,7 +51,7 @@ try{
  await page.evaluate(()=>mmEnterApp({id:'account-a',email:'test@example.invalid'}));
  assert.equal(await page.locator('#ingredients .price').inputValue(),'10');checks.push('full application boots with the production account and pricing scripts');
  await page.evaluate(()=>{for(let i=2;i<=7;i++)__db.price_book.push({...structuredClone(__db.price_book[0]),id:'10000000-0000-4000-8000-'+String(i).padStart(12,'0'),item_data:{...__db.price_book[0].item_data,name:'Test ingredient '+i}});});
- await page.locator('#mmRefreshCloud').click();await page.waitForFunction(()=>!mmRefreshPromise);
+ await page.locator('#tab-menu').click();await page.locator('#mmMenuRefresh').click();await page.waitForFunction(()=>!mmRefreshPromise);await page.locator('#tab-costing').click();
  assert.equal(await page.evaluate(()=>readPriceBook().length),7);checks.push('production account load traverses every server-capped page');
  await page.locator('#recipeName').fill('A device save that must fail');
  const originalCache=await page.evaluate(()=>localStorage.getItem(mmAccountCacheKey(MM_LIBRARY_KEY,mmUser.id)));
@@ -98,7 +98,7 @@ try{
  checks.push('VAT-inclusive linked prices keep their entered amount and show a GP warning');
  await page.evaluate(()=>{addRow({name:'Own ingredient',qty:100,qtyUnit:'g',pack:1000,packUnit:'g',price:4,priceEntered:true,priceLinkMode:'manual'});});
  assert.match(await page.locator('#status').textContent(),/unconfirmed VAT/);
- await page.locator('#ingredients tr').last().locator('.ingredient-vat-basis').selectOption('ex_vat');assert.equal(await page.evaluate(()=>rows().at(-1).priceBasis),'ex_vat');checks.push('manual recipe VAT basis is editable and retained');
+ await page.locator('#ingredients tr').last().locator('.ingredient-price-disclosure').click();await page.locator('#ingredients tr').last().locator('.ingredient-vat-basis').selectOption('ex_vat');assert.equal(await page.evaluate(()=>rows().at(-1).priceBasis),'ex_vat');checks.push('manual recipe VAT basis is editable and retained');
  await page.evaluate(()=>{setActiveView('pricebook');editPriceEntry(readPriceBook()[0].id)});
  assert.equal(await page.locator('#pbPriceBasis').inputValue(),'inc_vat');checks.push('manual price-book editing shows the stored VAT basis');
  await page.evaluate(()=>{setActiveView('costing');});

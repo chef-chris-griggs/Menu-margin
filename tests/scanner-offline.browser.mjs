@@ -6,12 +6,16 @@ import {fileURLToPath} from 'node:url';
 import {createRequire} from 'node:module';
 const root=path.resolve(fileURLToPath(new URL('../',import.meta.url))),require=createRequire(import.meta.url);
 let pw;try{pw=require('playwright');}catch{pw=require('/Users/chrisgriggs/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');}
+const fixture=process.env.MM_OFFLINE_FIXTURE||path.join(root,'samples/IMG_2384.HEIC');
+const fixtureName=path.basename(fixture),fixtureType=/\.heic$/i.test(fixture)?'image/heic':/\.pdf$/i.test(fixture)?'application/pdf':'image/jpeg';
+await readFile(fixture).catch(()=>{throw Error('Missing private offline fixture. Restore samples/IMG_2384.HEIC or set MM_OFFLINE_FIXTURE to a four-row private invoice image.');});
 const browserName=process.argv.includes('--webkit')?'webkit':'chromium',prefix='/Menu-margin/scanner-preview/',external=[];
 const types={'.js':'text/javascript','.mjs':'text/javascript','.html':'text/html','.css':'text/css','.json':'application/json','.webmanifest':'application/manifest+json','.svg':'image/svg+xml','.png':'image/png','.wasm':'application/wasm'};
 const server=http.createServer(async(req,res)=>{
   try{
     const url=new URL(req.url,'http://localhost');if(req.method!=='GET'||!url.pathname.startsWith(prefix))throw new Error('Invalid request');
     if(url.pathname===prefix+'qa'){res.writeHead(200,{'content-type':'text/html'});res.end(`<!doctype html><script src="${prefix}vendor/scanner/client.js"></script>`);return;}
+    if(url.pathname===prefix+'private-fixture'){res.writeHead(200,{'content-type':fixtureType});res.end(await readFile(fixture));return;}
     const relative=decodeURIComponent(url.pathname.slice(prefix.length))||'index.html';
     if(!/^(?:index\.html|privacy\.html|help\.html|terms\.html|sw\.js|styles\.css|manifest\.webmanifest|icons\/|js\/|styles\/|vendor\/|samples\/IMG_2384\.HEIC$)/.test(relative))throw new Error('Not an app asset');
     const file=path.resolve(root,relative);if(!file.startsWith(root+path.sep))throw new Error('Invalid path');
@@ -28,16 +32,16 @@ try{
   await page.evaluate(async()=>{const cache=await caches.open('menumargin-shell-v1.0.5');await cache.put('/Menu-margin/live-cache-sentinel',new Response('LIVE APP'));});
   // Read the private fixture before installing the worker. User-selected Files
   // never pass through fetch or the app's HTTP cache in production either.
-  await page.evaluate(async prefix=>{const response=await fetch(prefix+'samples/IMG_2384.HEIC');window.invoice=new File([new Uint8Array(await response.arrayBuffer())],'BPM.HEIC',{type:'image/heic'});},prefix);
+  await page.evaluate(async({prefix,fixtureName,fixtureType})=>{const response=await fetch(prefix+'private-fixture');if(!response.ok)throw Error('Private fixture unavailable');window.invoice=new File([new Uint8Array(await response.arrayBuffer())],fixtureName,{type:fixtureType});},{prefix,fixtureName,fixtureType});
   await page.evaluate(async prefix=>{
     await navigator.serviceWorker.register(prefix+'sw.js',{scope:prefix});await navigator.serviceWorker.ready;
     if(!navigator.serviceWorker.controller)await new Promise(resolve=>navigator.serviceWorker.addEventListener('controllerchange',resolve,{once:true}));
   },prefix);
   const online=await page.evaluate(async()=>{const r=await MenuMarginScanner.scanFile(window.invoice);return r.rows.map(row=>[row.productCode,row.quantity,row.unitPrice,row.lineTotal]);});
-  assert.equal(online.length,4);console.log('PASS: real HEIC scanned with self-hosted assets.');
+  assert.equal(online.length,4);console.log('PASS: private '+fixtureType+' scanned with self-hosted assets.');
   const cached=await page.evaluate(async prefix=>{const cachesNames=await caches.keys();const legacy=await caches.open('menumargin-shell-v1.0.5');if(await(await legacy.match('/Menu-margin/live-cache-sentinel'))?.text()!=='LIVE APP')throw new Error('Preview damaged the live cache.');const cache=await caches.open(cachesNames.find(n=>n.startsWith('menumargin-shell-'+encodeURIComponent(prefix)+'-')));return (await cache.keys()).map(r=>new URL(r.url).pathname);},prefix);
   for(const name of ['scanner.worker.js','ort-wasm-simd-threaded.wasm','PP-OCRv5_mobile_det_onnx_infer.tar','en_PP-OCRv5_mobile_rec_onnx_infer.tar'])assert.ok(cached.some(p=>p.endsWith(name)),`${name} cached`);
-  assert.equal(cached.some(p=>p.includes('/samples/')),false);console.log('PASS: models/runtime cached; invoice photo is absent from HTTP cache; live-app cache preserved.');
+  assert.equal(cached.some(p=>p.includes('/samples/')||p.endsWith('/private-fixture')),false);console.log('PASS: models/runtime cached; invoice photo is absent from HTTP cache; live-app cache preserved.');
   const legal=await context.newPage();await legal.goto(origin+prefix+'privacy.html');
   assert.match(await legal.locator('h1').textContent(),/information in Mise en Price/);await legal.close();
   const appShell=await page.evaluate(async prefix=>{const names=await caches.keys(),cache=await caches.open(names.find(name=>name.startsWith('menumargin-shell-'+encodeURIComponent(prefix)+'-')));return (await cache.match(prefix+'index.html')).text();},prefix);
@@ -49,7 +53,7 @@ try{
   const offlineMode=browserName==='webkit'?'HTTP origin stopped (WebKit offline emulation blocks Blob APIs)':'browser offline mode';
   if(browserName==='webkit'){server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}else await context.setOffline(true);
   const offline=await page.evaluate(async()=>{const r=await MenuMarginScanner.scanFile(window.invoice,{onProgress:message=>console.log('OFFLINE:',message)});return r.rows.map(row=>[row.productCode,row.quantity,row.unitPrice,row.lineTotal]);});
-  assert.deepEqual(offline,online);console.log('PASS: fresh OCR worker scans the same HEIC with '+offlineMode+'.');
+  assert.deepEqual(offline,online);console.log('PASS: fresh OCR worker scans the same private file with '+offlineMode+'.');
   const help=await context.newPage();await help.goto(origin+prefix+'help.html');assert.match(await help.locator('h1').textContent(),/Help with Mise en Price/);await help.close();console.log('PASS: support information opens from the offline cache.');
   await page.evaluate(async()=>{
     MenuMarginScanner.reset();const controller=new AbortController();
@@ -59,5 +63,5 @@ try{
   const afterCancel=await page.evaluate(async()=>{const r=await MenuMarginScanner.scanFiles([window.invoice,window.invoice]);return {rows:r.rows.map(row=>[row.productCode,row.quantity,row.unitPrice,row.lineTotal]),pages:r.pages.length,warnings:r.warnings};});
   assert.deepEqual(afterCancel.rows,online);assert.equal(afterCancel.pages,1);assert.ok(afterCancel.warnings.some(w=>w.includes('Duplicate photo')));
   assert.equal(external.length,0);console.log('PASS: retry after cancellation works offline; duplicate photo produces one page; no external or upload requests.');
-  await mkdir(path.join(root,'scanner-debug'),{recursive:true});await writeFile(path.join(root,'scanner-debug',`offline-${browserName}.json`),JSON.stringify({passed:true,browser:browserName,offlineMode,online,offline,cached,external},null,2));
+  await mkdir(path.join(root,'scanner-debug'),{recursive:true});await writeFile(path.join(root,'scanner-debug',`offline-${browserName}.json`),JSON.stringify({passed:true,browser:browserName,fixtureType,offlineMode,online,offline,cached,external},null,2));
 }finally{await browser?.close();if(server.listening)await new Promise(resolve=>server.close(resolve));}

@@ -9,7 +9,7 @@ const mime={'.js':'text/javascript','.mjs':'text/javascript','.html':'text/html'
 const server=http.createServer(async(req,res)=>{
  try{
   const pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname).slice(1)||'index.html';
-  if(!/^(index\.html|js\/[\w.-]+\.(?:js|mjs))$/.test(pathname))throw Error('not allowed');
+  if(!/^(index\.html|styles\.css|styles\/[\w.-]+\.css|js\/[\w.-]+\.(?:js|mjs))$/.test(pathname))throw Error('not allowed');
   const file=path.resolve(root,pathname);if(!file.startsWith(root))throw Error();
   let data=await readFile(file,'utf8');
   if(pathname==='index.html'){
@@ -21,14 +21,16 @@ const server=http.createServer(async(req,res)=>{
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const origin='http://127.0.0.1:'+server.address().port;
 const browser=await (process.argv.includes('--webkit')?webkit:chromium).launch({headless:true});
-const page=await browser.newPage();
+const page=await browser.newPage({viewport:process.argv.includes('--webkit')?{width:390,height:844}:{width:1440,height:900}});
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
 try{
  await page.goto(origin);
+ await page.addStyleTag({url:origin+'/styles.css'});
+ await page.addStyleTag({url:origin+'/styles/recipe-scan.css'});
  await page.evaluate(()=>{
-  window.mmUser={id:'test-chef'};window.mmCloudReady=false;
+  window.mmUser={id:'test-chef'};window.mmCloudReady=false;window.authListeners=[];window.mmSupabase={auth:{onAuthStateChange:fn=>{window.authListeners.push(fn);return {data:{subscription:{unsubscribe(){}}}};}}};
   window.MM_LIBRARY_KEY='recipes';window.MM_PRICEBOOK_KEY='prices';
-  window.mmReadUserCache=(key)=>key==='prices'?[{id:'price-a',name:'Chicken breast',supplier:'Test supplier',packBase:1000,baseUnit:'g',price:10,priceBasis:'ex_vat'},{id:'olive-5l',name:'Extra Virgin Olive Oil PET',supplier:'Fresh Direct',packBase:5000,baseUnit:'ml',price:25,priceBasis:'ex_vat'},{id:'vegetable-5l',name:'Vegetable Oil',supplier:'Fresh Direct',packBase:5000,baseUnit:'ml',price:15,priceBasis:'ex_vat'}]:[];
+  window.mmReadUserCache=(key)=>key==='prices'?[{id:'price-a',name:'Chicken breast',supplier:'Test supplier',packBase:1000,baseUnit:'g',price:10,priceBasis:'ex_vat'},{id:'olive-5l',name:'Extra Virgin Olive Oil PET',supplier:'Fresh Direct',packBase:5000,baseUnit:'ml',price:25,priceBasis:'ex_vat'},{id:'onion',name:'Onion',supplier:'Test supplier',packBase:1000,baseUnit:'g',price:2,priceBasis:'ex_vat'},{id:'vegetable-5l',name:'Vegetable Oil',supplier:'Fresh Direct',packBase:5000,baseUnit:'ml',price:15,priceBasis:'ex_vat'}]:[];
   window.mmWriteUserCache=()=>{throw Error('Scanner must not auto-save')};
   window.mmNewUuid=()=> '99999999-9999-4999-8999-999999999999';
   window.mmSaveRecipeDraftSoon=()=>{};window.mmClearRecipeDraft=()=>{};window.mmAuthMessage=()=>{};
@@ -43,12 +45,25 @@ try{
  await page.locator('#recipeScanStart').click();
  await page.locator('#recipeScanReview').waitFor({state:'visible'});
  assert.equal(await page.locator('#recipeScanRows tr').count(),3);
+ const chicken=page.locator('#recipeScanRows tr').first().locator('.recipe-supplier-match');
+ assert.equal(await chicken.inputValue(),'');
+ await chicken.selectOption('price-a');
  const match=page.locator('#recipeScanRows tr').nth(2).locator('.recipe-supplier-match');
  assert.match(await match.locator('option').allTextContents().then(x=>x.join(' ')),/Extra Virgin Olive Oil PET/);
  assert.doesNotMatch(await match.locator('option').allTextContents().then(x=>x.join(' ')),/Vegetable Oil/);
  assert.equal(await match.inputValue(),'','Suggestions must not auto-select a supplier');
  await match.selectOption('olive-5l');
  assert.equal(await page.locator('#recipeScanYield').inputValue(),'10');
+ await page.locator('#recipeScanSellingPrice').fill('10');
+ assert.match(await page.locator('#recipeScanTotals').textContent(),/Partial cost: £11.00/);
+ const onion=page.locator('#recipeScanRows tr').nth(1).locator('.recipe-supplier-match');
+ await page.locator('#recipeScanRows tr').nth(1).locator('input[type=search]').fill('Test supplier');
+ await onion.selectOption('onion');
+ assert.match(await page.locator('#recipeScanTotals').textContent(),/Batch cost: £12.00 · Per portion: £1.20 · GP: 88.0%/);
+ await page.locator('#recipeScanReview').screenshot({path:process.argv.includes('--webkit')?'/tmp/mep-scanner-webkit.png':'/tmp/mep-scanner-chromium.png'});
+ if(process.argv.includes('--webkit'))assert.equal(await page.locator('#recipeScanRows').evaluate(node=>getComputedStyle(node.querySelector('tr')).display),'block');
+ await onion.selectOption('');
+
  await page.locator('#recipeScanImport').click();
  assert.equal(await page.locator('#recipeName').inputValue(),'Chicken curry');
  assert.equal(await page.locator('#ingredients tr').count(),3);
@@ -61,8 +76,132 @@ try{
  assert.equal(await oliveRow.locator('.price').inputValue(),'25');
  assert.equal(await oliveRow.locator('.pack').inputValue(),'5000');
  assert.equal(await oliveRow.evaluate(el=>el.dataset.priceBookId),'olive-5l');
+ assert.equal(await page.locator('#sellingPrice').inputValue(),'10');
+ assert.equal(await page.locator('#ingredients tr').nth(1).evaluate(el=>el.dataset.priceLinkMode),'manual');
+ assert.equal(await page.locator('#ingredients tr').nth(1).locator('.price').inputValue(),'');
+ assert.equal(await page.locator('#gpPct').textContent(),'—','Unpriced imported ingredients must not show a misleading GP');
+ assert.match(await page.locator('#batchDetail').textContent(),/Partial cost/);
  assert.equal(await page.evaluate(()=>hasUnsavedChanges),true);
  assert.equal(await page.evaluate(()=>currentRecipeId),null);
+ // Explicit saving and reloading retain the confirmed supplier ID and current price.
+ await page.evaluate(()=>{window.savedRecipes=[];writeLibrary=items=>{window.savedRecipes=structuredClone(items);};readLibrary=()=>structuredClone(window.savedRecipes);});
+ await page.locator('#saveRecipe').click();
+ assert.equal(await page.evaluate(()=>window.savedRecipes.length),1);
+ assert.equal(await page.evaluate(()=>window.savedRecipes[0].ingredients[2].priceBookId),'olive-5l');
+ await page.evaluate(()=>loadRecipe(window.savedRecipes[0]));
+ assert.equal(await oliveRow.evaluate(el=>el.dataset.priceBookId),'olive-5l');
+ const oldBook=await page.evaluate(()=>readPriceBook());
+ await page.evaluate(prices=>{window.mmReadUserCache=key=>key==='prices'?prices.map(p=>p.id==='olive-5l'?{...p,price:30}:p):window.savedRecipes;calculate();},oldBook);
+ assert.equal(await oliveRow.locator('.price').inputValue(),'30');
+ assert.equal(await oliveRow.locator('.cost-cell').textContent(),'£1.20');
+ // Switching account after extraction must invalidate the review, even if IDs overlap.
+ await page.locator('#recipeScanFile').setInputFiles({name:'second.jpg',mimeType:'image/jpeg',buffer:Buffer.from([255,216,255,217])});
+ await page.locator('#recipeScanStart').click();
+ await page.locator('#recipeScanReview').waitFor({state:'visible'});
+ await page.evaluate(()=>{window.mmUser={id:'other-chef'};});
+ await page.locator('#recipeScanImport').click();
+ assert.match(await page.locator('#recipeScanStatus').textContent(),/Account changed/);
+ assert.equal(await page.locator('#recipeScanReview').isVisible(),false);
+ assert.equal(await page.locator('#recipeName').inputValue(),'Chicken curry');
+ // Negative paths must leave the already-saved recipe intact.
+ const savedName=await page.locator('#recipeName').inputValue();
+ const scan=async(text)=>{
+  await page.evaluate(({text,prices})=>{window.mmUser={id:'test-chef'};window.mmReadUserCache=key=>key==='prices'?prices:window.savedRecipes;window.MenuMarginScanner={scanRecipeFile:async()=>({text,warnings:[]})};window.confirm=()=>true;},{text,prices:oldBook});
+  await page.locator('#recipeScanFile').setInputFiles({name:'negative.jpg',mimeType:'image/jpeg',buffer:Buffer.from([255,216,255,217])});
+  await page.locator('#recipeScanStart').click();await page.locator('#recipeScanReview').waitFor({state:'visible'});
+ };
+ const text='Oil test\nServes 4\nIngredients\n200 ml olive oil';
+ await scan(text);
+ assert.match(await page.locator('#recipeScanSource').getAttribute('href'),/^blob:/);
+ await page.locator('.recipe-supplier-match').selectOption('olive-5l');
+ await page.evaluate(prices=>{window.mmReadUserCache=key=>key==='prices'?prices.map(p=>p.id==='olive-5l'?{...p,name:'Vegetable Oil',price:15}:p):window.savedRecipes;},oldBook);
+ await page.locator('#recipeScanImport').click();
+ assert.match(await page.locator('#recipeScanStatus').textContent(),/Supplier details changed/);
+ assert.equal(await page.locator('.recipe-supplier-match').inputValue(),'');
+ assert.equal(await page.locator('#recipeName').inputValue(),savedName);
+ await scan(text);await page.locator('.recipe-supplier-match').selectOption('olive-5l');
+ await page.evaluate(prices=>{window.mmReadUserCache=key=>key==='prices'?prices.map(p=>p.id==='olive-5l'?{...p,price:30}:p):window.savedRecipes;},oldBook);
+ await page.locator('#recipeScanImport').click();
+ assert.match(await page.locator('#recipeScanStatus').textContent(),/Supplier details changed/);
+ assert.match(await page.locator('.recipe-supplier-match').locator('option').allTextContents().then(x=>x.join(' ')),/£30.00/);
+ await scan(text);await page.locator('.recipe-supplier-match').selectOption('olive-5l');
+ await page.locator('.scan-unit').selectOption('g');assert.equal(await page.locator('.recipe-supplier-match').inputValue(),'');
+ assert.doesNotMatch((await page.locator('.recipe-supplier-match option').allTextContents()).join(' '),/Olive Oil/);
+ await page.locator('.scan-qty').fill('');await page.locator('#recipeScanImport').click();
+ assert.match(await page.locator('#recipeScanStatus').textContent(),/Complete every ingredient/);
+ assert.equal(await page.locator('#recipeName').inputValue(),savedName);
+ await scan(text);await page.locator('.recipe-supplier-match').selectOption('olive-5l');
+ await page.evaluate(()=>{window.confirm=()=>false;});await page.locator('#recipeScanImport').click();
+ assert.equal(await page.locator('#recipeName').inputValue(),savedName);
+ await scan(text);await page.locator('.recipe-supplier-match').selectOption('olive-5l');
+ await page.evaluate(prices=>{window.confirm=()=>{window.mmReadUserCache=key=>key==='prices'?prices.map(p=>p.id==='olive-5l'?{...p,price:40}:p):window.savedRecipes;return true;};},oldBook);
+ await page.locator('#recipeScanImport').click();assert.match(await page.locator('#recipeScanStatus').textContent(),/changed while confirming/);
+ assert.equal(await page.locator('#recipeName').inputValue(),savedName);
+ // Replacing the file invalidates the old review and source link immediately.
+ await page.locator('#recipeScanFile').setInputFiles({name:'replacement.jpg',mimeType:'image/jpeg',buffer:Buffer.from([255,216,255,217])});
+ assert.equal(await page.locator('#recipeScanReview').isVisible(),false);
+ assert.equal(await page.locator('#recipeScanSource').getAttribute('href'),null);
+ // A late result from a cancelled scan cannot overwrite a newer review.
+ await page.evaluate(()=>{window.MenuMarginScanner.scanRecipeFile=()=>new Promise(resolve=>{window.oldScanResolve=resolve;});});
+ await page.locator('#recipeScanStart').click();assert.equal(await page.locator('#recipeScanStart').isDisabled(),true);
+ await page.locator('#recipeScanCancel').click();
+ await scan('Current scan\nServes 2\nIngredients\n100 g onions');
+ await page.evaluate(()=>window.oldScanResolve({text:'Stale recipe\nIngredients\n500 g flour',warnings:['STALE WARNING']}));
+ assert.equal(await page.locator('#recipeScanName').inputValue(),'Current scan');
+ assert.doesNotMatch(await page.locator('#recipeScanStatus').textContent(),/STALE/);
+ assert.equal(await page.evaluate(()=>window.savedRecipes.length),1,'Negative paths must not save anything');
+ // A chef can enter a whole-pack price without any supplier match or new product.
+ await scan(text);
+ const manualRow=page.locator('#recipeScanRows tr').first();
+ await manualRow.locator('.scan-manual-toggle').click();
+ assert.equal(await manualRow.locator('.scan-pack-price').isVisible(),true);
+ assert.equal(await manualRow.locator('.scan-pack-price').inputValue(),'');
+ await page.locator('#recipeScanImport').click();assert.match(await page.locator('#recipeScanStatus').textContent(),/Complete each manual pack/);
+ await manualRow.locator('.scan-pack').fill('5');await manualRow.locator('.scan-pack-unit').selectOption('kg');await manualRow.locator('.scan-pack-price').fill('25');
+ await page.locator('#recipeScanImport').click();assert.match(await page.locator('#recipeScanStatus').textContent(),/compatible pack unit/);
+ await manualRow.locator('.scan-pack-unit').selectOption('l');await manualRow.locator('.scan-pack-vat').selectOption('ex_vat');await page.locator('#recipeScanYield').fill('2');await page.locator('#recipeScanSellingPrice').fill('5');
+ assert.match(await page.locator('#recipeScanTotals').textContent(),/Batch cost: £1.00 · Per portion: £0.50 · GP: 90.0%/);
+ await page.locator('#recipeScanReview').screenshot({path:process.argv.includes('--webkit')?'/tmp/mep-manual-price-webkit.png':'/tmp/mep-manual-price-chromium.png'});
+ await page.locator('#recipeScanImport').click();
+ assert.equal(await page.locator('#ingredients .price').inputValue(),'25');assert.equal(await page.locator('#ingredients .pack').inputValue(),'5');assert.equal(await page.locator('#ingredients .pack-unit').inputValue(),'l');
+ assert.equal(await page.locator('#ingredients tr').evaluate(tr=>tr.dataset.priceBookId),'');assert.equal(await page.locator('#ingredients tr').evaluate(tr=>tr.dataset.priceLinkMode),'manual');
+ assert.equal(await page.locator('#batchCost').textContent(),'£1.00');assert.equal(await page.locator('#gpPct').textContent(),'90.0%');assert.equal(await page.evaluate(()=>window.savedRecipes.length),1);
+ await page.locator('#saveRecipe').click();assert.equal(await page.evaluate(()=>window.savedRecipes.length),2);
+ await page.evaluate(()=>loadRecipe(window.savedRecipes.at(-1)));assert.equal(await page.locator('#ingredients .price').inputValue(),'25');
+ await page.evaluate(prices=>{window.mmReadUserCache=key=>key==='prices'?prices.map(p=>({...p,price:99})):window.savedRecipes;calculate();},oldBook);
+ assert.equal(await page.locator('#ingredients .price').inputValue(),'25','Own pack price must survive supplier updates');
+ await scan(text);await manualRow.locator('.recipe-supplier-match').selectOption('olive-5l');await manualRow.locator('.scan-manual-toggle').click();
+ assert.equal(await manualRow.locator('.recipe-supplier-match').inputValue(),'','Switching to own price must detach the supplier');
+ await manualRow.locator('.scan-manual-toggle').click();assert.equal(await manualRow.locator('.recipe-supplier-match').inputValue(),'','Switching back requires confirmation again');
+ await manualRow.locator('.recipe-supplier-match').selectOption('olive-5l');await page.locator('#recipeScanImport').click();assert.equal(await page.locator('#ingredients tr').evaluate(tr=>tr.dataset.priceBookId),'olive-5l');
+ await scan(text);await page.locator('#recipeScanSellingPrice').fill('5');
+ await page.evaluate(()=>{window.importConfirmations=[];window.confirm=message=>{window.importConfirmations.push(message);return true;};});
+ await page.locator('#recipeScanImport').click();assert.ok(await page.evaluate(()=>window.importConfirmations.some(m=>m.includes('1 ingredient(s) have no price'))));
+ assert.equal(await page.locator('#gpPct').textContent(),'—');assert.equal(await page.locator('#mobileGp').textContent(),'—');assert.equal(await page.locator('#ingredients .price').inputValue(),'');
+ assert.match(await page.locator('#ingredients .price-link-status').textContent(),/Price missing/);
+ await page.evaluate(()=>{window.printedRecipe='';window.open=()=>({document:{open(){},write(text){window.printedRecipe=text;},close(){}},focus(){},print(){}});window.mmDeliverFile=async blob=>{window.csvRecipe=await blob.text();return 'downloaded';};});
+ await page.locator('#printBtn').click();
+ assert.match(await page.evaluate(()=>window.printedRecipe),/Not priced/);
+ assert.doesNotMatch(await page.evaluate(()=>window.printedRecipe),/100\.0%/);
+ await page.locator('#exportCsv').click();await page.waitForFunction(()=>Boolean(window.csvRecipe));
+ assert.equal(await page.evaluate(()=>window.csvRecipe.split('\r\n').find(line=>line.startsWith('"Actual GP (%)",'))),'"Actual GP (%)",""');
+ await page.locator('#recipeScanFile').setInputFiles({name:'large.jpg',mimeType:'image/jpeg',buffer:Buffer.from([255,216,255,217])});
+ await page.evaluate(()=>{
+  const prices=Array.from({length:5000},(_,i)=>({id:'bulk-'+i,name:'Supplier ingredient '+i,baseUnit:'g',packBase:1000,price:1}));
+  prices.push({id:'actual-onion',name:'Onion',baseUnit:'g',packBase:1000,price:2});window.priceBookReadCount=0;
+  window.mmReadUserCache=key=>{if(key==='prices'){window.priceBookReadCount++;return prices;}return window.savedRecipes;};
+  window.MenuMarginScanner.scanRecipeFile=async()=>({text:'Large kitchen batch\nServes 60\nIngredients\n'+Array(120).fill('1 g onions').join('\n'),warnings:[]});
+ });
+ await page.locator('#recipeScanStart').click();await page.locator('#recipeScanReview').waitFor({state:'visible'});
+ assert.equal(await page.locator('#recipeScanRows tr').count(),120);
+ assert.ok(await page.evaluate(()=>window.priceBookReadCount)<=4,'A large review must read its price book per batch, not per total/row');
+ await page.locator('#recipeScanRows tr').first().getByRole('button',{name:/Remove scanned ingredient/}).click();await page.locator('#recipeScanAdd').click();
+ const labels=await page.locator('#recipeScanRows .scan-name').evaluateAll(nodes=>nodes.map(n=>n.getAttribute('aria-label')));assert.equal(new Set(labels).size,labels.length,'Added rows need unique accessible labels after removal');
+ await page.evaluate(()=>{window.mmUser=null;for(const fn of window.authListeners)fn('SIGNED_OUT',null);});
+ assert.equal(await page.locator('#recipeScanReview').isVisible(),false);
+ assert.equal(await page.locator('#recipeScanRows tr').count(),0);
+ assert.equal(await page.locator('#recipeScanName').inputValue(),'');
+ assert.equal(await page.locator('#recipeScanSource').getAttribute('href'),null);
  assert.deepEqual(errors,[]);
  console.log('Recipe review, exact supplier match and unsaved costing import passed');
 }finally{await browser.close();server.close();}

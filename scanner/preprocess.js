@@ -67,7 +67,7 @@ function normaliseDarkLabels(cv,gray,cleaned){
 export function matPixels(cv,mat){
   const rgba=new cv.Mat();try{if(mat.channels()===1)cv.cvtColor(mat,rgba,cv.COLOR_GRAY2RGBA);else if(mat.channels()===3)cv.cvtColor(mat,rgba,cv.COLOR_RGB2RGBA);else mat.copyTo(rgba);return {width:rgba.cols,height:rgba.rows,data:new Uint8ClampedArray(rgba.data)};}finally{rgba.delete();}
 }
-export function preprocessImage(cv,input,{maxSide=2600,minSide=1500}={}){
+export function preprocessImage(cv,input,{maxSide=2600,minSide=1500,preserveText=false}={}){
   const source=cv.matFromImageData(input),warnings=[];
   const detected=paperCorners(cv,source);
   const corners=detected||[[0,0],[source.cols-1,0],[source.cols-1,source.rows-1],[0,source.rows-1]];
@@ -89,9 +89,12 @@ export function preprocessImage(cv,input,{maxSide=2600,minSide=1500}={}){
     // Retain antialiasing and faint decimal points. A hard binary image erases
     // small type; blend the adaptive shadow mask with the normalised grayscale.
     cv.addWeighted(normalised,.85,cleaned,.15,0,cleaned);
-    const darkLabelsNormalised=normaliseDarkLabels(cv,gray,cleaned);
+    const darkLabelsNormalised=preserveText?0:normaliseDarkLabels(cv,gray,cleaned);
+    // Invoice shadow masks and dark-label inversion damage small antialiased
+    // screenshot lettering. Recipe mode preserves grayscale text instead.
+    if(preserveText)gray.copyTo(cleaned);
     const pixels=matPixels(cv,cleaned),rules=verticalRules(cv,cleaned);
-    const info={originalWidth:source.cols,originalHeight:source.rows,width,height,paperDetected:Boolean(detected),corners,homography:Array.from(transform.data64F),scale,darkLabelsNormalised,method:'EXIF decode → paper quadrilateral → perspective warp → grayscale → illumination normalisation → adaptive Gaussian mask blended with grayscale → dark header inversion',warnings};
-    return {mat:cleaned.clone(),binaryMat:adaptive.clone(),pixels,verticalRules:rules,info};
+    const info={originalWidth:source.cols,originalHeight:source.rows,width,height,paperDetected:Boolean(detected),corners,homography:Array.from(transform.data64F),scale,darkLabelsNormalised,method:preserveText?'EXIF decode → paper quadrilateral → perspective warp → antialiased grayscale recipe text':'EXIF decode → paper quadrilateral → perspective warp → grayscale → illumination normalisation → adaptive Gaussian mask blended with grayscale → dark header inversion',warnings};
+    return {grayMat:gray.clone(),mat:cleaned.clone(),binaryMat:adaptive.clone(),pixels,verticalRules:rules,info};
   }finally{source.delete();from.delete();to.delete();transform.delete();warped.delete();gray.delete();background.delete();normalised.delete();cleaned.delete();adaptive.delete();}
 }
