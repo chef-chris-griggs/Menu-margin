@@ -63,3 +63,31 @@ test('a valid VAT number crossing a column boundary never adds a second line pri
   }
   const page=extractPage(words,{width:1000,height:400});assert.equal(page.rows.length,3);assert.deepEqual(page.rows.map(r=>r.lineTotal),[18.15,18.15,18.15]);
 });
+test('footer page numbering is read outside the product header and defers partial invoice totals',()=>{
+ const words=fixture();words.push(word('Page',760,440),word('2',815,440),word('of',835,440),word('2',865,440));
+ const p=extractPage(words,{width:1000,height:500});assert.equal(p.printedPage,2);
+ const result=combinePages([p]);assert.deepEqual(result.validation.missingPages,[1]);assert.equal(result.validation.matchesSubtotal,null);
+});
+test('brought-forward labels and amounts never become products or pollute a neighbouring product name',()=>{
+ const words=fixture();words.push(word('BroughtForward',100,137),word('£20.00',880,137));
+ const page=extractPage(words,{width:1000,height:500});assert.deepEqual(page.rows.map(r=>r.description),['Tomatoes','Onions']);
+ const attached=fixture();attached.push(word('BroughtForwaro',270,160));
+ const joined=extractPage(attached,{width:1000,height:500});assert.equal(joined.rows[0].description,'Tomatoes');
+});
+test('explicit EACH price units supply a one-item pack without changing delivered quantity',()=>{
+ const words=[word('Description',100,100),word('Qty',500,100),word('Price',650,100),word('Unit',750,100),word('Net',850,100),word('Amount',900,100),word('Chicken fillet',100,160),word('6',500,160),word('£2.50',650,160),word('EACH',750,160),word('£15.00',880,160)];
+ const row=extractPage(words,{width:1050,height:400}).rows[0];assert.equal(row.quantity,6);assert.equal(row.quantityBasis,'unit');assert.deepEqual(row.pack,{caseCount:1,eachSize:1,unit:'each'});assert.equal(row.unitPrice,2.5);
+});
+test('a supplemental footer reread can fill an unread total but never creates product rows',()=>{
+ const metadataWords=[word('Nett',700,440),word('Total',750,440),word('£14.50',880,440)];
+ const p=extractPage(fixture().filter(w=>w.poly[0][1]!==270),{width:1000,height:500,metadataWords});assert.equal(p.rows.length,2);assert.equal(p.totals.subtotal,14.5);
+});
+test('numeric column edges follow repeated geometric drift without moving pence into VAT',()=>{
+ const words=[word('Description',40,90),word('Qty',500,90),word('Unit',620,90),word('Price',665,90),word('Line',790,90),word('Total',835,90),word('VAT',950,90)];
+ for(let i=0;i<9;i++){
+  const y=170+i*50,shift=i*2;
+  words.push(word('Carrots',40,y),word('1',500+shift,y),word('£14.51',630+shift,y),word('£14.51',805+shift,y),word('0',945+shift,y));
+ }
+ const p=extractPage(words,{width:1100,height:750});assert.equal(p.rows.length,9);assert.ok(p.rows.every(r=>r.unitPrice===14.51&&r.lineTotal===14.51));
+ const c=p.columns.find(c=>c.key==='lineTotal');assert.ok(c.rightTrack,'Use repeated image positions to follow a slanted column');
+});

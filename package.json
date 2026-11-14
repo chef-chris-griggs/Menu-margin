@@ -5,7 +5,7 @@
   "scripts": {
     "build:scanner": "node scripts/build-scanner.mjs",
     "test:scanner": "node scripts/test-invoice-samples.mjs",
-    "test:unit": "node --test tests/recipe-scan-parser.test.mjs tests/recipe-price-suggestions.test.mjs tests/recipe-ocr-lines.test.mjs tests/invoice-positioned.test.mjs tests/invoice-values.test.mjs tests/invoice-review-logic.test.mjs tests/recipe-pricing.test.mjs tests/cloud-data.test.mjs tests/cardless-trial.test.mjs tests/owner-dashboard.test.mjs tests/owner-dashboard-cache.test.mjs tests/supabase-security-contract.test.mjs scanner/paddleocr/ctc.test.mjs",
+    "test:unit": "node --test tests/invoice-reread.test.mjs tests/recipe-scan-parser.test.mjs tests/recipe-price-suggestions.test.mjs tests/recipe-ocr-lines.test.mjs tests/invoice-positioned.test.mjs tests/invoice-values.test.mjs tests/invoice-review-logic.test.mjs tests/recipe-pricing.test.mjs tests/cloud-data.test.mjs tests/cardless-trial.test.mjs tests/owner-dashboard.test.mjs tests/owner-dashboard-cache.test.mjs tests/supabase-security-contract.test.mjs scanner/paddleocr/ctc.test.mjs",
     "test:review": "node tests/invoice-review.browser.mjs",
     "test:review:webkit": "node tests/invoice-review.browser.mjs --webkit",
     "test:decode": "node tests/invoice-decode.browser.mjs",
@@ -22,7 +22,12 @@
     "test:account-isolation": "node scripts/test-account-isolation.mjs",
     "test:recovery": "node tests/password-recovery.browser.mjs",
     "test:recovery:webkit": "node tests/password-recovery.browser.mjs --webkit",
-    "test:seo": "node scripts/check-marketing-seo.mjs"
+    "test:seo": "node scripts/check-marketing-seo.mjs",
+    "test:staging-isolation": "node --env-file-if-exists=.env.staging scripts/test-staging-isolation.mjs",
+    "test:local-rls": "node scripts/test-local-rls.mjs",
+    "test:recipe-e2e": "node tests/recipe-scan-end-to-end.browser.mjs",
+    "test:recipe-e2e:webkit": "node tests/recipe-scan-end-to-end.browser.mjs --webkit",
+    "check:scanner-bundle": "node scripts/check-scanner-bundle.mjs"
   },
   "dependencies": {
     "@paddleocr/paddleocr-js": "0.4.2",

@@ -80,7 +80,7 @@ function headerMatches(words){
 export function detectHeader(rows,verticalRules,width){
   const height=median(rows.flatMap(r=>r.words.map(w=>w.height)))||16,candidates=[];
   for(const row of rows){
-    const nearby=rows.filter(r=>r.y>=row.y-height*.5&&r.y<=row.y+height*2.1).flatMap(r=>r.words);
+    const nearby=rows.filter(r=>r.y>=row.y-height*1.8&&r.y<=row.y+height*3.5).flatMap(r=>r.words);
     const matched=headerMatches(nearby),keys=new Set(matched.map(m=>m.key));
     if(!keys.has('description')||(!keys.has('unitPrice')&&!keys.has('lineTotal'))||keys.size<3)continue;
     const headerYs=matched.flatMap(m=>m.words.map(w=>w.rowY));
@@ -127,11 +127,27 @@ export function detectHeader(rows,verticalRules,width){
       const centre=median(cluster.map(w=>w.cx)),score=cluster.length/(1+Math.abs(centre-column.cx)/Math.max(height*2,(high-low)*.35));
       if(!best||score>best.score)best={score,centre,left:median(cluster.map(w=>w.x)),right:median(cluster.map(w=>w.x+w.width)),count:cluster.length};
     }
-    if(best)column.dataAlignment=best;
+    if(best){
+      const cluster=candidates.filter(w=>Math.abs(w.x+w.width-best.right)<height*.8);
+      const anchorY=median(cluster.map(w=>w.cy)),slopes=[];
+      for(let i=0;i<cluster.length;i++)for(let j=i+1;j<cluster.length;j++){
+        const dy=cluster[j].cy-cluster[i].cy;
+        if(Math.abs(dy)<height*4)continue;
+        const slope=(cluster[j].x+cluster[j].width-cluster[i].x-cluster[i].width)/dy;
+        if(Math.abs(slope)<.08)slopes.push(slope);
+      }
+      const slope=slopes.length>=3?median(slopes):0;
+      column.dataAlignment={...best,slope,anchorY,left:median(cluster.map(w=>w.x-slope*(w.cy-anchorY))),right:median(cluster.map(w=>w.x+w.width-slope*(w.cy-anchorY)))};
+    }
   }
   for(let i=0;i<columns.length-1;i++){
     const a=columns[i],b=columns[i+1],da=a.dataAlignment,db=b.dataAlignment;
-    if(da&&db&&da.centre<db.centre-height*.4){const edge=(da.right+db.left)/2;a.right=edge;b.left=edge;}
+    if(da&&db&&da.centre<db.centre-height*.4){const edge=(da.right+db.left)/2;a.right=edge;b.left=edge;
+      if(da.slope||db.slope){
+        const anchorY=(da.anchorY+db.anchorY)/2;
+        const value=(da.right+da.slope*(anchorY-da.anchorY)+db.left+db.slope*(anchorY-db.anchorY))/2;
+        a.rightTrack=b.leftTrack={value,anchorY,slope:(da.slope+db.slope)/2};
+      }}
   }
   return {...header,columns};
 }
@@ -143,10 +159,14 @@ function taxBasis(words){
   if(n.some(x=>['incvat','inclvat','includingvat','gross'].includes(x)||x.endsWith('incvat')||x.endsWith('inclvat')))return 'inc_vat';
   return 'unknown';
 }
+export function columnBoundsAt(column,y){
+ const at=(track,value)=>track?track.value+track.slope*(y-track.anchorY):value;
+ return {left:at(column.leftTrack,column.left),right:at(column.rightTrack,column.right)};
+}
 function cellsFor(words,columns){
   const cells=Object.fromEntries(columns.map(c=>[c.key,[]]));
   for(const word of words){
-    let choices=columns.filter(c=>word.cx>=c.left&&word.cx<c.right);
+    let choices=columns.filter(c=>{const b=columnBoundsAt(c,word.cy);return word.cx>=b.left&&word.cx<b.right;});
     if(!choices.length)choices=columns;
     const chosen=choices.slice().sort((a,b)=>Math.abs(word.cx-(a.dataAlignment?.centre??a.cx))-Math.abs(word.cx-(b.dataAlignment?.centre??b.cx)))[0];
     if(chosen)cells[chosen.key].push(word);
@@ -160,7 +180,7 @@ function splitColumnSpanningWords(words,columns,width,headerBottom){
     const parts=[];
     for(const character of word.characters){
       const xs=character.poly.map(p=>p[0]),cx=(Math.min(...xs)+Math.max(...xs))/2;
-      const column=columns.find(c=>cx>=c.left&&cx<c.right);
+      const column=columns.find(c=>{const b=columnBoundsAt(c,word.cy);return cx>=b.left&&cx<b.right;});
       if(!column||!numeric.has(column.key))return [word];
       let part=parts.at(-1);if(part?.column!==column.key){part={column:column.key,characters:[]};parts.push(part);}part.characters.push(character);
     }
@@ -226,7 +246,7 @@ function isFooter(row){
 }
 function readTotals(rows,start){
   const totals={subtotal:null,vat:null,total:null},evidence={};
-  const labels=[['subtotal',['subtotal']],['subtotal',['goods','value']],['subtotal',['goodsvalue']],['subtotal',['net','amount']],['total',['invoice','total']],['total',['invoicetotal']],['total',['grand','total']],['total',['gross','amount']],['vat',['vat']]];
+  const labels=[['subtotal',['subtotal']],['subtotal',['goods','value']],['subtotal',['goodsvalue']],['subtotal',['net','amount']],['subtotal',['nett','total']],['subtotal',['net','total']],['subtotal',['netttotal']],['total',['invoice','total']],['total',['invoicetotal']],['total',['grand','total']],['total',['gross','amount']],['vat',['vat']]];
   for(let ri=0;ri<rows.length;ri++){
     const row=rows[ri];if(row.y<start)continue;
     for(let i=0;i<row.words.length;i++)for(const [key,parts] of labels){
@@ -258,7 +278,7 @@ function readTotals(rows,start){
 function readReference(rows,kind,headerY){
   const patterns=kind==='invoice'?[['invoice','no'],['invoice','number']]:kind==='order'?[['order','no'],['order','number']]:kind==='page'?[['page','no'],['page']]:[['delivery','note','number'],['delivery','no']];
   for(let ri=0;ri<rows.length;ri++){
-    const row=rows[ri];if(row.y>headerY)break;
+    const row=rows[ri];if(kind!=='page'&&row.y>headerY)break;
     for(let i=0;i<row.words.length;i++)for(const parts of patterns){
       const found=phraseAt(row.words,i,parts);if(!found)continue;
       const valid=w=>/\d/.test(w.text)&&!found.words.includes(w)&&/^[A-Za-z0-9,./-]+$/.test(w.text);
@@ -269,7 +289,7 @@ function readReference(rows,kind,headerY){
   }
   return null;
 }
-export function extractPage(rawWords,{width,height,verticalRules=[],pageNumber=1}={}){
+export function extractPage(rawWords,{width,height,verticalRules=[],pageNumber=1,metadataWords=[]}={}){
   let words=normaliseWords(rawWords,width),physicalRows=groupWordsIntoRows(words);const header=detectHeader(physicalRows,verticalRules,width);
   const warnings=[],items=[],unassignedFragments=[];
   if(!header)return {pageNumber,words,columns:[],rows:[],totals:{subtotal:null,vat:null,total:null},warnings:['No reliable product-table header was detected.'],needsReview:true};
@@ -279,7 +299,9 @@ export function extractPage(rawWords,{width,height,verticalRules=[],pageNumber=1
   const rowHeight=header.height;
   for(const physical of physicalRows.filter(r=>r.y>header.bottom-rowHeight*.15)){
     if(isFooter(physical)&&items.length){footerStart=physical.y;continues=rowLabel(physical.words).includes('continued');break;}
-    const cells=cellsFor(physical.words,header.columns);
+    const splitCarry=['brought','forward'].every(label=>physical.words.some(w=>normal(w.text)===label));
+    const productWords=physical.words.filter(w=>!headerToken(w.text,'broughtforward')&&!(splitCarry&&['brought','forward'].includes(normal(w.text))));
+    const cells=cellsFor(productWords,header.columns);
     const desc=descriptionText(cells.description||[]),productCode=codeFrom(cells.code||[]),qtyValue=parseQuantityCell(numericWords(cells.quantity||[])),weightValue=parseQuantityCell(numericWords(cells.weight||[])),qty=qtyValue.value,loose=parseNumberCell(cells.looseQuantity||[]),weight=weightValue.value;
     const price=parseGbpCell(numericWords(cells.unitPrice||[]),{allowOcrCurrencyGlyph:true}),line=parseGbpCell(numericWords(cells.lineTotal||[]),{allowOcrCurrencyGlyph:true}),packValue=parsePackCell(cells.pack||[],{allowOcrUnitGlyph:true}),u=unitFrom(cells.unit||[]);
     const fieldEvidence=Boolean(productCode||price.value!==null||line.value!==null||qty!==null||loose!==null||packValue.eachSize!==null);
@@ -306,6 +328,7 @@ export function extractPage(rawWords,{width,height,verticalRules=[],pageNumber=1
     const mixedQuantities=qty>0&&loose>0;
     if(loose>0&&!(qty>0)){quantity=loose;quantityBasis='unit';if(pack)pack={...pack,caseCount:1};}
     if(mixedQuantities){quantity=null;quantityBasis='mixed';pack=null;}
+    if(!pack&&u==='each'&&header.columns.some(c=>c.key==='unit')){quantityBasis='unit';pack={caseCount:1,eachSize:1,unit:'each'};}
     if(header.columns.some(c=>c.key==='weight')&&u&&u!=='each'){quantity=weight;quantityBasis='weight';pack=weight===null?null:{caseCount:1,eachSize:weight,unit:u};}
     const unitPriceColumn=header.columns.find(c=>c.key==='unitPrice'),lineColumn=header.columns.find(c=>c.key==='lineTotal');
     const basis=unitPriceColumn?.taxBasis&&unitPriceColumn.taxBasis!=='unknown'?unitPriceColumn.taxBasis:lineColumn?.taxBasis||'unknown';
@@ -333,8 +356,11 @@ export function extractPage(rawWords,{width,height,verticalRules=[],pageNumber=1
     items.push(item);lastBodyY=physical.y;
   }
   const totals=readTotals(physicalRows,Number.isFinite(footerStart)?footerStart:lastBodyY+rowHeight*.8);
+  const metadataRows=groupWordsIntoRows(normaliseWords(metadataWords,width));
+  const rereadTotals=readTotals(metadataRows,Number.isFinite(footerStart)?footerStart:lastBodyY+rowHeight*.8);
+  for(const key of ['subtotal','vat','total'])if(totals[key]===null&&rereadTotals[key]!==null)totals[key]=rereadTotals[key];
   const before=physicalRows.filter(r=>r.y<header.bottom);
-  const invoiceNumber=readReference(before,'invoice',header.y),orderNumber=readReference(before,'order',header.y),deliveryNumber=readReference(before,'delivery',header.y),printedPage=Number(readReference(before,'page',header.y))||null;
+  const invoiceNumber=readReference(before,'invoice',header.y),orderNumber=readReference(before,'order',header.y),deliveryNumber=readReference(before,'delivery',header.y),printedPage=Number(readReference(metadataRows,'page',Infinity)||readReference(physicalRows,'page',header.y))||null;
   const tokenSet=new Set(before.flatMap(r=>r.words.map(w=>normal(w.text))));
   const supplier=tokenSet.has('bidfood')?'Bidfood':tokenSet.has('freshdirect')?'Fresh Direct':tokenSet.has('british')&&tokenSet.has('meats')?'British Premium Meats':'';
   if(unassignedFragments.length)warnings.push(`${unassignedFragments.length} detached numeric fragment(s) could not be assigned to a product. Check the source image for missing quantities.`);

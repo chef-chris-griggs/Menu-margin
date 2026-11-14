@@ -6,13 +6,10 @@ permissions:
   contents: read
 jobs:
   build-recipe-scanner:
-    if: github.event.pull_request.head.repo.full_name == 'chef-chris-griggs/Menu-margin' && github.event.pull_request.head.ref == 'fix/recipe-ocr-accurate-lines'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-        with:
-          ref: fix/recipe-ocr-accurate-lines
       - uses: actions/setup-node@v7
         with:
           node-version: '24'

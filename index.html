@@ -25,6 +25,8 @@
 <!-- Cloudflare Web Analytics -->
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"74380b01dfe04aeca8a2b90baf6ad809"}'></script>
 <!-- End Cloudflare Web Analytics -->
+<link rel="stylesheet" href="./styles/recipe-scan.css?v=0.4.0-manual-prices">
+<link rel="stylesheet" href="./styles/app-ios.css?v=1.0.0">
 </head>
 <body data-active-view="costing">
 <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -40,6 +42,10 @@
   <symbol id="icon-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14M10 11v6M14 11v6"/></symbol>
   <symbol id="icon-search-empty" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7"/><path d="m16 16 5 5M8 8l5 5M13 8l-5 5"/></symbol>
   <symbol id="icon-shield" viewBox="0 0 24 24"><path d="m12 3 8 3v5c0 5-3.4 8.3-8 10-4.6-1.7-8-5-8-10V6l8-3Z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></symbol>
+  <symbol id="icon-cloche" viewBox="0 0 24 24"><path d="M3 17a9 9 0 0 1 18 0H3ZM2 21h20M12 4v3M10 4h4"/></symbol>
+  <symbol id="icon-camera" viewBox="0 0 24 24"><path d="M5 6h3l2-3h4l2 3h3a2 2 0 0 1 2 2v11H3V8a2 2 0 0 1 2-2Z"/><circle cx="12" cy="12.5" r="3.5"/></symbol>
+  <symbol id="icon-chevron" viewBox="0 0 24 24"><path d="m7 9 5 5 5-5"/></symbol>
+  <symbol id="icon-person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></symbol>
   <symbol id="icon-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="1"/><circle cx="16" cy="12" r="1"/><circle cx="10" cy="18" r="1"/></symbol>
 </svg>
 
@@ -73,7 +79,7 @@
 </section>
 
 <header class="app-header">
-  <div class="brand">Mise en <span>Price</span></div>
+  <div class="brand"><i class="ios-app-mark" aria-hidden="true"><svg><use href="#icon-cloche"/></svg></i><div>Mise en <span>Price</span></div></div>
   <div id="mmAccountBar" aria-label="Account controls">
     <span id="mmAccountLabel" class="account-label">Signed in</span>
     <span id="mmCloudStatus" class="cloud-status" role="status">Checking sync…</span>
@@ -82,6 +88,7 @@
     <button type="button" id="mmRefreshCloud" class="header-action secondary">Refresh &amp; sync</button>
     <button type="button" id="mmSignOut" class="signout-button"><svg><use href="#icon-logout"/></svg><span>Sign out</span></button>
   </div>
+  <button type="button" class="ios-account-button" data-ios-action="account" aria-label="Open account and settings"><svg><use href="#icon-person"/></svg></button>
 </header>
 <div id="mmMigrationNotice" class="mm-notice" role="status" hidden></div>
 <div id="mmGlobalError" class="mm-global-error" role="alert" hidden></div>
@@ -91,12 +98,12 @@
   <button type="button" class="nav-tab" role="tab" aria-selected="false" aria-controls="view-recipes" id="tab-recipes" data-view="recipes"><svg><use href="#icon-recipe"/></svg><span>Recipes</span></button>
   <button type="button" class="nav-tab" role="tab" aria-selected="false" aria-controls="view-pricebook" id="tab-pricebook" data-view="pricebook"><svg><use href="#icon-book"/></svg><span>Prices</span></button>
   <button type="button" class="nav-tab" role="tab" aria-selected="false" aria-controls="view-invoices" id="tab-invoices" data-view="invoices"><svg><use href="#icon-scan"/></svg><span>Scan</span></button>
-  <button type="button" class="nav-tab" role="tab" aria-selected="false" aria-controls="view-menu" id="tab-menu" data-view="menu"><svg><use href="#icon-menu"/></svg><span>Menu</span></button>
+  <button type="button" class="nav-tab" role="tab" aria-selected="false" aria-controls="view-menu" id="tab-menu" data-view="menu"><svg><use href="#icon-menu"/></svg><span>More</span></button>
 </nav>
 
 <main id="appMain">
   <section id="view-menu" class="app-view" role="tabpanel" aria-labelledby="tab-menu" hidden>
-    <div class="page-heading"><div><h1>Menu</h1><p class="page-subtitle">Account settings, exports, and useful links.</p></div></div>
+    <div class="page-heading"><div><h1>More</h1><p class="page-subtitle">Account settings, exports, and useful links.</p></div></div>
     <div class="menu-grid">
       <section class="panel menu-card" aria-labelledby="menuAccountTitle">
         <h2 id="menuAccountTitle">Account</h2>
@@ -116,12 +123,13 @@
           <button type="button" id="mmMenuPriceCsv" class="secondary">Share price book CSV</button>
           <button type="button" id="mmMenuBackup" class="secondary">Share account backup</button>
         </div>
-        <p class="menu-hint">For a recipe PDF, open Cost and choose Print. On iPhone, use the print preview’s share options to save or send the PDF.</p>
+        <p class="menu-hint">For a recipe PDF, open Cost, tap the three-dot actions menu, then Print. On iPhone, use the print preview’s share options to save or send the PDF.</p>
         <button type="button" id="mmMenuPrintFlow" class="text-button">Open Cost and PDF tools</button>
       </section>
       <section class="panel menu-card" aria-labelledby="menuHelpTitle">
         <h2 id="menuHelpTitle">Help &amp; information</h2>
         <div class="menu-link-list">
+          <button type="button" id="mmMenuInstall" class="secondary" hidden>Install app</button>
           <a href="./owner-dashboard.html" id="mmOwnerDashboardLink" hidden>Owner dashboard — signups &amp; trials</a>
           <a href="./help.html">Help &amp; contact</a>
           <a href="./privacy.html">Privacy information</a>
@@ -150,51 +158,62 @@
   </section>
   <section id="view-costing" class="app-view" role="tabpanel" aria-labelledby="tab-costing">
     <div class="page-heading recipe-page-heading">
-      <div><h1 id="recipeHeading">New recipe</h1><p id="recipeStateCaption" class="page-subtitle">Not saved yet</p></div>
+      <div><p class="ios-eyebrow">Your kitchen, costed</p><h1 id="recipeHeading">New recipe</h1><p id="recipeStateCaption" class="page-subtitle">Not saved yet</p></div>
+    </div>
+    <div class="ios-quick-actions" aria-label="Start a recipe">
+      <button type="button" class="ios-quick-action" data-ios-action="scan-recipe"><svg><use href="#icon-camera"/></svg><span><strong>Scan a recipe</strong><small>From a photo or PDF</small></span></button>
+      <button type="button" class="ios-quick-action secondary" data-ios-action="new-recipe"><svg><use href="#icon-add"/></svg><span><strong>Start from scratch</strong><small>Build your own dish</small></span></button>
     </div>
     <div class="recipe-toolbar">
       <button type="button" class="secondary" id="newRecipe"><span class="button-icon">↺</span> New</button>
+      <details class="ios-recipe-tools" id="recipeTools" open><summary aria-label="More recipe actions"><span aria-hidden="true">•••</span></summary><div class="ios-tool-menu">
       <button type="button" class="secondary" id="exportCsv"><svg><use href="#icon-download"/></svg> CSV</button>
       <button type="button" class="secondary" id="printBtn"><svg><use href="#icon-print"/></svg> Print</button>
+      </div></details>
       <button type="button" id="saveRecipe"><svg><use href="#icon-save"/></svg> Save recipe</button>
     </div>
     <details class="panel" id="recipeScanPanel" style="margin:1rem 0;padding:1rem">
-      <summary><strong>Scan a recipe photo or PDF</strong></summary>
+      <summary><span class="ios-scan-mark" aria-hidden="true"><svg><use href="#icon-camera"/></svg></span><strong>Recipe scanner</strong></summary>
       <p>Read a printed recipe locally, review quantities, then import into costing. Handwriting may require corrections.</p>
       <div class="actions" style="display:flex;flex-wrap:wrap;gap:.6rem;align-items:center">
         <label for="recipeScanFile">Recipe document</label>
-        <input id="recipeScanFile" type="file" accept="image/jpeg,image/png,image/heic,image/heif,application/pdf,.jpg,.jpeg,.png,.heic,.heif,.pdf">
+        <label for="recipeScanFile" class="ios-file-picker"><svg><use href="#icon-camera"/></svg><span><strong>Choose your recipe</strong><small id="recipeScanFileName">Photo or PDF</small></span><span class="ios-file-choose">Browse</span></label>
+        <input class="ios-file-input" id="recipeScanFile" type="file" accept="image/jpeg,image/png,image/heic,image/heif,application/pdf,.jpg,.jpeg,.png,.heic,.heif,.pdf">
         <button id="recipeScanStart" type="button">Read recipe</button>
         <button id="recipeScanCancel" type="button" class="secondary">Cancel</button>
       </div>
       <p id="recipeScanStatus" role="status" aria-live="polite">Select a photo or PDF to begin.</p>
       <div id="recipeScanReview" hidden>
         <h2>Review scanned recipe</h2>
-        <p>Check quantities against the original. Select a suitable supplier suggestion when names differ. Only confirmed matches carry their supplier price into costing.</p>
+        <a id="recipeScanSource" target="_blank" rel="noopener noreferrer" hidden>View original</a>
+        <p>Check quantities against the original. Choose a supplier product for its current price, or use Enter pack price to enter the pack size and price yourself. Your own prices stay separate from supplier price updates.</p>
         <div class="recipe-top">
           <div class="field"><label for="recipeScanName">Recipe name</label><input id="recipeScanName" autocomplete="off"></div>
           <div class="field"><label for="recipeScanYield">Portions</label><input id="recipeScanYield" type="number" min="1" step="1"></div>
         </div>
-        <div class="table-wrap"><table class="ingredient-table"><thead><tr><th>Ingredient</th><th>Quantity</th><th>Unit</th><th>Price-book suggestion</th><th>Check</th><th>Remove</th></tr></thead><tbody id="recipeScanRows"></tbody></table></div>
+        <div class="table-wrap"><table class="ingredient-table"><thead><tr><th>Ingredient</th><th>Quantity</th><th>Unit</th><th>Supplier or own pack price</th><th>Check</th><th>Remove</th></tr></thead><tbody id="recipeScanRows"></tbody></table></div>
+        <div class="field"><label for="recipeScanSellingPrice">Actual selling price per portion, excluding VAT (£)</label><input id="recipeScanSellingPrice" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Enter actual selling price"></div>
+        <p id="recipeScanTotals" role="status" aria-live="polite"></p>
+        <button id="recipeScanAdd" type="button" class="secondary">Add missing ingredient</button>
         <button id="recipeScanImport" type="button">Import into costing</button>
       </div>
     </details>
     <div id="toast" class="toast app-toast" role="status" aria-live="polite" hidden></div>
     <div class="costing-layout" id="costingLayout">
       <section class="panel recipe-details-panel" aria-labelledby="recipeDetailsTitle">
-        <div class="section-heading"><div><h2 id="recipeDetailsTitle">Recipe details</h2><p class="section-help">The dish, and how many portions it makes.</p></div><span class="step-pill">Step 1</span></div>
+        <div class="section-heading"><div><h2 id="recipeDetailsTitle">Your dish</h2><p class="section-help">The dish, and how many portions it makes.</p></div><span class="step-pill">Step 1</span></div>
         <div class="recipe-top">
           <div class="field"><label for="recipeName">Dish name</label><input id="recipeName" placeholder="e.g. Roast chicken, herb potatoes & greens" autocomplete="off"></div>
-          <div class="field"><label for="yield">Portions per batch</label><input id="yield" type="number" inputmode="numeric" min="1" step="1" value="10"></div>
+          <div class="field"><label for="yield">Portions</label><input id="yield" type="number" inputmode="numeric" min="1" step="1" value="10"></div>
         </div>
       </section>
       <section class="panel ingredients-panel" aria-labelledby="ingredientsTitle">
-        <div class="section-heading"><div><h2 id="ingredientsTitle">Ingredients</h2><p class="section-help">Amount used, and the price of the pack you buy it in.</p></div><span class="step-pill">Step 2</span></div>
+        <div class="section-heading"><div><h2 id="ingredientsTitle">Ingredients</h2><p class="section-help">What goes in, and what it costs.</p></div><span class="step-pill">Step 2</span></div>
         <div class="table-wrap"><table class="ingredient-table" aria-label="Recipe ingredients"><thead><tr><th>Ingredient</th><th>Qty used</th><th>Qty unit</th><th>Pack size</th><th>Pack unit</th><th>Pack price (£)</th><th>Cost used</th><th>Remove</th></tr></thead><tbody id="ingredients"></tbody></table></div>
         <div class="actions add-row"><button type="button" id="addIngredient"><svg><use href="#icon-add"/></svg> Add ingredient</button></div>
       </section>
       <aside class="panel summary" id="summary" aria-labelledby="summaryTitle">
-        <h2 id="summaryTitle">Your numbers</h2>
+        <h2 id="summaryTitle">Your margin</h2>
         <div class="summary-top"><div class="eyebrow">Total batch cost</div><div class="big" id="batchCost">£0.00</div><div class="sub" id="batchDetail">Across 10 portions</div></div>
         <div class="stats">
           <div class="stat"><div class="label">Cost per portion</div><div class="value" id="portionCost">£0.00</div></div>
@@ -217,7 +236,7 @@
   </section>
 
   <section id="view-recipes" class="app-view" role="tabpanel" aria-labelledby="tab-recipes" hidden>
-    <div class="page-heading"><div><h1>Saved recipes</h1><p class="page-subtitle">Everything you cost is saved to your account.</p></div></div>
+    <div class="page-heading"><div><h1>Your recipes</h1><p class="page-subtitle">Everything you cost is saved to your account.</p></div></div>
     <div class="page-action-row"><button type="button" id="recipesNew"><svg><use href="#icon-add"/></svg> New recipe</button><button type="button" class="secondary" id="exportBackup"><svg><use href="#icon-download"/></svg> Download backup</button><button type="button" class="secondary" id="importBackup"><svg><use href="#icon-file"/></svg> Restore backup</button><input id="backupFile" type="file" accept="application/json,.json" hidden></div>
     <div id="recipesToast" class="toast" role="status" aria-live="polite"></div>
     <div id="recipeEmpty" class="empty-state">
@@ -234,7 +253,8 @@
   </section>
 
   <section id="view-pricebook" class="app-view" role="tabpanel" aria-labelledby="tab-pricebook" hidden>
-    <div class="page-heading"><div><h1>Ingredient price book</h1><p class="page-subtitle">Your buying prices. Add rows straight to a recipe from the Cost screen.</p></div></div>
+    <div class="page-heading"><div><h1>Your prices</h1><p class="page-subtitle">The ingredients you buy, ready for your next dish.</p></div></div>
+    <details class="ios-price-editor" id="pricebookEditor" open><summary><svg><use href="#icon-add"/></svg><span>Add a supplier price</span><svg class="ios-disclosure-icon"><use href="#icon-chevron"/></svg></summary>
     <section class="panel pricebook-panel" aria-labelledby="pricebookTitle">
       <div class="section-heading"><div><h2 id="pricebookTitle">Add a supplier price</h2><p class="section-help">The pack you actually buy: cases, the size of each item, and the case price.</p></div></div>
       <form id="pricebookForm" class="pricebook-form">
@@ -250,6 +270,7 @@
       </form>
       <p class="unit-note">Enter the total price for the full case. Mise en Price divides it across the case contents when costing a recipe.</p>
     </section>
+    </details>
     <section class="pricebook-results" aria-labelledby="pricebookListTitle">
     <div class="list-heading"><h2 id="pricebookListTitle">Your supplier prices</h2><div class="pricebook-toolbar"><div class="pricebook-search"><label class="visually-hidden" for="pbSearch">Search ingredients or suppliers</label><input id="pbSearch" placeholder="Search ingredients or suppliers…" autocomplete="off"><button type="button" class="secondary" id="pbClear">Clear</button></div><button type="button" class="secondary" id="pbExport">Export CSV</button></div></div>
       <div id="pricebookList" class="pricebook-list" aria-live="polite"></div>
@@ -258,7 +279,8 @@
   </section>
 
   <section id="view-invoices" class="app-view" role="tabpanel" aria-labelledby="tab-invoices" hidden>
-    <div class="page-heading"><div><h1>Invoice scan</h1><p class="page-subtitle">Choose every page of one invoice, compare the detected products with the photo, then save selected prices.</p></div></div>
+    <div class="page-heading"><div><p class="ios-eyebrow">Less typing. More cooking.</p><h1>Scan</h1><p class="page-subtitle">A recipe to cost. An invoice to update your prices.</p></div></div>
+    <div class="ios-quick-actions" aria-label="Choose what to scan"><button type="button" class="ios-quick-action" data-ios-action="scan-recipe"><svg><use href="#icon-camera"/></svg><span><strong>Recipe photo</strong><small>Ingredients into a dish</small></span></button><button type="button" class="ios-quick-action secondary" data-ios-action="scan-invoice"><svg><use href="#icon-file"/></svg><span><strong>Supplier invoice</strong><small>Keep buying prices fresh</small></span></button></div>
     <section class="panel invoice-panel" aria-labelledby="invoiceTitle">
       <h2 id="invoiceTitle">Choose an invoice</h2>
       <div class="field invoice-file-field">
@@ -312,12 +334,13 @@
 <script src="./js/pricing.js?v=2.1.0"></script>
 <script src="./js/auth-recovery.js?v=2.1.2"></script>
 <script src="./js/auth.js?v=2.1.5-trial-clarity"></script>
-<script src="./js/recipe.js?v=2.2.0-menu-share"></script>
+<script src="./js/recipe.js?v=2.2.1-price-completeness"></script>
 <script src="./js/pricebook.js?v=2.2.0-menu-share"></script>
-<script src="./vendor/scanner/client.js?v=2.0.1-recipe-ocr"></script>
+<script src="./vendor/scanner/client.js?v=2.0.3-invoice-recovery"></script>
 <script src="./js/invoice.js?v=2.1.1-launch"></script>
-<script type="module" src="./js/recipe-scan-ui.mjs?v=0.2.0"></script>
+<script type="module" src="./js/recipe-scan-ui.mjs?v=0.5.0-manual-prices"></script>
 <script src="./js/startup.js?v=2.1.3-email"></script>
 <script src="./js/menu.js?v=2.2.0"></script>
+<script src="./js/app-ui.js?v=1.0.0"></script>
 </body>
 </html>

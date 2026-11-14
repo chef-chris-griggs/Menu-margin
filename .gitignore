@@ -12,3 +12,5 @@ samples/*
 .env
 .env.*
 !.env.example
+
+!.env.staging.example

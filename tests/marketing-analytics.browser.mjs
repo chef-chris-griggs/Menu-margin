@@ -101,7 +101,8 @@ async function run(engine, width) {
 }
 
 async function validateGoogleTag() {
-  const browser = await chromium.launch({headless:true});
+  const proxy = process.env.MM_TEST_PROXY ? {server:process.env.MM_TEST_PROXY,bypass:'127.0.0.1,localhost'} : undefined;
+  const browser = await chromium.launch({headless:true,proxy});
   try {
     const context = await browser.newContext({viewport:{width:390,height:844}});
     const hits = [], unexpected = [], consoleErrors = [];

@@ -1,11 +1,11 @@
 const CACHE_PREFIX = 'menumargin-shell-' + encodeURIComponent(new URL(self.registration.scope).pathname) + '-';
-const CACHE_NAME = CACHE_PREFIX + 'v2.0.7-pricebook-suggestions';
+const CACHE_NAME = CACHE_PREFIX + 'v2.0.14-ios-interface';
 const cachedResponse = request => caches.open(CACHE_NAME).then(cache => cache.match(request));
 const SHELL = [
-  './', './index.html', './styles.css?v=1.0.7', './styles/invoice-scanner.css?v=2', './styles/recipe-price-links.css?v=2.1.1', './styles/account.css?v=2.1.1', './styles/menu.css?v=2.2.0', './privacy.html', './help.html', './terms.html', './manifest.webmanifest', './icons/icon.svg',
+  './', './index.html', './styles.css?v=1.0.7', './styles/app-ios.css?v=1.0.0', './styles/recipe-scan.css?v=0.4.0-manual-prices', './styles/invoice-scanner.css?v=2', './styles/recipe-price-links.css?v=2.1.1', './styles/account.css?v=2.1.1', './styles/menu.css?v=2.2.0', './privacy.html', './help.html', './terms.html', './manifest.webmanifest', './icons/icon.svg',
   './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png',
   './vendor/supabase/supabase.js',
-  './js/cloud-data.js?v=2.1.1', './js/site-config.js?v=2.1.1', './js/pricing.js?v=2.1.0', './js/auth-recovery.js?v=2.1.2', './js/auth.js?v=2.1.5-trial-clarity', './js/recipe.js?v=2.2.0-menu-share', './js/pricebook.js?v=2.2.0-menu-share', './js/invoice.js?v=2.1.1-launch', './js/startup.js?v=2.1.3-email', './js/menu.js?v=2.2.0', './js/recipe-scan-ui.mjs?v=0.2.0', './js/recipe-scan-parser.mjs', './js/recipe-price-suggestions.mjs', './vendor/scanner/client.js?v=2.0.1-recipe-ocr'
+  './js/cloud-data.js?v=2.1.1', './js/site-config.js?v=2.1.1', './js/pricing.js?v=2.1.0', './js/auth-recovery.js?v=2.1.2', './js/auth.js?v=2.1.5-trial-clarity', './js/recipe.js?v=2.2.1-price-completeness', './js/pricebook.js?v=2.2.0-menu-share', './js/invoice.js?v=2.1.1-launch', './js/startup.js?v=2.1.3-email', './js/menu.js?v=2.2.0', './js/app-ui.js?v=1.0.0', './js/recipe-scan-ui.mjs?v=0.5.0-manual-prices', './js/recipe-scan-parser.mjs', './js/recipe-price-suggestions.mjs?v=0.5.0-manual-prices', './vendor/scanner/client.js?v=2.0.3-invoice-recovery'
 ];
 
 self.addEventListener('install', event => {

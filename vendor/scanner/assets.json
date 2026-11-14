@@ -1,16 +1,16 @@
 {
   "engineVersion": "2.0.0-positioned-paddleocr",
-  "builtAt": "2026-11-13T18:06:07.262Z",
+  "builtAt": "2026-11-13T19:32:29.845Z",
   "assets": [
     {
       "file": "client.js",
-      "bytes": 13681,
-      "sha256": "09f72ff64df2a37097567ca14313df19d4eb6b16c997a981a64a3e78b996d24a"
+      "bytes": 13719,
+      "sha256": "fd7d8b15b1f4e478a7baa07515271d0102df8525723bc92fd7fef597d8f8fbb1"
     },
     {
       "file": "scanner.worker.js",
-      "bytes": 10572524,
-      "sha256": "fa4950e536fab237958c0d959f417bc9c0226c818fefef3e835565f454bc3e09"
+      "bytes": 10576644,
+      "sha256": "9f7f6c690e81a66c47a8f0672ce2b8957fd0258b5fe1866c5844c9ba59e18d89"
     },
     {
       "file": "heic-decoder.js",
