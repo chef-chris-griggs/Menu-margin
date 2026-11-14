@@ -1,0 +1,26 @@
+# Mise en Price
+
+> Recipe costing and menu pricing software for UK chefs, caterers and independent restaurants.
+
+Mise en Price is a web-based tool for calculating ingredient cost per portion and food-cost gross profit. It also provides a supplier price book, invoice scanning with manual review, saved recipes, and CSV export. Ingredient-based GP excludes labour, overheads and waste. Invoice results should be checked before import.
+
+The public recipe calculator can be tried without creating an account. The full app offers a 14-day free trial with no card required. After the trial, users may choose a £9.99/month subscription. The card-free trial does not charge automatically when it ends.
+
+## Main pages
+
+- [Mise en Price homepage](https://miseenprice.co.uk/): Product overview, free one-recipe calculator, features and pricing.
+- [Recipe costing software](https://miseenprice.co.uk/recipe-costing-software): Recipe and portion costs for chefs.
+- [Free recipe costing calculator](https://miseenprice.co.uk/free-recipe-costing-calculator): Calculate food costs using ingredient quantities and prices.
+- [Food GP calculator](https://miseenprice.co.uk/food-gp-calculator): Explains food gross profit calculations.
+- [Invoice scanning for chefs](https://miseenprice.co.uk/invoice-scanning-for-chefs): Supplier invoice import and manual review.
+- [Supplier price tracking](https://miseenprice.co.uk/restaurant-supplier-price-tracking): Price-book information for kitchens.
+- [Catering recipe costing](https://miseenprice.co.uk/catering-recipe-costing): Costing for caterers.
+- [Menu pricing guide](https://miseenprice.co.uk/restaurant-menu-pricing-guide): Menu pricing guidance.
+
+## Access
+
+- Website: https://miseenprice.co.uk/
+- Full application: https://menu-margin.pages.dev/
+- Sitemap: https://miseenprice.co.uk/sitemap.xml
+
+This is a descriptive site guide. It does not claim third-party endorsements, customer ratings, or guaranteed AI-search visibility.
