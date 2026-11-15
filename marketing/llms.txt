@@ -2,7 +2,7 @@
 
 > Recipe costing and menu pricing software for UK chefs, caterers and independent restaurants.
 
-Mise en Price is a web-based tool for calculating ingredient cost per portion and food-cost gross profit. It also provides a supplier price book, invoice scanning with manual review, saved recipes, and CSV export. Ingredient-based GP excludes labour, overheads and waste. Invoice results should be checked before import.
+Mise en Price is a web-based tool for calculating ingredient cost per portion and food-cost gross profit. It also provides a supplier price book, invoice scanning with manual review, saved recipes, and CSV export. Ingredient-based GP excludes labour, overheads and waste. Invoice results should be checked before import. The signed-in app also reads printed recipe photos and PDFs into a reviewable costing draft, with suggested matches from the user's own supplier price book. Review quantities, units, products and pack prices before importing; save explicitly after checking the costing.
 
 The public recipe calculator can be tried without creating an account. The full app offers a 14-day free trial with no card required. After the trial, users may choose a £9.99/month subscription. The card-free trial does not charge automatically when it ends.
 
@@ -12,6 +12,7 @@ The public recipe calculator can be tried without creating an account. The full 
 - [Recipe costing software](https://miseenprice.co.uk/recipe-costing-software): Recipe and portion costs for chefs.
 - [Free recipe costing calculator](https://miseenprice.co.uk/free-recipe-costing-calculator): Calculate food costs using ingredient quantities and prices.
 - [Food GP calculator](https://miseenprice.co.uk/food-gp-calculator): Explains food gross profit calculations.
+- [Recipe scanner for chefs](https://miseenprice.co.uk/recipe-scanning-for-chefs): Printed recipe photos and PDFs, ingredient review, supplier price-book matching and explicit saving.
 - [Invoice scanning for chefs](https://miseenprice.co.uk/invoice-scanning-for-chefs): Supplier invoice import and manual review.
 - [Supplier price tracking](https://miseenprice.co.uk/restaurant-supplier-price-tracking): Price-book information for kitchens.
 - [Catering recipe costing](https://miseenprice.co.uk/catering-recipe-costing): Costing for caterers.
