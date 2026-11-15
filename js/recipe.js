@@ -36,12 +36,19 @@ function updateRecipeHeader(){
   $('recipeStateCaption').textContent=hasUnsavedChanges?'Changes not saved':currentRecipeId?(mmCloudReady&&typeof mmReadPending==='function'&&!mmReadPending(mmUser?.id).some(item=>item.kind==='recipes'&&item.id===currentRecipeId)?'Saved to your account':'Saved on this device — waiting to sync'):'Not saved yet';
 }
 
+// Stored snapshots are authoritative for writes and backups. Resolved prices
+// are a read-only view; opening/editing another dish must not acknowledge alerts.
+function mmReadStoredLibrary(){
+  if(!mmUser?.id)throw new Error('Sign in before changing saved recipes.');
+  const value=mmReadUserCache(MM_LIBRARY_KEY,mmUser.id);
+  if(!Array.isArray(value)||value.some(r=>!r||typeof r!=='object'||Array.isArray(r)||!r.id))throw new Error('Saved recipes could not be read. Keep your device data and try Refresh & sync.');
+  return value;
+}
 function readLibrary(){
   if(!mmUser)return [];
   try{
-    const value=mmReadUserCache(MM_LIBRARY_KEY,mmUser.id);
     const index=mmBuildPriceIndex(readPriceBook());
-    return Array.isArray(value)?value.filter(r=>r&&typeof r==='object'&&r.id).map(recipe=>mmResolveRecipePrices(recipe,index)):[];
+    return mmReadStoredLibrary().map(recipe=>mmResolveRecipePrices(recipe,index));
   }catch(e){return []}
 }
 function writeLibrary(items){
@@ -89,7 +96,9 @@ function showToast(message){const toast=$('toast');toast.textContent=message;toa
 function showRecipesToast(message){const toast=$('recipesToast');toast.textContent=message;clearTimeout(recipesToastTimer);recipesToastTimer=setTimeout(()=>{toast.textContent='';},7000)}
 async function downloadAccountBackup(){
   if(!mmUser){showRecipesToast('Sign in before downloading your account backup.');return;}
-  const recipes=readLibrary(),draft=hasUnsavedChanges?recipeData():null;
+  let recipes;
+  try{recipes=mmReadStoredLibrary();}catch(error){showRecipesToast('Could not read the saved recipes for backup. Your data has not changed. '+error.message);return;}
+  const draft=hasUnsavedChanges?recipeData():null;
   const draftHasContent=draft&&(draft.name!=='Untitled recipe'||draft.ingredients.some(mmIngredientTouched));
   if(draftHasContent){draft.id=currentRecipeId||mmNewUuid();const index=recipes.findIndex(item=>item.id===draft.id);if(index>=0)recipes[index]=draft;else recipes.push(draft);}
   const backup={format:'menumargin-account-backup',schemaVersion:1,exportedAt:new Date().toISOString(),recipes,priceBook:readPriceBook()};
@@ -137,17 +146,22 @@ function mmBackupRecordKey(item){
 async function restoreAccountBackup(file){
   if(!mmUser){showRecipesToast('Sign in before restoring an account backup.');return;}
   if(!file)return;
+  const userId=mmUser.id;
   if(file.size>25*1024*1024){showRecipesToast('This backup is larger than 25 MB and cannot be opened here.');return;}
   let backup;
   try{backup=JSON.parse(await file.text())}catch{showRecipesToast('That file is not valid JSON. Choose a Mise en Price backup file.');return;}
   if(backup?.format!=='menumargin-account-backup'||backup?.schemaVersion!==1||!Array.isArray(backup.recipes)||!Array.isArray(backup.priceBook)){
     showRecipesToast('This is not a supported Mise en Price backup. Your current data has not changed.');return;
   }
+  if(mmUser?.id!==userId){showRecipesToast('The signed-in account changed. Choose the backup again in the intended account.');return;}
   const incomingRecipes=backup.recipes.map(mmBackupRecipe).filter(Boolean),incomingPrices=backup.priceBook.map(mmBackupPrice).filter(Boolean);
   const skippedRecipes=backup.recipes.length-incomingRecipes.length,skippedPrices=backup.priceBook.length-incomingPrices.length;
-  const currentRecipes=readLibrary(),currentPrices=readPriceBook();
+  let currentRecipes;
+  try{currentRecipes=mmReadStoredLibrary();}catch(error){showRecipesToast('Could not read your saved recipes. The backup has not been merged. '+error.message);return;}
+  const currentPrices=readPriceBook();
   const accepted=confirm(`Merge ${incomingRecipes.length} recipe${incomingRecipes.length===1?'':'s'} and ${incomingPrices.length} supplier price${incomingPrices.length===1?'':'s'} from this backup into the signed-in account? Current recipes and prices are kept; conflicting recipe versions are added as copies, and matching supplier items keep their current price.${skippedRecipes||skippedPrices?` Invalid rows will be skipped (${skippedRecipes} recipe${skippedRecipes===1?'':'s'}, ${skippedPrices} price${skippedPrices===1?'':'s'}).`:''}`);
   if(!accepted)return;
+  if(mmUser?.id!==userId){showRecipesToast('The signed-in account changed. The backup has not been merged.');return;}
   let recipeCopies=0,priceCopies=0,priceMatches=0;
   const recipes=[...currentRecipes],recipeById=new Map(recipes.map(item=>[item.id,item]));
   const prices=[...currentPrices],priceByProduct=new Map(prices.map(item=>[mmBackupRecordKey(item),item])),priceById=new Map(prices.map(item=>[item.id,item])),restoredPriceIds=new Map();
@@ -174,7 +188,9 @@ async function restoreAccountBackup(file){
   const recipeCount=recipes.length-currentRecipes.length,priceCount=prices.length-currentPrices.length;
   try{
     if(priceCount)writePriceBook(prices);
-    if(recipeCount)writeLibrary(recipes);
+    // A price-book merge can pin legacy supplier IDs. Read those fresh stored
+    // records after that step, then append only the imported additions.
+    if(recipeCount)writeLibrary([...mmReadStoredLibrary(),...recipes.slice(currentRecipes.length)]);
   }catch(error){
     refreshLibrary(currentRecipeId);renderPriceBook();
     showRecipesToast('The backup could not be fully saved. Some rows may already be on this device; check Recipes and Prices before retrying.');
@@ -337,12 +353,12 @@ function loadRecipe(d){
   hasUnsavedChanges=false;calculate();updateRecipeHeader();refreshLibrary(currentRecipeId);
 }
 async function saveCurrentRecipe(){
-  const items=readLibrary();const data=recipeData();
-  if(!currentRecipeId){data.id=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16)})}
-  const index=items.findIndex(r=>r.id===data.id);
-  if(index>=0)items[index]=data;else items.push(data);
   let savedOnDevice=false;
   try{
+    const items=mmReadStoredLibrary();const data=recipeData();
+    if(!currentRecipeId){data.id=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16)})}
+    const index=items.findIndex(r=>r.id===data.id);
+    if(index>=0)items[index]=data;else items.push(data);
     writeLibrary(items);savedOnDevice=true;currentRecipeId=data.id;hasUnsavedChanges=false;refreshLibrary(currentRecipeId);updateRecipeHeader();mmClearRecipeDraft();
     if(!mmUser || !mmCloudReady) { showToast(`Saved “${data.name}” on this device. It will sync when you are online.`); if(mmUser)mmAuthMessage('Saved on this device. Cloud sync will resume when online.'); return; }
     mmAuthMessage('Saving recipe to your cloud account…');
@@ -412,20 +428,24 @@ function openRecipeById(id){
 }
 function renameRecipeById(id){
   if(!id)return;
-  const items=readLibrary(),item=items.find(r=>r.id===id);if(!item)return;
-  const name=prompt('Enter a new name for this recipe:',item.name||'Untitled recipe');
-  if(name===null)return;if(!name.trim()){alert('Please enter a recipe name.');return}
-  item.name=name.trim();item.updatedAt=new Date().toISOString();
-  try{writeLibrary(items);if(currentRecipeId===id){$('recipeName').value=item.name;hasUnsavedChanges=true;mmSaveRecipeDraftSoon();updateRecipeHeader()}refreshLibrary(id);showToast(`Renamed recipe to “${item.name}”.`)}
-  catch(e){showToast('Could not rename recipe. Browser storage may be unavailable.')}
+  try{
+    const userId=mmUser?.id,items=mmReadStoredLibrary(),index=items.findIndex(r=>r.id===id),item=items[index];if(!item)return;
+    const name=prompt('Enter a new name for this recipe:',item.name||'Untitled recipe');
+    if(name===null)return;if(!name.trim()){alert('Please enter a recipe name.');return;}
+    if(mmUser?.id!==userId){showToast('The signed-in account changed. The recipe was not renamed.');return;}
+    items[index]={...item,name:name.trim(),updatedAt:new Date().toISOString()};
+    writeLibrary(items);if(currentRecipeId===id){$('recipeName').value=name.trim();hasUnsavedChanges=true;mmSaveRecipeDraftSoon();updateRecipeHeader()}refreshLibrary(id);showToast(`Renamed recipe to “${name.trim()}”.`);
+  }catch(e){showToast('Could not rename recipe. Browser storage may be unavailable. '+e.message)}
 }
 function deleteRecipeById(id){
   if(!id)return;
-  const items=readLibrary(),item=items.find(r=>r.id===id);if(!item)return;
-  if(currentRecipeId===id&&!maybeSaveChanges())return;
-  if(!confirm(`Delete “${item.name}” from your account and synced devices? Download a backup first if you may need it.`))return;
-  try{writeLibrary(items.filter(r=>r.id!==id));if(currentRecipeId===id){currentRecipeId=null;loadRecipe({name:'',yield:10,sellingPrice:0,targetGp:70,ingredients:[]});hasUnsavedChanges=false;mmClearRecipeDraft()}refreshLibrary();showToast(`Deleted “${item.name}” from your account.`)}
-  catch(e){showToast('Could not delete recipe.')}
+  try{
+    const userId=mmUser?.id,items=mmReadStoredLibrary(),item=items.find(r=>r.id===id);if(!item)return;
+    if(currentRecipeId===id&&!maybeSaveChanges())return;
+    if(!confirm(`Delete “${item.name}” from your account and synced devices? Download a backup first if you may need it.`))return;
+    if(mmUser?.id!==userId){showToast('The signed-in account changed. The recipe was not deleted.');return;}
+    writeLibrary(items.filter(r=>r.id!==id));if(currentRecipeId===id){currentRecipeId=null;loadRecipe({name:'',yield:10,sellingPrice:0,targetGp:70,ingredients:[]});hasUnsavedChanges=false;mmClearRecipeDraft()}refreshLibrary();showToast(`Deleted “${item.name}” from your account.`);
+  }catch(e){showToast('Could not delete recipe. '+e.message)}
 }
 $('openRecipe').addEventListener('click',()=>openRecipeById($('recipeSelect').value));
 $('renameRecipe').addEventListener('click',()=>renameRecipeById($('recipeSelect').value));

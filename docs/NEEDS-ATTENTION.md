@@ -33,16 +33,17 @@ The list is collapsed initially, pages in 20s, renders names as text, reads only
 relevant views and clears state across sign-out/account changes. Unreadable cache
 shows recovery guidance instead of an all-clear and is never erased.
 
-Existing recipe, pricing, price-book, scanner/invoice, Auth/cloud, billing/security,
-Supabase schema/policies, guide, supplier-alert, logo and marketing implementation
-files are unchanged. No migration or live customer account is needed to test this.
+The paired recipe-snapshot isolation fix updates recipe persistence so only the
+selected Save acknowledges current prices. Existing pricing, price-book, invoice/
+scanner, Auth/cloud, billing/security, Supabase schema/policies, guide, supplier-
+alert UI, logo and marketing implementations are unchanged. No migration or live
+customer account is needed to test this.
 
-A pre-existing limitation discovered by integration testing: saveCurrentRecipe()
-reads the resolved whole library before saving, so an explicit Save of one recipe
-can also refresh stored supplier-price snapshots in others. This feature neither
-introduces nor changes that behavior. It can affect supplier-alert comparison
-baselines; a separate narrowly scoped fix should be reviewed and tested before
-changing it. The Needs attention comparison uses current resolved costs.
+The save-snapshot issue found during integration testing is fixed by the paired
+[recipe snapshot isolation change](RECIPE-SNAPSHOT-ISOLATION.md). Saving, renaming,
+deleting, exporting or restoring another recipe cannot acknowledge unreviewed
+price comparisons. Already overwritten historical baselines are not invented or
+automatically reconstructed.
 
 Automated coverage uses the actual shared helpers and real app scripts with
 synthetic isolated Auth/cloud records. It tests direct field focus, invoice/price
