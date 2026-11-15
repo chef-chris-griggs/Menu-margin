@@ -126,7 +126,8 @@ async function run(browserType,viewport) {
       'restaurant-supplier-price-tracking.html',
       'catering-recipe-costing.html',
       'recipe-costing-software.html',
-      'invoice-scanning-for-chefs.html'
+      'invoice-scanning-for-chefs.html',
+      'recipe-scanning-for-chefs.html'
     ];
     for (const slug of seoPages) {
       const seo = await browser.newPage({viewport,deviceScaleFactor:1});
@@ -140,8 +141,10 @@ async function run(browserType,viewport) {
       check(await seo.locator('link[rel="canonical"]').getAttribute('href')==='https://miseenprice.co.uk/'+slug.replace(/\.html$/,''),slug+' canonical changed');
       check(await seo.locator('img[src="./miseenprice-logo.svg"]').first().isVisible(),slug+' branded logo missing');
       check(await seo.locator('link[href="./seo-premium.css"]').count()===1,slug+' premium stylesheet missing');
-      const shot=await seo.locator('.premium-visual img').first().evaluate(i=>({ready:i.complete,width:i.naturalWidth,visible:!!i.getClientRects().length}));
-      check(shot.ready&&shot.width>0&&shot.visible,slug+' product screenshot not loaded');
+      if (slug !== 'recipe-scanning-for-chefs.html') {
+        const shot=await seo.locator('.premium-visual img').first().evaluate(i=>({ready:i.complete,width:i.naturalWidth,visible:!!i.getClientRects().length}));
+        check(shot.ready&&shot.width>0&&shot.visible,slug+' product screenshot not loaded');
+      }
       if (slug === 'free-recipe-costing-calculator.html') {
         check(await seo.locator('a[href="#try-recipe"]').count()>=1,slug+' in-page calculator link missing');
         check(await seo.locator('#demoForm').isVisible(),slug+' real calculator not visible');
@@ -159,7 +162,10 @@ async function run(browserType,viewport) {
         check(await seo.locator('.demo-ingredient').count()===3,slug+' remove-ingredient action failed');
         check((await seo.locator('#gpPercent').textContent())==='89.6%',slug+' GP did not recover');
       } else {
-        if (['restaurant-menu-pricing-guide.html','food-gp-calculator.html'].includes(slug)) {
+        if (slug === 'recipe-scanning-for-chefs.html') {
+          check(await seo.locator('a[href="/free-recipe-costing-calculator#try-recipe"]').count()===1,slug+' public calculator link missing');
+          check(await seo.locator('#review-title').isVisible(),slug+' manual review explanation missing');
+        } else if (['restaurant-menu-pricing-guide.html','food-gp-calculator.html'].includes(slug)) {
           check(await seo.locator('a[href="./free-recipe-costing-calculator#try-recipe"]').count()>=1,slug+' dedicated calculator link missing');
         } else {
           check(await seo.locator('a[href="./#try-recipe"]').count()>=1,slug+' free calculator link missing');
