@@ -10,10 +10,12 @@ ambiguous matches, removed products and unit compatibility remain authoritative.
 
 The comparison is against each recipe’s stored pack-price snapshot, not against
 an invented last invoice, a market price, or a time-based notification history.
-Opening a recipe does not acknowledge the alert. Explicitly saving it records its
-then-current prices through the original save action. Existing operations that
-already save resolved recipe data, such as rename/backup restoration, also affect
-that stored comparison point. No new historical ledger or database schema is used.
+Opening a recipe does not acknowledge the alert. Explicitly saving it records
+only that recipe’s current prices. Other saved recipes retain their comparison
+snapshots, including during rename, delete and backup operations. Backups retain
+saved recipe snapshots and the current price book separately. No historical ledger
+or database schema is introduced; comparisons erased by earlier saves cannot be
+reconstructed automatically without guessing.
 
 Cost increases are ranked by extra cost per portion; decreases and price checks
 are visible separately. Both pack size and price matter: a larger dearer pack may
@@ -30,8 +32,9 @@ The optional list is collapsed initially and paged in groups of 20. It reads onl
 when relevant views are visited, coalesces changes and clears account state on
 sign-out/switch. Names and supplier descriptions use textContent. The original
 Open/unsaved-change confirmation and Save actions remain in control. Existing
-recipe, pricing, invoice/scanner, Auth/cloud, billing, security, marketing and logo
-implementation files are unchanged. No production migration is required.
+pricing, invoice/scanner, Auth/cloud, billing/security, marketing and logo
+implementation files are unchanged. Recipe storage operations now preserve
+unreviewed comparison snapshots. No production migration is required.
 
 Tests use actual shared costing/pricing helpers and real app scripts with
 synthetic isolated accounts/cloud data. They cover packs/units, zero/missing
