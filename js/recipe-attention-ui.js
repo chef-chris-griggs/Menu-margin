@@ -38,8 +38,8 @@
    const badges=node('div','attention-badges');for(const category of item.categories)badges.append(node('span','attention-badge',labels[category]));card.append(badges,node('h3','',item.name));
    const relevant=filter.value==='all'?item.issues:item.issues.filter(issue=>issue.category===filter.value),first=relevant[0];
    card.append(node('p','attention-primary',first.message));
-   if(item.gp!==null)card.append(node('p','attention-note','Current GP '+item.gp.toFixed(1)+'% at the saved selling price, excluding VAT.'));
-   else card.append(node('p','attention-note','Finish the costing, supplier, VAT and selling-price checks before relying on GP.'));
+   if(item.gp!==null&&!(item.shortfall>0&&item.shortfall<.1))card.append(node('p','attention-note','Current GP '+item.gp.toFixed(1)+'% at the saved selling price, excluding VAT.'));
+   else if(item.gp===null)card.append(node('p','attention-note','Finish the costing, supplier, VAT and selling-price checks before relying on GP.'));
    if(relevant.length>1){
     const all=node('details','attention-checks');all.append(node('summary','','See all '+relevant.length+' checks'));const checks=node('ul');
     for(const issue of relevant){const li=node('li');li.append(node('span','',issue.message));const button=node('button','text-button','Go to this check');button.type='button';button.addEventListener('click',()=>review(item,issue));li.append(button);checks.append(li);}all.append(checks);card.append(all);

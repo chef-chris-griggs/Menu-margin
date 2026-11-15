@@ -37,7 +37,7 @@ function mmRecipeAttention(recipe,prices){
  if(target===null)add('details','Set a GP target between 1% and 99.9%.',null,'targetGp');
  let gp=complete&&linksValid&&allExVat&&portions!==null&&selling!==null?(selling-total/portions)/selling*100:null;
  if(gp!==null&&!Number.isFinite(gp)){gp=null;add('details','Check the selling price and ingredient amounts; GP is too large to show reliably.',null,'sellingPrice');}
- if(gp!==null&&target!==null&&target-gp>1e-9)add('gp','GP is '+gp.toFixed(1)+'%, below your '+target+'% target by '+(target-gp).toFixed(1)+' percentage points.',null,'sellingPrice');
+ if(gp!==null&&target!==null&&target-gp>1e-9)add('gp',target-gp<.1?'GP is slightly below your '+target+'% target (less than 0.1 percentage points below).':'GP is '+gp.toFixed(1)+'%, below your '+target+'% target by '+(target-gp).toFixed(1)+' percentage points.',null,'sellingPrice');
  const rank={prices:0,units:1,vat:2,details:3,gp:4};issues.sort((a,b)=>rank[a.category]-rank[b.category]||(a.rowIndex??-1)-(b.rowIndex??-1));
  return {id:recipe?.id,name:recipe?.name||'Untitled recipe',issues,categories:[...new Set(issues.map(issue=>issue.category))],gp,targetGp:target,shortfall:gp!==null&&target!==null?Math.max(0,target-gp):null,portionCost:complete&&linksValid&&portions!==null?total/portions:null,priority:issues.length?rank[issues[0].category]:5};
 }

@@ -66,6 +66,7 @@ try{
   const row={name:'Butter',qty:100,qtyUnit:'g',pack:1000,packUnit:'g',price:10,priceEntered:true,priceLinkMode:'manual',priceBasis:'ex_vat'};
   const records=[['Healthy',{},{}],['Missing pack price',{price:'',priceEntered:false},{}],['Ambiguous supplier',{priceBookId:price.id,priceLinkMode:'auto'},{}],['Incompatible units',{qtyUnit:'ml'},{}],['Manual VAT check',{priceBasis:'unknown'},{}],['Selling price needed',{}, {sellingPrice:0}],['Portions needed',{}, {yield:0}],['Below target',{}, {sellingPrice:.5}],['Removed supplier',{priceBookId:'foreign-account-product',priceLinkMode:'linked'},{}],['Supplier VAT check',{name:'Stock',priceBookId:__stockId,priceLinkMode:'linked'},{}],['Empty recipe',{}, {ingredients:[]}],['Current linked price',{priceBookId:price.id,priceLinkMode:'linked'},{}]];
   records[2][1].priceBookId=null;
+  records.push(['Slightly below target',{qty:300.4},{yield:1,sellingPrice:10}]);
   records.push(['Several checks',{qty:'',pack:'',price:'',priceEntered:false},{sellingPrice:0}]);
   __db.recipes=records.map(([name,extra,recipe],i)=>({id:'20000000-0000-4000-8000-'+String(i+1).padStart(12,'0'),user_id:'account-a',name,recipe_data:{name,yield:4,sellingPrice:5,targetGp:70,ingredients:[{...row,...extra}],...recipe},updated_at:'2026-10-01T00:00:00Z'}));
   __db.recipes.push({id:'20000000-0000-4000-8000-000000000099',user_id:'account-b',name:'B private recipe',recipe_data:{name:'B private recipe',yield:1,sellingPrice:1,targetGp:99,ingredients:[{...row,name:'B private spice',priceBookId:'10000000-0000-4000-8000-000000000099',priceLinkMode:'linked'}]},updated_at:'2026-10-01T00:00:00Z'});
@@ -73,11 +74,12 @@ try{
   return mmEnterApp({id:'account-a',email:'chef-a@example.invalid'});
  });await settle();
  await page.evaluate(()=>{window.__attentionWrites=[];window.__attentionReads=[];const original=Storage.prototype.setItem,read=mmReadUserCache;window.__restoreProbe=()=>{Storage.prototype.setItem=original;mmReadUserCache=read;};Storage.prototype.setItem=function(key,value){if([mmAccountCacheKey(MM_LIBRARY_KEY,mmUser.id),mmAccountCacheKey(MM_PRICEBOOK_KEY,mmUser.id)].includes(key))__attentionWrites.push(key);return original.call(this,key,value);};mmReadUserCache=(key,id)=>{__attentionReads.push(id);return read(key,id);};window.__beforeAttention=JSON.stringify({recipes:mmReadUserCache(MM_LIBRARY_KEY,mmUser.id),prices:readPriceBook()});});
- await open();await page.waitForFunction(()=>document.querySelectorAll('#needsAttentionList article').length===11);
- assert.match(await page.locator('#needsAttentionStatus').textContent(),/11 recipes need attention/);assert.equal(await card('Healthy').count(),0);assert.equal(await card('Current linked price').count(),0);
+ await open();await page.waitForFunction(()=>document.querySelectorAll('#needsAttentionList article').length===12);
+ assert.match(await page.locator('#needsAttentionStatus').textContent(),/12 recipes need attention/);assert.equal(await card('Healthy').count(),0);assert.equal(await card('Current linked price').count(),0);
  assert.match(await card('Below target').textContent(),/GP is 50.0%, below your 70% target/);assert.doesNotMatch(await card('Missing pack price').textContent(),/Current GP/);assert.doesNotMatch(await card('Incompatible units').textContent(),/Current GP/);
+ assert.match(await card('Slightly below target').textContent(),/slightly below.*less than 0.1/);assert.doesNotMatch(await card('Slightly below target').textContent(),/by 0.0|Current GP 70.0%/);
  assert.doesNotMatch(await page.locator('#needsAttentionPanel').textContent(),/B private/);
- for(const [value,count] of [['prices',4],['units',3],['vat',2],['details',3],['gp',1],['all',11]]){await page.locator('#needsAttentionFilter').selectOption(value);assert.equal(await page.locator('#needsAttentionList article').count(),count);}
+ for(const [value,count] of [['prices',4],['units',3],['vat',2],['details',3],['gp',2],['all',12]]){await page.locator('#needsAttentionFilter').selectOption(value);assert.equal(await page.locator('#needsAttentionList article').count(),count);}
  assert.deepEqual(await page.evaluate(()=>__attentionWrites),[]);assert.ok((await page.evaluate(()=>__attentionReads)).every(id=>id==='account-a'));assert.equal(await page.evaluate(()=>JSON.stringify({recipes:mmReadUserCache(MM_LIBRARY_KEY,mmUser.id),prices:readPriceBook()})===__beforeAttention),true);await page.evaluate(()=>__restoreProbe());
  checks.push('Every saved recipe is checked, including unchanged-price GP problems; all filters use actual data and reading/filtering writes nothing or reads another account');
  await mkdir(path.join(root,'reports/recipe-attention'),{recursive:true});
@@ -108,6 +110,7 @@ try{
  await card('Selling price needed').getByRole('button',{name:'Review recipe',exact:true}).click();await focused('#sellingPrice');await page.locator('#sellingPrice').fill('5');await save();await gone('Selling price needed');
  await card('Portions needed').getByRole('button',{name:'Review recipe',exact:true}).click();await focused('#yield');assert.equal(await page.evaluate(()=>mmReadUserCache(MM_LIBRARY_KEY,mmUser.id).find(r=>r.name==='Portions needed').yield),0);await page.locator('#yield').fill('4');await save();await gone('Portions needed');
  await card('Below target').getByRole('button',{name:'Review recipe',exact:true}).click();await focused('#sellingPrice');await page.locator('#sellingPrice').fill('2');await save();await gone('Below target');
+ await card('Slightly below target').getByRole('button',{name:'Review recipe',exact:true}).click();await focused('#sellingPrice');await page.locator('#sellingPrice').fill('11');await save();await gone('Slightly below target');
  await card('Empty recipe').getByRole('button',{name:'Review recipe',exact:true}).click();await focused('#addIngredient');
  const blank=page.locator('#ingredients tr').first();await blank.locator('.ingredient').fill('Salt');await blank.locator('.qty').fill('100');await blank.locator('.pack').fill('1000');await blank.locator('.price').fill('0');if(!await blank.locator('.ingredient-vat-basis').isVisible())await blank.locator('.ingredient-price-disclosure').click();await blank.locator('.ingredient-vat-basis').selectOption('ex_vat');await save();
  await page.waitForFunction(()=>document.getElementById('needsAttentionStatus').textContent.includes('No outstanding checks'));

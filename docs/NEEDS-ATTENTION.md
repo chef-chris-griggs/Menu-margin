@@ -20,6 +20,8 @@ saved selling price, all on a confirmed excluding-VAT basis. Unknown/including-V
 prices require checking; no tax rate or conversion is guessed. Missing/invalid
 selling price, target or portions directs the chef to existing fields. A below-
 target warning is shown only when a reliable actual GP and valid target exist.
+Tiny genuine shortfalls are labelled slightly below target, avoiding misleading
+rounded messages that imply equal GP or zero percentage-point loss.
 
 Review actions call the existing recipe Open/unsaved-change guard, or open the
 exact current supplier item in the existing price editor. They focus the relevant

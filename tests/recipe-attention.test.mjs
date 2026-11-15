@@ -76,3 +76,10 @@ test('reports put costing problems ahead of reliable GP shortfalls, retain sourc
 test('a different account book cannot resolve the signed-in account’s pinned product ID',()=>{
  const r=run(dish({ingredients:[row({priceBookId:'account-a-item',priceLinkMode:'linked'})]}),[book({id:'account-b-item'})]);assert.ok(has(r,'prices'));assert.equal(r.gp,null);
 });
+
+test('tiny genuine shortfalls are never described as zero points below a rounded equal GP',()=>{
+ for(const qty of [300.4,300.0001]){
+  const r=run(dish({yield:1,sellingPrice:10,targetGp:70,ingredients:[row({qty,qtyUnit:'g',pack:1000,packUnit:'g',price:10})]}));
+  assert.ok(has(r,'gp'));assert.ok(r.gp<70);assert.match(r.issues[0].message,/slightly below.*less than 0.1/);assert.doesNotMatch(r.issues[0].message,/by 0.0|GP is 70.0%/);
+ }
+});
