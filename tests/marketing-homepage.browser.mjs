@@ -177,6 +177,19 @@ async function run(browserType,viewport) {
       check(issues.length===0,slug+' JavaScript errors '+issues.join('; '));
       await seo.close();
     }
+    const legacy = await browser.newPage({viewport,deviceScaleFactor:1});
+    await legacy.goto(origin+'/one-recipe-demo', {waitUntil:'networkidle'});
+    check(await legacy.locator('link[rel="canonical"]').getAttribute('href')==='https://miseenprice.co.uk/free-recipe-costing-calculator', 'legacy demo canonical must point to the fuller calculator');
+    check(await legacy.locator('#demoForm').isVisible(), 'legacy demo must stay usable');
+    await legacy.waitForFunction(()=>document.querySelector('#gpPercent')?.textContent?.includes('%'));
+    check(await legacy.locator('#batchCost').textContent()==='£5.20', 'legacy batch calculation changed');
+    await legacy.locator('#sellPrice').fill('10');
+    check(await legacy.locator('#gpPercent').textContent()==='94.8%', 'legacy GP interaction changed');
+    await legacy.locator('#addIngredient').click();
+    check(await legacy.locator('.demo-ingredient').count()===4, 'legacy add ingredient failed');
+    await legacy.locator('.demo-ingredient').last().getByRole('button',{name:'Remove ingredient'}).click();
+    check(await legacy.locator('.demo-ingredient').count()===3, 'legacy remove ingredient failed');
+    await legacy.close();
     const templatePage = await browser.newPage({viewport,deviceScaleFactor:1});
     const templateErrors=[];
     templatePage.on('pageerror', e=>templateErrors.push(e.message));
