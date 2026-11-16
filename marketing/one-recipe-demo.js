@@ -28,7 +28,7 @@ if(copyDemoButton){copyDemoButton.addEventListener('click',async()=>{
     const fields=[...row.querySelectorAll('input,select')].map(el=>el.value.trim());
     return fields[0]+': '+fields[1]+' '+fields[2]+' used; pack '+fields[3]+' '+fields[4]+' at £'+fields[5];
   });
-  const content=['Mise en Price recipe calculator','Recipe: '+recipe,'Portions: '+portions,'Selling price per portion ex VAT: £'+selling,'Ingredients:',...ingredientLines,'Batch cost: '+document.getElementById('batchCost').textContent,'Cost per portion: '+document.getElementById('portionCost').textContent,'Food-cost GP: '+document.getElementById('gpPercent').textContent].join('\\n');
+  const content=['Mise en Price recipe calculator','Recipe: '+recipe,'Portions: '+portions,'Selling price per portion ex VAT: £'+selling,'Ingredients:',...ingredientLines,'Batch cost: '+document.getElementById('batchCost').textContent,'Cost per portion: '+document.getElementById('portionCost').textContent,'Food-cost GP: '+document.getElementById('gpPercent').textContent].join('\n');
   try{
     if(!navigator.clipboard || !navigator.clipboard.writeText)throw new Error('Clipboard unavailable');
     await navigator.clipboard.writeText(content);
