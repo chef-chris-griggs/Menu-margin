@@ -164,7 +164,7 @@ async function run(browserType,viewport) {
         // Reproduce the visible worked example in the actual calculator.
         const exampleRows = await seo.locator('#soup-costing-ingredients tbody tr').evaluateAll(rows=>rows.map(row=>[...row.children].map(cell=>cell.textContent.trim())));
         check(exampleRows.length===9, 'worked example needs all nine ingredients, including bread and butter');
-        check(await seo.locator('.walkthrough-disclosure').textContent().then(t=>t.includes('Illustrative example.')&&t.includes('not current supplier quotes')), 'sample prices must be disclosed');
+        check(await seo.locator('.walkthrough-disclosure').textContent().then(t=>t.includes('Illustrative example.')&&t.includes('sample pack prices')&&t.includes('assumed yield')), 'sample prices must be disclosed');
         const measure = text => { const m=text.match(/^([\d.]+) (kg|g|ml|l|each)$/); if(!m)throw Error('Invalid worked quantity: '+text);return {value:m[1],unit:m[2],base:Number(m[1])*(m[2]==='kg'||m[2]==='l'?1000:1)}; };
         let exampleTotal=0;
         for(const [name,used,pack,price,cost] of exampleRows){
