@@ -161,6 +161,47 @@ async function run(browserType,viewport) {
         await seo.locator('.demo-ingredient').last().locator('.demo-remove').click();
         check(await seo.locator('.demo-ingredient').count()===3,slug+' remove-ingredient action failed');
         check((await seo.locator('#gpPercent').textContent())==='89.6%',slug+' GP did not recover');
+        // Reproduce the visible worked example in the actual calculator.
+        const exampleRows = await seo.locator('#soup-costing-ingredients tbody tr').evaluateAll(rows=>rows.map(row=>[...row.children].map(cell=>cell.textContent.trim())));
+        check(exampleRows.length===9, 'worked example needs all nine ingredients, including bread and butter');
+        check(await seo.locator('.walkthrough-disclosure').textContent().then(t=>t.includes('Illustrative example.')&&t.includes('not current supplier quotes')), 'sample prices must be disclosed');
+        const measure = text => { const m=text.match(/^([\d.]+) (kg|g|ml|l|each)$/); if(!m)throw Error('Invalid worked quantity: '+text);return {value:m[1],unit:m[2],base:Number(m[1])*(m[2]==='kg'||m[2]==='l'?1000:1)}; };
+        let exampleTotal=0;
+        for(const [name,used,pack,price,cost] of exampleRows){
+          const calculated=measure(used).base/measure(pack).base*Number(price.replace('£',''));
+          check(Math.abs(calculated-Number(cost.replace('£','')))<0.000001, 'incorrect visible ingredient cost: '+name);
+          exampleTotal+=calculated;
+        }
+        check(Math.abs(exampleTotal-24)<0.000001, 'visible ingredient table must total £24');
+        while(await seo.locator('.demo-ingredient').count()) await seo.locator('.demo-remove').first().click();
+        for(const [name,used,pack,price] of exampleRows){
+          await seo.locator('#addIngredient').click();
+          const row=seo.locator('.demo-ingredient').last(), usedQty=measure(used), packQty=measure(pack);
+          await row.locator('input[type="text"]').fill(name);
+          await row.locator('input[type="number"]').nth(0).fill(usedQty.value);
+          await row.locator('select').nth(0).selectOption(usedQty.unit);
+          await row.locator('input[type="number"]').nth(1).fill(packQty.value);
+          await row.locator('select').nth(1).selectOption(packQty.unit);
+          await row.locator('input[type="number"]').nth(2).fill(price.replace('£',''));
+        }
+        await seo.locator('#portions').fill('20');
+        await seo.locator('#sellPrice').fill('4');
+        check(await seo.locator('#batchCost').textContent()==='£24.00', 'worked example batch cost');
+        check(await seo.locator('#portionCost').textContent()==='£1.20', 'worked example portion cost');
+        check(await seo.locator('#gpValue').textContent()==='£2.80', 'worked example cash GP');
+        check(await seo.locator('#gpPercent').textContent()==='70.0%', 'worked example GP');
+        await seo.locator('#portions').fill('18');
+        check(await seo.locator('#portionCost').textContent()==='£1.33', 'reduced yield must change portion cost');
+        await seo.locator('#portions').fill('20');
+        await seo.locator('.demo-ingredient').first().locator('input[type="number"]').nth(2).fill('15');
+        check(await seo.locator('#batchCost').textContent()==='£26.00', 'tomato pack increase must add £2 to batch');
+        check(await seo.locator('#portionCost').textContent()==='£1.30', 'changed-price portion cost');
+        check(await seo.locator('#gpPercent').textContent()==='67.5%', 'changed-price GP');
+        check(Math.ceil((1.30/(1-0.70))*100)/100===4.34, 'target selling price must round upwards');
+        check((4.33-1.30)/4.33*100<70, '£4.33 does not reach the unrounded target');
+        check(await seo.locator('.costing-walkthrough').textContent().then(t=>t.includes('£4.34')&&t.includes('2.5 percentage points')), 'written target/GP change explanation');
+        const exampleTableLayout=await seo.locator('.walkthrough-table-scroll').evaluate(e=>({width:e.clientWidth,scroll:e.scrollWidth,overflow:getComputedStyle(e).overflowX}));
+        check(exampleTableLayout.overflow==='auto', 'mobile table must scroll within its container');
       } else {
         if (slug === 'recipe-scanning-for-chefs.html') {
           check(await seo.locator('a[href="/free-recipe-costing-calculator#try-recipe"]').count()===1,slug+' public calculator link missing');
