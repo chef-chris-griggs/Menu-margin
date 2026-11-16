@@ -17,3 +17,23 @@ document.getElementById('addIngredient').addEventListener('click',()=>{
   const status=document.getElementById('demoAddStatus');
   if(status)status.textContent='Ingredient added. Enter a name and pack details.';
 });document.getElementById('demoForm').addEventListener('submit',e=>e.preventDefault());['portions','sellPrice'].forEach(id=>document.getElementById(id).addEventListener('input',calculate));examples.forEach(addRow);
+// Preserve a user-controlled copy of demo inputs without transmitting supplier prices.
+const copyDemoButton=document.getElementById('copyDemoRecipe');
+if(copyDemoButton){copyDemoButton.addEventListener('click',async()=>{
+  const status=document.getElementById('copyDemoStatus');
+  const recipe=document.getElementById('recipeName').value.trim();
+  const portions=document.getElementById('portions').value;
+  const selling=document.getElementById('sellPrice').value;
+  const ingredientLines=[...rows.children].map(row=>{
+    const fields=[...row.querySelectorAll('input,select')].map(el=>el.value.trim());
+    return fields[0]+': '+fields[1]+' '+fields[2]+' used; pack '+fields[3]+' '+fields[4]+' at £'+fields[5];
+  });
+  const content=['Mise en Price recipe calculator','Recipe: '+recipe,'Portions: '+portions,'Selling price per portion ex VAT: £'+selling,'Ingredients:',...ingredientLines,'Batch cost: '+document.getElementById('batchCost').textContent,'Cost per portion: '+document.getElementById('portionCost').textContent,'Food-cost GP: '+document.getElementById('gpPercent').textContent].join('\\n');
+  try{
+    if(!navigator.clipboard || !navigator.clipboard.writeText)throw new Error('Clipboard unavailable');
+    await navigator.clipboard.writeText(content);
+    if(status)status.textContent='Recipe details copied. Keep them to refer to when adding your recipe in the app.';
+  }catch(error){
+    if(status)status.textContent='Copy unavailable in this browser. Please save your recipe details before leaving this page.';
+  }
+});}
