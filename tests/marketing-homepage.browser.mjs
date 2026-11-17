@@ -208,6 +208,16 @@ async function run(browserType,viewport) {
           check(await seo.locator('#review-title').isVisible(),slug+' manual review explanation missing');
         } else if (['restaurant-menu-pricing-guide.html','food-gp-calculator.html'].includes(slug)) {
           check(await seo.locator('a[href="./free-recipe-costing-calculator#try-recipe"]').count()>=1,slug+' dedicated calculator link missing');
+          if (slug === 'restaurant-menu-pricing-guide.html') {
+            const cells = await seo.locator('#menu-pricing-example td').allTextContents();
+            const number = text => Number(text.match(/[0-9]+(?:\.[0-9]+)?/)?.[0]);
+            const cost = number(cells[0]), target = number(cells[1]), price = number(cells[2]);
+            check(Number.isFinite(cost) && cost > 0 && target > 0 && target < 100 && price > 0, 'menu pricing example needs valid visible inputs');
+            check((price-cost)/price*100 >= target, 'published menu price must actually meet its target GP');
+            check((price-0.01-cost)/(price-0.01)*100 < target, 'menu price should be the minimum whole-penny price meeting the target');
+            check(await seo.locator('#menu-costing-definition').isVisible(), 'menu costing definition missing');
+            check(await seo.locator('a[href="./free-recipe-costing-calculator#soup-costing-walkthrough"]').count() === 1, 'menu guide needs the existing whole-dish costing example');
+          }
         } else {
           check(await seo.locator('a[href="./#try-recipe"]').count()>=1,slug+' free calculator link missing');
         }
