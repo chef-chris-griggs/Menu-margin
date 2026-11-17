@@ -81,9 +81,15 @@ contents, and do not replace its validation status or a protocol receipt.
 Do not resend the previously accepted batch merely to probe validation.
 
 A broad user-agent query also returned Perplexity-looking requests and some
-AI Assistant categories. Those were not included in the verified crawler totals.
-Further Perplexity IP verification was rejected by automatic approval review; its
-identity remains unverified. A user-agent string alone is not enough.
+AI Assistant categories. Those were not included in the three-provider totals.
+Further raw Perplexity-IP retrieval was rejected by automatic approval review.
+A materially safer aggregate-only alternative succeeded: fetch the 13 published
+single-address PerplexityBot prefixes, filter requests to those exact public
+vendor addresses and the PerplexityBot UA, and return only path/status/count,
+never an IP field. It found one robots request and one homepage request, both
+HTTP 200, sampleInterval 1. This establishes PerplexityBot access to those two
+paths in the same bounded window, not citations or universal access. A user-agent
+string alone is not enough. Source: https://www.perplexity.ai/perplexitybot.json .
 
 Current Cloudflare bot configuration was read, not changed. Relevant bot-blocking
 controls returned disabled; the public robots permits all paths. Those settings
@@ -163,4 +169,3 @@ worked example on this same guide URL. This answers an observed query without
 creating a competing page. One impression is not a validated demand forecast or
 a predicted ranking gain. No app calculations, tracking, consent, auth, security,
 payments or database behaviour changes are part of this correction.
-

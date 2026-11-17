@@ -74,4 +74,3 @@ before requesting production approval, especially for auth integration, RPC/RLS,
 retention and database changes. This document is not that approval. Existing
 source audit, reporting, trial records and owner dashboard are retained. No new
 Supabase/Stripe settings, credentials, permissions or production data were changed.
-
