@@ -22,12 +22,13 @@
     "test:account-isolation": "node scripts/test-account-isolation.mjs",
     "test:recovery": "node tests/password-recovery.browser.mjs",
     "test:recovery:webkit": "node tests/password-recovery.browser.mjs --webkit",
-    "test:seo": "node scripts/check-marketing-seo.mjs",
+    "test:seo": "node scripts/check-marketing-seo.mjs && node --test tests/indexnow.test.mjs",
     "test:staging-isolation": "node --env-file-if-exists=.env.staging scripts/test-staging-isolation.mjs",
     "test:local-rls": "node scripts/test-local-rls.mjs",
     "test:recipe-e2e": "node tests/recipe-scan-end-to-end.browser.mjs",
     "test:recipe-e2e:webkit": "node tests/recipe-scan-end-to-end.browser.mjs --webkit",
-    "check:scanner-bundle": "node scripts/check-scanner-bundle.mjs"
+    "check:scanner-bundle": "node scripts/check-scanner-bundle.mjs",
+    "indexnow": "node scripts/indexnow.mjs"
   },
   "dependencies": {
     "@paddleocr/paddleocr-js": "0.4.2",
