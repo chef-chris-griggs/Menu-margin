@@ -1,10 +1,10 @@
 # Recipe costing walkthrough and distribution handoff
 
-Status: prepared for review, not published. This work extends the existing free calculator page rather than creating another competing search page. It is separate from PR #78 and does not authorise merging it.
+Status updated 17 November: published by approved PR #79 at f6b0ec5, with production checks completed. The existing free calculator now includes this walkthrough. This does not authorise merging PR #78. The creative sequence below remains an illustrative example, not a genuine kitchen case study.
 
 ## Content and audience
 
-Destination after an approved release: https://miseenprice.co.uk/free-recipe-costing-calculator#soup-costing-walkthrough
+Live destination: https://miseenprice.co.uk/free-recipe-costing-calculator#soup-costing-walkthrough
 
 For UK chefs costing a dish, sides, batch yield and supplier-price changes. The example covers a 20-portion soup with bread and butter. All nine pack prices are explicitly illustrative, not supplier quotes or a tested production recipe. It is not a customer case study and must not be described as Chris's actual kitchen costing or a measured saving. An actual kitchen case study still requires a chef-approved recipe, measured yield and dated purchase prices.
 
@@ -47,6 +47,9 @@ For fresh, verified resource opportunities, offer a useful worked costing exampl
 
 ## Measurement and next checks
 
-After production approval and verified release, compare finalized UK Search Console query/page impressions and clicks for the existing calculator URL over comparable weekly periods. Check relevant food-cost, portion-cost and recipe-costing query rows without replacing aggregate totals with incomplete query subtotals. Track source-specific UK engaged sessions separately from confirmed app registrations/trials and paid subscriptions. Classify owner/test activity before making acquisition claims. No ranking lift, AI citation or conversion result has been established for this unreleased content.
+After production approval and verified release, compare finalized UK Search Console query/page impressions and clicks for the existing calculator URL over comparable weekly periods. Check relevant food-cost, portion-cost and recipe-costing query rows without replacing aggregate totals with incomplete query subtotals. Track source-specific UK engaged sessions separately from confirmed app registrations/trials and paid subscriptions. Classify owner/test activity before making acquisition claims. No ranking lift, AI citation or conversion result has been established for this released content.
 
 Bing property/import consent and IndexNow/Crawler Hints verification remain separate open items under issue #77. The approved www fix is already live and must not be recreated.
+
+
+17 November operational update: PR #80 is also live. Its one approved IndexNow batch returned 202, with key validation pending. Ownership verification and sitemap submission were already accepted in Bing. Do not repeat those actions; see issue #77. A Gmail check found the Craft Guild was already pitched on 10 November, so its David Foad editorial overlap must be reconciled as an existing conversation, not a fresh cold contact.

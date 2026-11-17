@@ -29,6 +29,23 @@ for (const url of urls) {
   assert.equal(canonical, url, `Canonical does not match sitemap: ${path}`);
   assert.equal((html.match(/<h1(?:\s|>)/gi) || []).length, 1, `Expected one H1: ${path}`);
   assert(!/<meta\s+name="robots"\s+content="[^"]*noindex/i.test(html), `Sitemap contains noindex page: ${path}`);
+  for (const match of html.matchAll(/<script\b[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi)) {
+    const data = JSON.parse(match[1]);
+    assert.equal(data['@context'], 'https://schema.org', `Invalid structured-data context: ${path}`);
+    assert(data['@type'], `Missing structured-data type: ${path}`);
+    assert.equal(data.url, url, `Structured-data URL differs from canonical: ${path}`);
+    assert(data.name && data.description, `Incomplete structured-data description: ${path}`);
+  }
+}
+
+// The old tool stays usable, but only the fuller calculator is proposed for search.
+const legacyDemo = readFileSync(join(root, 'one-recipe-demo.html'), 'utf8');
+assert(!urls.includes(`${origin}/one-recipe-demo`), 'Duplicate calculator must not be proposed as a sitemap canonical');
+assert(legacyDemo.includes(`rel="canonical" href="${origin}/free-recipe-costing-calculator"`), 'Legacy demo must consolidate with the full calculator');
+assert(!/noindex/i.test(legacyDemo), 'Keep the legacy demo crawlable so its canonical can be read');
+for (const path of ['recipe-costing-software.html', 'recipe-scanning-for-chefs.html']) {
+  const html = readFileSync(join(root, path), 'utf8');
+  assert(html.includes('"@type":"WebPage"'), `Public feature page needs its structured description: ${path}`);
 }
 
 const redirects = readFileSync(join(root, '_redirects'), 'utf8');
