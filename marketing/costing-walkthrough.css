@@ -1,0 +1,11 @@
+.costing-walkthrough{scroll-margin-top:24px}
+.walkthrough-disclosure{background:#edf6ee;border-left:4px solid #176c45;border-radius:0 12px 12px 0;padding:18px 20px}
+.walkthrough-table-scroll{max-width:100%;overflow-x:auto;border:1px solid #dbe8de;border-radius:14px;margin-block:20px;background:#fff}
+.walkthrough-table-scroll:focus-visible{outline:3px solid #176c45;outline-offset:4px}
+.walkthrough-table-scroll table{min-width:620px;margin:0}
+.walkthrough-table-scroll caption,.costing-walkthrough .seo-table caption{text-align:left;font-weight:700;color:#123b2f;padding:15px 10px;caption-side:top}
+.walkthrough-table-scroll thead,.walkthrough-table-scroll tfoot{background:#edf6ee}
+.walkthrough-table-scroll tfoot td{font-weight:800;color:#123b2f}
+.walkthrough-change{background:#edf6ee;border:1px solid #cfe3d5;border-radius:14px;padding:18px 22px;margin-block:20px}
+.walkthrough-change p{margin:0}
+@media(max-width:650px){.walkthrough-disclosure,.walkthrough-change{padding:16px}.walkthrough-table-scroll caption{max-width:calc(100vw - 60px)}}

@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="./site.css">
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebPage","name":"Free Recipe Costing Calculator for UK Chefs","url":"https://miseenprice.co.uk/free-recipe-costing-calculator","description":"Learn to calculate recipe cost, cost per portion and ingredient-based gross profit. Use the free Mise en Price calculator.","isPartOf":{"@type":"WebSite","name":"Mise en Price","url":"https://miseenprice.co.uk/"}}</script>
   <link rel="stylesheet" href="./seo-premium.css">
+  <link rel="stylesheet" href="./costing-walkthrough.css">
   <link rel="stylesheet" href="./one-recipe-demo.css">
   <script src="./one-recipe-demo.js?v=20261109-blank-price" defer></script>
   <link rel="stylesheet" href="./analytics.css">
@@ -45,19 +46,49 @@
         <li><strong>Review the result.</strong> The calculator shows total ingredient cost, cost per portion, cash GP per portion and food-cost GP percentage.</li>
       </ol>
     </section>
-    <section aria-labelledby="example">
-      <h2 id="example">Worked example: recipe costing and GP</h2>
-      <p>Suppose a batch of soup costs <strong>£12.00</strong> in ingredients and makes <strong>10 portions</strong>. You sell each portion for <strong>£5.00 excluding VAT</strong>.</p>
-      <div class="seo-panel"><table class="seo-table"><tbody>
-        <tr><th scope="row">Total ingredient cost</th><td>£12.00</td></tr>
-        <tr><th scope="row">Portions made</th><td>10</td></tr>
+    <section class="costing-walkthrough" id="soup-costing-walkthrough" aria-labelledby="example">
+      <p class="seo-eyebrow">A worked kitchen costing</p>
+      <h2 id="example">How to cost a 20-portion soup, including bread and butter</h2>
+      <p>Start with the whole dish you serve. Tomatoes and stock are only part of the costing: include oil, seasoning, bread and butter before you divide the batch across your portions.</p>
+      <p class="walkthrough-disclosure"><strong>Illustrative example.</strong> These sample pack prices and the assumed yield of 20 saleable portions show the costing method. Replace them with your actual supplier prices and measured cooked yield. Use a consistent VAT basis.</p>
+      <h3>1. Calculate the cost of each ingredient used</h3>
+      <p>Divide the quantity used by the purchased pack quantity, then multiply by the whole-pack price. Keep the units compatible. For the tomatoes: 4 kg ÷ 5 kg × £12.50 = <strong>£10.00</strong>.</p>
+      <p id="ingredient-table-help" class="seo-note">On a small screen, scroll the table sideways to see pack prices and ingredient costs.</p>
+      <div class="walkthrough-table-scroll" role="region" aria-label="Soup ingredient costing table" aria-describedby="ingredient-table-help" tabindex="0">
+        <table id="soup-costing-ingredients"><caption>Soup, bread and butter: sample ingredient costs for 20 portions</caption><thead><tr><th scope="col">Ingredient</th><th scope="col">Quantity used</th><th scope="col">Pack quantity</th><th scope="col">Pack price</th><th scope="col">Cost used</th></tr></thead><tbody>
+          <tr><th scope="row">Tomatoes</th><td>4 kg</td><td>5 kg</td><td>£12.50</td><td>£10.00</td></tr>
+          <tr><th scope="row">Onions</th><td>1 kg</td><td>5 kg</td><td>£5.00</td><td>£1.00</td></tr>
+          <tr><th scope="row">Garlic</th><td>100 g</td><td>1 kg</td><td>£8.00</td><td>£0.80</td></tr>
+          <tr><th scope="row">Oil</th><td>200 ml</td><td>5 l</td><td>£15.00</td><td>£0.60</td></tr>
+          <tr><th scope="row">Vegetable stock powder</th><td>100 g</td><td>1 kg</td><td>£10.00</td><td>£1.00</td></tr>
+          <tr><th scope="row">Cream</th><td>500 ml</td><td>2 l</td><td>£6.00</td><td>£1.50</td></tr>
+          <tr><th scope="row">Seasoning blend</th><td>20 g</td><td>1 kg</td><td>£5.00</td><td>£0.10</td></tr>
+          <tr><th scope="row">Bread rolls</th><td>20 each</td><td>40 each</td><td>£12.00</td><td>£6.00</td></tr>
+          <tr><th scope="row">Butter</th><td>300 g</td><td>500 g</td><td>£5.00</td><td>£3.00</td></tr>
+        </tbody><tfoot><tr><th scope="row" colspan="4">Total batch ingredient cost</th><td>£24.00</td></tr></tfoot></table>
+      </div>
+      <p class="seo-note">Stock is costed as powder used, not as litres of prepared stock. Add water according to your recipe and the product instructions. Water is not priced in this illustration. Include any other ingredients and consumables in your own costing.</p>
+      <h3>2. Divide by the portions you actually serve</h3>
+      <p>At the assumed yield of 20 portions, <strong>£24.00 ÷ 20 = £1.20 ingredient cost per portion</strong>. If the same batch only produces 18 portions, the unrounded ingredient cost becomes £1.3333 per portion. Changing the yield changes the costing even when pack prices stay the same.</p>
+      <h3>3. Check food-cost GP against an ex-VAT selling price</h3>
+      <div class="seo-panel"><table class="seo-table" id="soup-costing-summary"><caption>Illustrative baseline at 20 portions</caption><tbody>
+        <tr><th scope="row">Batch ingredient cost</th><td>£24.00</td></tr>
+        <tr><th scope="row">Saleable portions</th><td>20</td></tr>
         <tr><th scope="row">Ingredient cost per portion</th><td>£1.20</td></tr>
-        <tr><th scope="row">Selling price per portion (ex VAT)</th><td>£5.00</td></tr>
-        <tr><th scope="row">Ingredient-based GP per portion</th><td>£3.80</td></tr>
-        <tr><th scope="row">Ingredient-based GP %</th><td>76%</td></tr>
+        <tr><th scope="row">Selling price per portion, excluding VAT</th><td>£4.00</td></tr>
+        <tr><th scope="row">Ingredient-based GP per portion</th><td>£2.80</td></tr>
+        <tr><th scope="row">Food cost percentage</th><td>30%</td></tr>
+        <tr><th scope="row">Ingredient-based GP</th><td>70%</td></tr>
       </tbody></table></div>
-      <p><strong>Cost per portion</strong> = total batch ingredient cost ÷ portions made. <strong>Ingredient-based GP %</strong> = (selling price excluding VAT − ingredient cost per portion) ÷ selling price excluding VAT × 100.</p>
-      <p class="seo-note">This is an ingredient-only gross profit calculation, not net profit. It does not automatically account for labour, utilities, rent, wastage or other operating costs. Compare costs and selling prices on a consistent VAT basis.</p>
+      <p><strong>Food-cost GP %</strong> = (£4.00 − £1.20) ÷ £4.00 × 100 = <strong>70%</strong>. Use ingredient costs and sales prices on a comparable VAT basis. This is not net profit: labour, energy, rent, waste and other operating costs still need to be covered.</p>
+      <h3>4. Re-cost the dish when a supplier price changes</h3>
+      <p>If the 5 kg tomato pack rises from <strong>£12.50 to £15.00</strong>, the 4 kg used now costs £12.00. That adds £2.00 to the batch.</p>
+      <div class="walkthrough-change"><p><strong>New batch cost: £26.00.</strong> Across 20 portions, ingredient cost rises to £1.30. Keeping the ex-VAT selling price at £4.00 reduces food-cost GP from 70% to <strong>67.5%</strong>, a fall of 2.5 percentage points.</p></div>
+      <p>To retain a 70% ingredient-based GP: £1.30 ÷ (1 − 0.70) = £4.3333… excluding VAT. Round the selling price <strong>up to at least £4.34 excluding VAT</strong> to meet the target. £4.33 falls slightly short before rounding the displayed GP. Check your final menu price against the other costs of preparing and serving the dish.</p>
+      <h3>Try the same check with one of your dishes</h3>
+      <p>Use the <a href="#try-recipe">free calculator above</a> and enter each row from your own recipe. It supports g/kg, ml/l and individual items. Include your sides and garnish, check the portion yield and change a pack price to see its effect. The calculator starts with a separate three-ingredient demonstration; this walkthrough does not replace your entries automatically.</p>
+      <p>For repeated re-costing, the full app lets you link recipes to your supplier price book. Read about <a href="/restaurant-supplier-price-tracking">supplier price tracking</a>, <a href="/recipe-scanning-for-chefs">scanning a printed recipe into a reviewable draft</a>, or <a href="/catering-recipe-costing">costing a catering menu per head</a>.</p>
+      <p class="seo-note">Mise en Price was created by Chris Griggs, a working chef.</p>
     </section>
     <section class="seo-panel" aria-labelledby="food-cost-percentage-guide">
       <h2 id="food-cost-percentage-guide">How to calculate food cost percentage and target GP</h2>

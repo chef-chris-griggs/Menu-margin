@@ -1,5 +1,26 @@
 # Search visibility investigation, issue #77
 
+## 17 November refresh
+
+This historical audit is now rebased onto production `3b0c3ef` (PRs #79 and #80).
+The canonical/menu-costing/structured-data changes below remain the proposed PR
+#78 release; they are not live yet. The later calculator walkthrough and direct
+IndexNow implementation are retained unchanged.
+
+The original www error was diagnosed as absent DNS and fixed with an approved
+exact-host 301 redirect. Bing ownership verification and sitemap submission were
+accepted on 16 November. The homepage was observed indexed; calculator/scanner
+indexing requests were accepted. PR #80 is live, and the one approved three-page
+IndexNow batch returned 202 at 06:18 UK time on 17 November. Engine-side key
+validation and authenticated reporting remain unconfirmed. Do not recreate those
+actions. Issue #77 contains release IDs and the actual receipt. Its latest status
+supersedes the historical blocker table below.
+
+The source-level conversion audit and researched partnership handoff are in
+`SEO-GROWTH-HANDOFF-2026-11-17.md`. No new traffic or conversion result is claimed.
+
+---
+
 Checked 16 November 2026 against production marketing source at `c8cf9bf`.
 This document records a read-only audit and a proposed branch change, not a release.
 
