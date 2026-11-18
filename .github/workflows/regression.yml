@@ -9,6 +9,8 @@ permissions:
 jobs:
   regression:
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
@@ -17,7 +19,6 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
-      - run: npx playwright install chromium webkit
       - run: npm run test:seo
       - run: node tests/marketing-homepage.browser.mjs
       - run: node tests/marketing-analytics.browser.mjs
