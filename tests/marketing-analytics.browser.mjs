@@ -51,6 +51,10 @@ async function run(engine, width) {
     check(await page.getByRole('region', {name:'Analytics cookies'}).isHidden(), 'Rejected choice does not prompt on every page');
     await page.locator('#addIngredient').click();
     check(await page.locator('.demo-ingredient').count() === 4, 'Calculator works when analytics rejected');
+    // Remove the newly added, intentionally blank ingredient before checking
+    // that an edited recipe yields a valid result after consent.
+    await page.getByRole('button', {name:'Remove ingredient'}).last().click();
+    check(await page.locator('.demo-ingredient').count() === 3, 'Restore valid demo before result tracking test');
     await page.getByRole('button', {name:'Cookie settings', exact:true}).click();
     await page.getByRole('button', {name:'Accept analytics', exact:true}).click();
     await page.waitForFunction(() => window.__testVendorLoads === 1);
@@ -62,7 +66,14 @@ async function run(engine, width) {
     await page.locator('#sellPrice').fill('12');
     const events = await page.evaluate(() => window.dataLayer.filter(a => a[0] === 'event').map(a => Array.from(a)));
     check(events.filter(e => e[1] === 'calculator_interaction').length === 1, 'One interaction event; default example is not use');
+    check(events.filter(e => e[1] === 'calculator_result_viewed').length === 1, 'One valid calculator result after edits; no value payload');
     check(!JSON.stringify(events).includes('11') && !JSON.stringify(events).includes('12'), 'No entered costs in custom events');
+    await page.getByRole('link', {name:/Start your free 14-day trial/i}).first().evaluate(a => {
+      a.addEventListener('click', e => e.preventDefault(), {once: true});
+      a.click();
+    });
+    const linkEvents = await page.evaluate(() => window.dataLayer.filter(a => a[0] === 'event').map(a => Array.from(a)));
+    check(linkEvents.some(e => e[1] === 'trial_cta_click' && e[2].cta_location === 'hero'), 'Trial CTA event records intent and location, not registration');
     await page.getByRole('button', {name:'Cookie settings', exact:true}).click();
     await page.getByRole('button', {name:'Accept analytics', exact:true}).click();
     check(await page.locator('#mep-google-tag').count() === 1, 'Repeated acceptance never duplicates tag');
