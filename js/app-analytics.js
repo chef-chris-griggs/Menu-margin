@@ -110,8 +110,7 @@
       banner.hidden = false;
       controls.setAttribute('aria-expanded', 'true');
     });
-    document.body.prepend(banner);
-    document.body.append(controls);
+    document.body.prepend(banner, controls);
     const saved = choice();
     banner.hidden = saved !== null;
     enabled = saved === 'accepted';
