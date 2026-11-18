@@ -1,7 +1,7 @@
 name: Mise en Price regression checks
 on:
   push:
-    branches: [main]
+    branches: [main, growth/verified-trial-ga4-20261118]
   pull_request:
   workflow_dispatch:
 permissions:
