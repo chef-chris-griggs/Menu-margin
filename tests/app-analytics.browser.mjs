@@ -5,9 +5,12 @@ import { resolve } from 'node:path';
 import { chromium, webkit } from 'playwright';
 
 const script = await readFile(resolve('js/app-analytics.js'));
-const html = '<!doctype html><html><head><title>Test app consent</title></head><body><main>Test</main><script src="/app-analytics.js"></script></body></html>';
+const stylesheet = await readFile(resolve('styles/app-analytics.css'));
+const html = '<!doctype html><html><head><title>Test app consent</title><link rel="stylesheet" href="/app-analytics.css"></head><body><main>Test</main><button id="tab-menu" style="position:fixed;right:8px;bottom:8px">Menu</button><script src="/app-analytics.js"></script></body></html>';
 const server = createServer((req, res) => {
-  if (req.url === '/app-analytics.js') {
+  if (req.url === '/app-analytics.css') {
+    res.writeHead(200, {'content-type':'text/css'}).end(stylesheet);
+  } else if (req.url === '/app-analytics.js') {
     res.writeHead(200, {'content-type':'text/javascript'}).end(script);
   } else {
     res.writeHead(200, {'content-type':'text/html'}).end(html);
@@ -28,6 +31,7 @@ for (const engine of [chromium, webkit]) {
     const page = await context.newPage();
     await page.goto(origin + '/?token=secret#secret');
     assert.equal(await page.getByRole('region', {name:'Optional app analytics'}).isVisible(), true);
+    await page.locator('#tab-menu').click(); // Analytics controls must never intercept app navigation.
     assert.deepEqual(thirdParty, [], 'No third-party requests before consent');
     assert.equal(await page.evaluate(() => typeof window.gtag), 'undefined');
     await page.getByRole('button', {name:'Reject analytics'}).click();
