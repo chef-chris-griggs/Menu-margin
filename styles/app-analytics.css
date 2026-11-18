@@ -1,6 +1,6 @@
 /* Low-profile optional analytics controls, independent of account UI. */
 .mep-app-cookie-settings { position:fixed; bottom:8px; right:8px; z-index:1100; padding:5px 9px; border:1px solid #6b827b; border-radius:6px; background:#fff; color:#153e35; font:12px system-ui,sans-serif; cursor:pointer; }
-.mep-app-analytics-banner { position:fixed; left:12px; right:12px; bottom:40px; max-width:620px; margin:auto; z-index:1101; box-sizing:border-box; padding:16px; background:#fff; color:#153e35; border:1px solid #a4b8ad; border-radius:10px; box-shadow:0 4px 20px #142e2640; font:14px/1.5 system-ui,sans-serif; }
+.mep-app-analytics-banner { position:relative; width:calc(100% - 24px); max-width:620px; margin:10px auto; z-index:1; box-sizing:border-box; padding:16px; background:#fff; color:#153e35; border:1px solid #a4b8ad; border-radius:10px; box-shadow:0 4px 20px #142e2640; font:14px/1.5 system-ui,sans-serif; }
 .mep-app-analytics-banner[hidden] { display:none; }
 .mep-app-analytics-banner p { margin:8px 0 12px; }
 .mep-app-analytics-banner a { color:#125f4b; text-decoration:underline; }
