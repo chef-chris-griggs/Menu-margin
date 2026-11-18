@@ -51,6 +51,10 @@ async function run(engine, width) {
     check(await page.getByRole('region', {name:'Analytics cookies'}).isHidden(), 'Rejected choice does not prompt on every page');
     await page.locator('#addIngredient').click();
     check(await page.locator('.demo-ingredient').count() === 4, 'Calculator works when analytics rejected');
+    // Remove the newly added, intentionally blank ingredient before checking
+    // that an edited recipe yields a valid result after consent.
+    await page.getByRole('button', {name:'Remove ingredient'}).last().click();
+    check(await page.locator('.demo-ingredient').count() === 3, 'Restore valid demo before result tracking test');
     await page.getByRole('button', {name:'Cookie settings', exact:true}).click();
     await page.getByRole('button', {name:'Accept analytics', exact:true}).click();
     await page.waitForFunction(() => window.__testVendorLoads === 1);
