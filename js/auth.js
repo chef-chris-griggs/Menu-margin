@@ -541,8 +541,21 @@ async function mmStartTrial(){
  const button=document.getElementById('mmStartTrial'),message=document.getElementById('mmBillingMessage');
  button.disabled=true;message.textContent='Checking your free-trial eligibility…';
  try{
+  // A read-only status check identifies a first trial without changing billing rules.
+  // If status cannot be verified, do not send a conversion event.
+  const userAtStart = mmUser?.id;
+  let hadNoTrial = false;
+  try {
+   const before = await mmSupabase.rpc('menu_margin_my_trial_started_at');
+   hadNoTrial = !before.error && before.data === null;
+  } catch { /* Trial activation must remain usable without analytics. */ }
   const {data:trialEnd,error:trialError}=await mmSupabase.rpc('menu_margin_start_cardless_trial');
   if(!trialError&&trialEnd&&Date.parse(trialEnd)>Date.now()){
+   // The successful server activation is authoritative. Never count repeat starts,
+   // expired trials, or a status request that could not be verified.
+   if (hadNoTrial && mmUser?.id === userAtStart) {
+    window.mmAnalyticsTrack?.('trial_started', {trial_type:'cardless_14_day'});
+   }
    message.textContent='Your free trial is active. No card is required. Opening your account…';
    await mmEnterApp(mmUser,true);return;
   }
@@ -573,7 +586,14 @@ document.getElementById('mmSignUp').addEventListener('click',async()=>{
   const email=document.getElementById('mmEmail').value.trim(),password=document.getElementById('mmPassword').value;
   if(!email||password.length<8){mmAuthMessage('Enter your email and a password of at least 8 characters first.');return;}
   mmAuthMessage('Creating your account…');const {data,error}=await mmSupabase.auth.signUp({email,password,options:{emailRedirectTo:MM_AUTH_REDIRECT_URL}});
-  if(error)mmAuthMessage(error.message);else if(!data.session)mmAuthMessage('Account created. Check your email for the confirmation link, then return here and sign in.');
+  if(error)mmAuthMessage(error.message);
+  else {
+   // Supabase can deliberately return an obfuscated user for an existing
+   // address. Only a newly created identity qualifies as a signup.
+   if(data?.user?.identities?.length > 0)
+    window.mmAnalyticsTrack?.('sign_up', {method:'email'});
+   if(!data.session)mmAuthMessage('Account created. Check your email for the confirmation link, then return here and sign in.');
+  }
 });
 const MM_RESET_COOLDOWN_KEY='menumargin-reset-email-cooldown-v1';
 let mmResetEmailSending=false,mmResetEmailUntil=0,mmResetEmailTimer=null;
