@@ -6,7 +6,7 @@
   const key = 'mep-analytics-consent-v1';
   const measurementId = 'G-E2DHD366MW';
   const maxAge = 180 * 24 * 60 * 60 * 1000;
-  let allowed = false, loaded = false, usedCalculator = false;
+  let allowed = false, loaded = false, usedCalculator = false, sawValidCalculatorResult = false;
   let banner, settings;
 
   function readChoice() {
@@ -127,8 +127,19 @@
       } else if (choice === 'accepted') { allowed = true; banner.hidden = true; loadTag(); }
     });
     document.addEventListener('input', e => {
-      if (allowed && !usedCalculator && e.target instanceof Element && e.target.closest('#demoForm')) {
+      if (!(e.target instanceof Element) || !e.target.closest('#demoForm')) return;
+      if (allowed && !usedCalculator) {
         usedCalculator = true; event('calculator_interaction', {calculator: 'one_recipe'});
+      }
+      // Count a usable result only after a real numeric/ingredient edit, never
+      // from the example prefill or the visitor merely opening the page.
+      const editedCalculation = e.target.matches('#sellPrice, #portions') ||
+        Boolean(e.target.closest('#ingredientRows'));
+      if (allowed && !sawValidCalculatorResult && editedCalculation &&
+          !document.getElementById('demoError')?.textContent &&
+          document.getElementById('gpPercent')?.textContent?.includes('%')) {
+        sawValidCalculatorResult = true;
+        event('calculator_result_viewed', {calculator: 'one_recipe'});
       }
     });
     document.addEventListener('click', e => {
@@ -136,7 +147,14 @@
       if (!a) return;
       const url = new URL(a.href, location.href);
       if (url.hostname === 'menu-margin.pages.dev' && url.pathname === '/') {
-        event('app_link_click', {link_purpose: /trial|try mise|try.*app/i.test(a.textContent) ? 'start_trial' : 'open_app'});
+        const trialLink = /trial|try mise|try.*app/i.test(a.textContent);
+        event('app_link_click', {link_purpose: trialLink ? 'start_trial' : 'open_app'});
+        if (trialLink) {
+          const location = a.closest('.homepage-hero, .hero') ? 'hero' :
+            a.closest('.homepage-demo, .demo-cta') ? 'calculator' : 'other';
+          // This measures intent, not account creation or a started free trial.
+          event('trial_cta_click', {cta_location: location});
+        }
       }
       if (url.origin === location.origin && url.pathname === '/recipe-costing-template.csv') event('costing_template_download');
     });
