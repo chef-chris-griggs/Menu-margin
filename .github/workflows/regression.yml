@@ -1,7 +1,7 @@
 name: Mise en Price regression checks
 on:
   push:
-    branches: [main]
+    branches: [main, growth/verified-trial-ga4-20261118]
   pull_request:
   workflow_dispatch:
 permissions:
@@ -9,7 +9,9 @@ permissions:
 jobs:
   regression:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -17,10 +19,10 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium webkit
       - run: npm run test:seo
       - run: node tests/marketing-homepage.browser.mjs
       - run: node tests/marketing-analytics.browser.mjs
+      - run: node tests/app-analytics.browser.mjs
       - run: npm run check:scanner-bundle
       - run: npm run test:unit
       - run: node tests/app-ios.browser.mjs && node tests/app-ios.browser.mjs --webkit

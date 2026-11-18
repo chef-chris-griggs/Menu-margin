@@ -41,3 +41,22 @@ test('paid checkout messaging does not incorrectly promise another free trial',(
  assert.match(auth,/Checkout was cancelled\. Your account is unchanged\./);
  assert.doesNotMatch(auth,/Stripe is confirming your trial/);
 });
+
+test('optional app GA4 records only authenticated server-confirmed conversion signals',()=>{
+ const app=read('js/app-analytics.js');
+ const auth=read('js/auth.js');
+ const sql=read('supabase/migrations/20261118160000_my_trial_started_at.sql');
+ const privacy=read('privacy.html');
+ const headers=read('_headers');
+ assert.match(app,/mep-app-analytics-consent-v1/);
+ assert.match(app,/\['sign_up', 'trial_started'\]/);
+ assert.match(app,/if \(!enabled \|\| !loaded/);
+ assert.doesNotMatch(app,/user_id|email_address|recipe_data/);
+ assert.match(auth,/rpc\('menu_margin_my_trial_started_at'\)/);
+ assert.match(auth,/hadNoTrial && mmUser\?\.id === userAtStart/);
+ assert.match(auth,/identities\?\.length > 0/);
+ assert.match(sql,/where t.user_id = \(select auth.uid\(\)\)/);
+ assert.match(sql,/revoke all on function public.menu_margin_my_trial_started_at\(\) from public, anon/);
+ assert.match(privacy,/optional Google Analytics 4/);
+ assert.match(headers,/www.googletagmanager.com/);
+});

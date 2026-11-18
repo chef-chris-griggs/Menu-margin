@@ -7,7 +7,7 @@
 <meta name="description" content="Recipe costing and supplier price book for busy kitchens.">
 <meta name="apple-mobile-web-app-title" content="Mise en Price">
 <meta name="color-scheme" content="light">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://cloudflareinsights.com https://*.cloudflareinsights.com https://phwdyckedcqxbojpbqgz.supabase.co wss://phwdyckedcqxbojpbqgz.supabase.co; worker-src 'self' blob:; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://static.cloudflareinsights.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.googletagmanager.com https://*.google-analytics.com; font-src 'self' data:; connect-src 'self' https://cloudflareinsights.com https://*.cloudflareinsights.com https://*.google-analytics.com https://www.googletagmanager.com https://phwdyckedcqxbojpbqgz.supabase.co wss://phwdyckedcqxbojpbqgz.supabase.co; worker-src 'self' blob:; manifest-src 'self'">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Mise en Price — Recipe Costing</title>
@@ -19,6 +19,7 @@
 <link rel="stylesheet" href="./styles/invoice-scanner.css?v=2">
 <link rel="stylesheet" href="./styles/recipe-price-links.css?v=2.1.1">
 <link rel="stylesheet" href="./styles/account.css?v=2.1.1">
+<link rel="stylesheet" href="./styles/app-analytics.css?v=1">
 <link rel="stylesheet" href="./styles/menu.css?v=2.2.0">
 <script src="./vendor/supabase/supabase.js"></script>
 <script src="./js/site-config.js?v=2.1.1" defer></script>
@@ -388,6 +389,7 @@
 <script src="./js/cloud-data.js?v=2.1.1"></script>
 <script src="./js/pricing.js?v=2.1.0"></script>
 <script src="./js/auth-recovery.js?v=2.1.2"></script>
+<script src="./js/app-analytics.js?v=1"></script>
 <script src="./js/auth.js?v=2.1.5-trial-clarity"></script>
 <script src="./js/recipe.js?v=2.2.2-snapshot-isolation"></script>
 <script src="./js/pricebook.js?v=2.2.0-menu-share"></script>
