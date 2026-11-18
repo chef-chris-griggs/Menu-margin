@@ -47,6 +47,12 @@
       allow_google_signals: false, allow_ad_personalization_signals: false,
       ads_data_redaction: true, user_data: {}, cookie_expires: maxAge / 1000
     });
+    // Keep campaign attribution when an opted-in visitor opens the app.
+    // Both domains must also be configured in GA4 Admin cross-domain settings.
+    gtag('set', 'linker', {
+      domains: ['miseenprice.co.uk', 'menu-margin.pages.dev'],
+      accept_incoming: true
+    });
     gtag('js', new Date());
     gtag('config', measurementId, {send_page_view: true});
     const script = document.createElement('script');
