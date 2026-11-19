@@ -112,6 +112,8 @@ async function run(browserType,viewport) {
     check((await page.locator('#demoError').textContent()).includes('units must match'),'unit-family mismatch not rejected');
     await second.locator('select').first().selectOption('kg');
     check((await page.locator('#demoError').textContent())==='','valid units did not recover');
+    const trialEntry=await page.getByRole('link',{name:/Start your free 14-day trial/i}).first().getAttribute('href');
+    check(trialEntry==='https://menu-margin.pages.dev/?intent=trial','Hero trial CTA must signal account creation intent');
     const trialUrls=await page.locator('a[href*="menu-margin.pages.dev"]').evaluateAll(links=>links.map(a=>a.href));
     check(trialUrls.length>=3&&trialUrls.every(x=>x.startsWith('https://menu-margin.pages.dev/')),'trial/signup links invalid');
     check(await page.locator('#pricing').isVisible(),'pricing section missing');
