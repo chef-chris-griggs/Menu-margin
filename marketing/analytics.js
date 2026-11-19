@@ -141,11 +141,17 @@
       // from the example prefill or the visitor merely opening the page.
       const editedCalculation = e.target.matches('#sellPrice, #portions') ||
         Boolean(e.target.closest('#ingredientRows'));
-      if (allowed && !sawValidCalculatorResult && editedCalculation &&
-          !document.getElementById('demoError')?.textContent &&
-          document.getElementById('gpPercent')?.textContent?.includes('%')) {
-        sawValidCalculatorResult = true;
-        event('calculator_result_viewed', {calculator: 'one_recipe'});
+      if (allowed && !sawValidCalculatorResult && editedCalculation) {
+        // Calculator input listeners update the result during the same event.
+        // Check after those listeners have run, so this event represents a
+        // valid user-edited calculation rather than the initial example.
+        queueMicrotask(() => {
+          if (!allowed || sawValidCalculatorResult ||
+              document.getElementById('demoError')?.textContent ||
+              !document.getElementById('gpPercent')?.textContent?.includes('%')) return;
+          sawValidCalculatorResult = true;
+          event('calculator_result_viewed', {calculator: 'one_recipe'});
+        });
       }
     });
     document.addEventListener('click', e => {
