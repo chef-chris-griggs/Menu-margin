@@ -5,6 +5,7 @@ import { chromium, webkit } from 'playwright';
 
 const root = resolve('marketing');
 const cloudflareHeaders = await readFile(resolve(root,'_headers'),'utf8');
+if (!cloudflareHeaders.includes('Referrer-Policy: strict-origin-when-cross-origin')) throw new Error('Website must pass only origin to the app for attribution');
 const csp = cloudflareHeaders.match(/Content-Security-Policy:\s*([^\r\n]+)/)?.[1];
 if (!csp) throw new Error('Cloudflare CSP header missing');
 const mime = { '.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.webp':'image/webp','.png':'image/png','.svg':'image/svg+xml','.xml':'application/xml' };
