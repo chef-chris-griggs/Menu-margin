@@ -582,6 +582,23 @@ document.getElementById('mmAuthForm').addEventListener('submit',async event=>{
   event.preventDefault();if(mmRecoveryMode==='error'){mmRecoveryMode='none';mmRecoveryClearUrl();}const email=document.getElementById('mmEmail').value.trim(),password=document.getElementById('mmPassword').value;
   mmAuthMessage('Signing in…');const {error}=await mmSupabase.auth.signInWithPassword({email,password});if(error)mmAuthMessage(error.message);
 });
+// Marketing trial links ask new visitors to create an account first.
+// This changes presentation only. Existing sign-in and signup handlers,
+// account validation, email verification and billing remain untouched.
+if (new URLSearchParams(window.location.search).get('intent') === 'trial') {
+  const signIn = document.getElementById('mmSignIn');
+  const signUp = document.getElementById('mmSignUp');
+  const heading = document.getElementById('mmAuthTitle');
+  const intro = document.querySelector('#mmAuthGate > p');
+  if (signIn && signUp && heading) {
+    heading.textContent = 'Start your 14-day free trial';
+    if (intro) intro.textContent = 'Enter your email and choose a password, then create your account. No payment card required.';
+    signUp.textContent = 'Create account';
+    signUp.classList.remove('secondary');
+    signIn.classList.add('secondary');
+    signUp.parentElement?.insertBefore(signUp, signIn);
+  }
+}
 document.getElementById('mmSignUp').addEventListener('click',async()=>{
   const email=document.getElementById('mmEmail').value.trim(),password=document.getElementById('mmPassword').value;
   if(!email||password.length<8){mmAuthMessage('Enter your email and a password of at least 8 characters first.');return;}
