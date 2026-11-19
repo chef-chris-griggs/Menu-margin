@@ -74,6 +74,9 @@ async function run(engine, width) {
     });
     const linkEvents = await page.evaluate(() => window.dataLayer.filter(a => a[0] === 'event').map(a => Array.from(a)));
     check(linkEvents.some(e => e[1] === 'trial_cta_click' && e[2].cta_location === 'hero'), 'Trial CTA event records intent and location, not registration');
+    const trialIndex = linkEvents.findIndex(e => e[1] === 'trial_cta_click');
+    const appIndex = linkEvents.findIndex(e => e[1] === 'app_link_click' && e[2].link_purpose === 'start_trial');
+    check(trialIndex >= 0 && appIndex > trialIndex, 'Prioritize trial-intent event before the outbound app-link event');
     await page.getByRole('button', {name:'Cookie settings', exact:true}).click();
     await page.getByRole('button', {name:'Accept analytics', exact:true}).click();
     check(await page.locator('#mep-google-tag').count() === 1, 'Repeated acceptance never duplicates tag');
