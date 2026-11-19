@@ -42,14 +42,15 @@ test('paid checkout messaging does not incorrectly promise another free trial',(
  assert.doesNotMatch(auth,/Stripe is confirming your trial/);
 });
 
-test('optional app GA4 records only authenticated server-confirmed conversion signals',()=>{
+test('optional app GA4 separates signup attempts from server-confirmed conversions',()=>{
  const app=read('js/app-analytics.js');
  const auth=read('js/auth.js');
  const sql=read('supabase/migrations/20261118160000_my_trial_started_at.sql');
  const privacy=read('privacy.html');
  const headers=read('_headers');
  assert.match(app,/mep-app-analytics-consent-v1/);
- assert.match(app,/\['sign_up', 'trial_started'\]/);
+ assert.match(app,/\['sign_up', 'signup_start', 'trial_started'\]/);
+ assert.match(auth,/mmAnalyticsTrack\?\.\('signup_start'/);
  assert.match(app,/if \(!enabled \|\| !loaded/);
  assert.doesNotMatch(app,/user_id|email_address|recipe_data/);
  assert.match(auth,/rpc\('menu_margin_my_trial_started_at'\)/);

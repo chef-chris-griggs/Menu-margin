@@ -29,7 +29,7 @@ for (const engine of [chromium, webkit]) {
       return route.fulfill({status:200, body:'', contentType:'text/javascript'});
     });
     const page = await context.newPage();
-    await page.goto(origin + '/?token=secret#secret');
+    await page.goto(origin + '/?token=secret#secret', {referer:'https://miseenprice.co.uk/sensitive?email=private%40example.com#token'});
     assert.equal(await page.getByRole('region', {name:'Optional app analytics'}).isVisible(), true);
     await page.locator('#tab-menu').click(); // Analytics controls must never intercept app navigation.
     assert.deepEqual(thirdParty, [], 'No third-party requests before consent');
@@ -46,13 +46,16 @@ for (const engine of [chromium, webkit]) {
     const locationCall = before.find(a => a[0] === 'set' && typeof a[1] === 'object' && a[1].page_location);
     assert.ok(locationCall);
     assert.equal(locationCall[1].page_location, origin + '/');
+    assert.equal(locationCall[1].page_referrer, 'https://miseenprice.co.uk/');
+    assert.doesNotMatch(JSON.stringify(before), /private%40example.com|sensitive|token=secret/);
     await page.evaluate(() => {
+      window.mmAnalyticsTrack('signup_start', {method:'email'});
       window.mmAnalyticsTrack('sign_up', {method:'email'});
       window.mmAnalyticsTrack('trial_started', {trial_type:'cardless_14_day'});
       window.mmAnalyticsTrack('trial_cta_click');
     });
     const events = await page.evaluate(() => window.dataLayer.filter(a => a[0] === 'event').map(a => Array.from(a)));
-    assert.deepEqual(events.map(e => e[1]), ['sign_up', 'trial_started']);
+    assert.deepEqual(events.map(e => e[1]), ['signup_start', 'sign_up', 'trial_started']);
     assert.doesNotMatch(JSON.stringify(events), /secret|email_address|account_id/);
     await page.getByRole('button', {name:'Analytics settings'}).click();
     await Promise.all([page.waitForEvent('load'), page.getByRole('button', {name:'Reject analytics'}).click()]);
