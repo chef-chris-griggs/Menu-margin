@@ -72,6 +72,10 @@ async function run(engine, width) {
       a.addEventListener('click', e => e.preventDefault(), {once: true});
       a.click();
     });
+    const trialTarget=await page.getByRole('link', {name:/Start your free 14-day trial/i}).first().getAttribute('href');
+    check(new URL(trialTarget).searchParams.get('intent')==='trial', 'Trial CTA must open the signup-first app view');
+    const signInTarget=await page.getByRole('link', {name:/Sign in/i}).first().getAttribute('href');
+    check(!new URL(signInTarget).searchParams.has('intent'), 'Normal sign-in link must not be rewritten');
     const linkEvents = await page.evaluate(() => window.dataLayer.filter(a => a[0] === 'event').map(a => Array.from(a)));
     check(linkEvents.some(e => e[1] === 'trial_cta_click' && e[2].cta_location === 'hero'), 'Trial CTA event records intent and location, not registration');
     const trialIndex = linkEvents.findIndex(e => e[1] === 'trial_cta_click');
