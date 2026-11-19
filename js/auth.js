@@ -602,6 +602,9 @@ if (new URLSearchParams(window.location.search).get('intent') === 'trial') {
 document.getElementById('mmSignUp').addEventListener('click',async()=>{
   const email=document.getElementById('mmEmail').value.trim(),password=document.getElementById('mmPassword').value;
   if(!email||password.length<8){mmAuthMessage('Enter your email and a password of at least 8 characters first.');return;}
+  // Funnel event is an attempt, not a completed signup. No email or password
+  // is included; the analytics helper respects the visitor's consent.
+  window.mmAnalyticsTrack?.('signup_start', {method:'email'});
   mmAuthMessage('Creating your account…');const {data,error}=await mmSupabase.auth.signUp({email,password,options:{emailRedirectTo:MM_AUTH_REDIRECT_URL}});
   if(error)mmAuthMessage(error.message);
   else {
