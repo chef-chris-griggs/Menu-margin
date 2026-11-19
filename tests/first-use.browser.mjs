@@ -50,7 +50,12 @@ try{
  const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));page.on('dialog',dialog=>dialog.accept());
  const progress=async value=>page.waitForFunction(n=>document.getElementById('firstUseProgress').textContent===n+' of 4 done',value);
  const openGuide=async()=>{if(!await page.locator('#firstUseDetails').evaluate(node=>node.open))await page.locator('#firstUseDetails>summary').click();};
- await page.goto(origin);await page.waitForFunction(()=>mmAppBooted);
+ await page.goto(origin+'/?intent=trial');await page.waitForFunction(()=>mmAppBooted);
+ assert.equal(await page.locator('#mmAuthTitle').textContent(),'Start your 14-day free trial');
+ assert.equal(await page.locator('#mmSignUp').textContent(),'Create account');
+ assert.equal(await page.locator('#mmSignUp').evaluate(el=>el.classList.contains('secondary')),false);
+ assert.equal(await page.locator('#mmSignIn').evaluate(el=>el.classList.contains('secondary')),true);
+ assert.equal(await page.locator('#mmSignUp').evaluate(el=>el.nextElementSibling?.id),'mmSignIn');
  assert.equal(await page.locator('#firstUseGuide').isVisible(),false);
  await page.evaluate(()=>{
   // Preserve the existing synthetic record as a returning chef's separate account.
