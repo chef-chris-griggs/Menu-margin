@@ -218,6 +218,8 @@ async function run(browserType,viewport) {
             check(await seo.locator('#menu-costing-definition').isVisible(), 'menu costing definition missing');
             check(await seo.locator('a[href="./free-recipe-costing-calculator#soup-costing-walkthrough"]').count() === 1, 'menu guide needs the existing whole-dish costing example');
           }
+        } else if (slug === 'recipe-costing-software.html') {
+          check(await seo.locator('a[href="/free-recipe-costing-calculator#try-recipe"]').count()>=1,slug+' dedicated calculator link missing');
         } else {
           check(await seo.locator('a[href="./#try-recipe"]').count()>=1,slug+' free calculator link missing');
         }
