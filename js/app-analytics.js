@@ -19,6 +19,15 @@
     // Auth links can contain secrets; do not forward any query or fragment.
     return location.origin + location.pathname;
   }
+  function safeReferrer() {
+    // Preserve the source origin across website-to-app navigation without
+    // exposing any referrer path, query parameters or auth fragments.
+    try {
+      const referrer = new URL(document.referrer);
+      return referrer.protocol === 'https:' || referrer.protocol === 'http:'
+        ? referrer.origin + '/' : '';
+    } catch { return ''; }
+  }
   function clearCookies() {
     for (const value of document.cookie.split(';')) {
       const cookieName = value.trim().split('=')[0];
@@ -43,7 +52,7 @@
       ad_user_data: 'denied', ad_personalization: 'denied'
     });
     gtag('set', {
-      page_location: safeLocation(), page_referrer: '',
+      page_location: safeLocation(), page_referrer: safeReferrer(),
       allow_google_signals: false, allow_ad_personalization_signals: false,
       ads_data_redaction: true, user_data: {}, cookie_expires: retention / 1000
     });
@@ -60,7 +69,7 @@
     document.head.append(tag);
   }
   window.mmAnalyticsTrack = (name, parameters = {}) => {
-    if (!enabled || !loaded || !['sign_up', 'trial_started'].includes(name)) return;
+    if (!enabled || !loaded || !['sign_up', 'signup_start', 'trial_started'].includes(name)) return;
     gtag('event', name, {...parameters, user_data: {}});
   };
   function apply(value) {
