@@ -154,13 +154,14 @@
       const url = new URL(a.href, location.href);
       if (url.hostname === 'menu-margin.pages.dev' && url.pathname === '/') {
         const trialLink = /trial|try mise|try.*app/i.test(a.textContent);
-        event('app_link_click', {link_purpose: trialLink ? 'start_trial' : 'open_app'});
         if (trialLink) {
           const location = a.closest('.homepage-hero, .hero') ? 'hero' :
             a.closest('.homepage-demo, .demo-cta') ? 'calculator' : 'other';
-          // This measures intent, not account creation or a started free trial.
+          // Record trial intent first, before a navigation can interrupt queued
+          // analytics events. This is not a signup or verified trial start.
           event('trial_cta_click', {cta_location: location});
         }
+        event('app_link_click', {link_purpose: trialLink ? 'start_trial' : 'open_app'});
       }
       if (url.origin === location.origin && url.pathname === '/recipe-costing-template.csv') event('costing_template_download');
     });
