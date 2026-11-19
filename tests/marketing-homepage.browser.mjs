@@ -223,6 +223,9 @@ async function run(browserType,viewport) {
           }
         } else if (slug === 'recipe-costing-software.html') {
           check(await seo.locator('a[href="/free-recipe-costing-calculator#try-recipe"]').count()>=1,slug+' dedicated calculator link missing');
+        } else if (slug === 'catering-recipe-costing.html') {
+          check(await seo.locator('a[href="./free-recipe-costing-calculator#try-recipe"]').count()>=2,slug+' both calculator actions must reach the dedicated page');
+          check(await seo.locator('a[href="./#try-recipe"]').count()===0,slug+' legacy homepage calculator link remains');
         } else {
           check(await seo.locator('a[href="./#try-recipe"]').count()>=1,slug+' free calculator link missing');
         }

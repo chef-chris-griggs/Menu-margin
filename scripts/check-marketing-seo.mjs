@@ -60,6 +60,13 @@ for (const url of urls.filter((item) => item !== origin + '/')) {
   if (matching.length) assert.equal(matching[0], expected, `Unexpected redirect target: ${matching[0]}`);
 }
 
+// UK acquisition routes should take chefs to the actual working calculator,
+// not rely on an unrelated homepage fragment.
+const catering = readFileSync(join(root, 'catering-recipe-costing.html'), 'utf8');
+assert(!catering.includes('href="./#try-recipe"'), 'Catering trial funnel points to the homepage instead of calculator');
+assert(catering.includes('href="./free-recipe-costing-calculator#try-recipe"'), 'Catering calculator link is missing');
+const gp = readFileSync(join(root, 'food-gp-calculator.html'), 'utf8');
+assert(gp.includes('free food GP and recipe calculator'), 'Food GP page lacks a clear calculator action');
 const homepage = readFileSync(join(root, 'index.html'), 'utf8');
 assert(!/href="#"/.test(homepage), 'Homepage contains empty-fragment links; use / for home');
 console.log(`SEO checks passed for ${urls.length} sitemap pages, canonicals, titles, descriptions, H1s, and robots.txt`);
