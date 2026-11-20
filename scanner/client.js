@@ -1,4 +1,4 @@
-import { decodeFilePages } from './decode.js';
+import { decodeFilePages, readRecipePdfText } from './decode.js';
 import { combinePages } from './table.js';
 
 const assetsBase=new URL('./',document.currentScript?.src||document.baseURI);
@@ -61,6 +61,12 @@ export async function scanRecipeFile(file,{onProgress,signal}={}){
   scanning=true;
   const pages=[];
   try{
+    // Searchable PDFs have actual text and page coordinates. Read that first,
+    // rather than OCRing their rendered image and merging adjacent columns.
+    let native=null;
+    try{native=await readRecipePdfText(file,{assetsBase,onProgress,signal});}
+    catch(error){if(signal?.aborted||error?.name==='AbortError')throw error;onProgress?.('PDF text unavailable; using local image recognition…');}
+    if(native)return native;
     for await(const decoded of decodeFilePages(file,{assetsBase,onProgress,signal,pageStart:pages.length+1})){
       if(pages.length>=12)throw new Error('Recipe exceeds 12 pages.');
       const response=await recognise(decoded.pixels,pages.length+1,{onProgress,signal,mode:'recipe'});
