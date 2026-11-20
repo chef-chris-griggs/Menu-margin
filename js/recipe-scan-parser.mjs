@@ -19,7 +19,7 @@ function ingredient(line){
  const raw=line.replace(/^\s*(?:(?:[-*]\s+|•\s*)|\d+[.)]\s+)/,"").trim();
  const first=amount.exec(raw),last=first?null:tail.exec(raw),m=first||last;
  if(m){
-  const candidateName=(first?m[3]:m[1]).replace(/\s*\(notes?\s+\d+\)\s*/gi,' ').replace(/,\s*(?:sliced|chopped|diced|finely|roughly|cold\b|torn\b|peeled|crushed|grated)\b.*$/i,'').trim();
+  const candidateName=(first?m[3]:m[1]).replace(/\s*\(notes?\s+\d+\)\s*/gi,' ').trim();
   // Ingredient alternatives such as 'silken or soft tofu' are names, not uncertain quantities.
   if(/\d/.test(candidateName))return {name:raw,qty:null,qtyUnit:null,needsReview:true,source:raw};
   const numeric=first?m[1]:m[2];
