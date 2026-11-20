@@ -100,7 +100,7 @@
     const title = document.createElement('strong');
     title.textContent = 'Optional app analytics';
     const paragraph = document.createElement('p');
-    paragraph.textContent = 'Help us measure verified signups and first-time trial starts. We do not send email, account IDs, recipes, prices or invoice data to Google. Your app works without analytics. ';
+    paragraph.textContent = 'Help us measure verified signups and first-time trial starts. This is a separate choice from website analytics. We do not send email, account IDs, recipes, prices or invoice data to Google. Your app works without analytics. ';
     const policy = document.createElement('a');
     policy.href = './privacy.html';
     policy.textContent = 'Privacy information';
