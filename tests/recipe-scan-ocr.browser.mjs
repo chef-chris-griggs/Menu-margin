@@ -74,22 +74,22 @@ try{
   ['Carrots julienned','300 g','Sesame seeds','40 g'],
   ['White miso paste','120 g']
  ];
- const draw=(txt,x,y)=>'BT /F1 10 Tf '+x+' '+y+' Td ('+txt.replace(/([\\\\()])/g,'\\\\$1')+') Tj ET';
+ const draw=(txt,x,y)=>'BT /F1 10 Tf '+x+' '+y+' Td ('+txt+') Tj ET';
  const commands=[draw('Korean Tofu and Ginger Soup',48,735),draw('Yield: 20 portions',48,714),draw('Ingredients',48,690)];
  sourceRows.forEach((row,i)=>row.forEach((text,j)=>commands.push(draw(text,[48,235,290,510][j],665-i*24))));
  commands.push(draw('Method',48,442));
- const stream2=commands.join('\\n');
+ const stream2=commands.join('\n');
  const objects2=[
   '<< /Type /Catalog /Pages 2 0 R >>',
   '<< /Type /Pages /Count 1 /Kids [4 0 R] >>',
   '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
   '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>',
-  '<< /Length '+Buffer.byteLength(stream2)+' >>\\nstream\\n'+stream2+'\\nendstream'
+  '<< /Length '+Buffer.byteLength(stream2)+' >>\nstream\n'+stream2+'\nendstream'
  ];
- let nativePdf='%PDF-1.4\\n',nativeOffsets=[0];
- objects2.forEach((obj,i)=>{nativeOffsets.push(Buffer.byteLength(nativePdf));nativePdf+=(i+1)+' 0 obj\\n'+obj+'\\nendobj\\n';});
+ let nativePdf='%PDF-1.4\n',nativeOffsets=[0];
+ objects2.forEach((obj,i)=>{nativeOffsets.push(Buffer.byteLength(nativePdf));nativePdf+=(i+1)+' 0 obj\n'+obj+'\nendobj\n';});
  const nativeStart=Buffer.byteLength(nativePdf);
- nativePdf+='xref\\n0 6\\n0000000000 65535 f \\n'+nativeOffsets.slice(1).map(n=>String(n).padStart(10,'0')+' 00000 n \\n').join('')+'trailer\\n<< /Size 6 /Root 1 0 R >>\\nstartxref\\n'+nativeStart+'\\n%%EOF';
+ nativePdf+='xref\n0 6\n0000000000 65535 f \n'+nativeOffsets.slice(1).map(n=>String(n).padStart(10,'0')+' 00000 n \n').join('')+'trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n'+nativeStart+'\n%%EOF';
  const native=await page.evaluate(async encoded=>MenuMarginScanner.scanRecipeFile(new File([Uint8Array.from(atob(encoded),c=>c.charCodeAt(0))],'two-column.pdf',{type:'application/pdf'})),Buffer.from(nativePdf).toString('base64'));
  assert.equal(native.source,'pdf-text','Searchable PDF should bypass image OCR');
  const nativeParsed=parseRecipeText(native.text);
