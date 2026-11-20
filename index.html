@@ -53,6 +53,7 @@
   <symbol id="icon-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="1"/><circle cx="16" cy="12" r="1"/><circle cx="10" cy="18" r="1"/></symbol>
 </svg>
 
+<p id="calculatorDraftNotice" role="status" hidden>This browser could not keep the calculator draft. Your dish is still in the calculator tab.</p>
 <section id="mmAuthGate" aria-labelledby="mmAuthTitle">
   <div class="brand auth-brand official-brand"><img class="official-logo" src="./icons/miseenprice-logo.jpg" width="1254" height="1254" alt="Mise en Price — recipe costing, menu pricing and gross profit" fetchpriority="high" decoding="async"></div>
   <h1 id="mmAuthTitle"><span>Prep it.</span> <span>Price it.</span> <span>Plate it.</span></h1>
@@ -106,6 +107,12 @@
 </nav>
 
 <main id="appMain">
+  <section id="calculatorDraftPanel" class="card" hidden aria-labelledby="calculatorDraftTitle">
+    <h2 id="calculatorDraftTitle">Your calculator dish is ready</h2>
+    <p>Review the ingredients and pack prices in the costing screen. Choose Save recipe when you are ready.</p>
+    <button type="button" id="reviewCalculatorDraft">Review my dish</button>
+    <button type="button" class="secondary" id="discardCalculatorDraft">Discard calculator draft</button>
+  </section>
   <aside id="firstUseGuide" class="first-use-guide" aria-labelledby="firstUseTitle" hidden>
     <details id="firstUseDetails" open>
       <summary><span id="firstUseTitle">Your first costed recipe</span><span id="firstUseProgress" role="status" aria-live="polite">0 of 4 done</span><svg aria-hidden="true"><use href="#icon-chevron"/></svg></summary>
@@ -389,12 +396,13 @@
 <script src="./js/cloud-data.js?v=2.1.1"></script>
 <script src="./js/pricing.js?v=2.1.0"></script>
 <script src="./js/auth-recovery.js?v=2.1.2"></script>
-<script src="./js/app-analytics.js?v=1"></script>
-<script src="./js/auth.js?v=2.1.5-trial-clarity"></script>
-<script src="./js/recipe.js?v=2.2.2-snapshot-isolation"></script>
+<script src="./js/app-analytics.js?v=2"></script>
+<script src="./js/calculator-draft.js?v=1"></script>
+<script src="./js/auth.js?v=2.1.6-calculator-draft"></script>
+<script src="./js/recipe.js?v=2.2.3-first-save"></script>
 <script src="./js/pricebook.js?v=2.2.0-menu-share"></script>
 <script src="./vendor/scanner/client.js?v=2.0.4-native-recipe-pdf"></script>
-<script src="./js/invoice.js?v=2.1.2-skip-packaging"></script>
+<script src="./js/invoice.js?v=2.1.3-stock-first-import"></script>
 <script type="module" src="./js/recipe-scan-ui.mjs?v=0.5.1-native-pdf"></script>
 <script src="./js/startup.js?v=2.1.3-email"></script>
 <script src="./js/menu.js?v=2.2.0"></script>

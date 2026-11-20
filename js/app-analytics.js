@@ -72,6 +72,16 @@
     if (!enabled || !loaded || !['sign_up', 'signup_start', 'trial_started'].includes(name)) return;
     gtag('event', name, {...parameters, user_data: {}});
   };
+  // The account key stays on the device. Event payloads contain no business data.
+  window.mmTrackFirstUse = (name, accountId) => {
+    if (!accountId || !enabled || !loaded || !['first_recipe_saved', 'first_invoice_imported'].includes(name)) return;
+    const key = 'mep-first-use:' + accountId + ':' + name;
+    try {
+      if (localStorage.getItem(key)) return;
+      localStorage.setItem(key, '1');
+      gtag('event', name, {user_data: {}});
+    } catch {}
+  };
   function apply(value) {
     enabled = value === 'accepted';
     try { localStorage.setItem(consentKey, JSON.stringify({value, at:Date.now()})); } catch {}
@@ -100,7 +110,7 @@
     const title = document.createElement('strong');
     title.textContent = 'Optional app analytics';
     const paragraph = document.createElement('p');
-    paragraph.textContent = 'Help us measure verified signups and first-time trial starts. This is a separate choice from website analytics. We do not send email, account IDs, recipes, prices or invoice data to Google. Your app works without analytics. ';
+    paragraph.textContent = 'Help us measure signups, trial starts and the first recipe save and invoice import on this device. This is a separate choice from website analytics. We do not send email, account IDs, recipes, prices or invoice data to Google. Your app works without analytics. ';
     const policy = document.createElement('a');
     policy.href = './privacy.html';
     policy.textContent = 'Privacy information';

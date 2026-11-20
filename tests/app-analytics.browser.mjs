@@ -53,10 +53,11 @@ for (const engine of [chromium, webkit]) {
       window.mmAnalyticsTrack('sign_up', {method:'email'});
       window.mmAnalyticsTrack('trial_started', {trial_type:'cardless_14_day'});
       window.mmAnalyticsTrack('trial_cta_click');
+      for (const event of ['first_recipe_saved','first_invoice_imported','first_recipe_saved']) window.mmTrackFirstUse(event, 'private-account');
     });
     const events = await page.evaluate(() => window.dataLayer.filter(a => a[0] === 'event').map(a => Array.from(a)));
-    assert.deepEqual(events.map(e => e[1]), ['signup_start', 'sign_up', 'trial_started']);
-    assert.doesNotMatch(JSON.stringify(events), /secret|email_address|account_id/);
+    assert.deepEqual(events.map(e => e[1]), ['signup_start', 'sign_up', 'trial_started', 'first_recipe_saved', 'first_invoice_imported']);
+    assert.doesNotMatch(JSON.stringify(events), /secret|email_address|account_id|private-account/);
     await page.getByRole('button', {name:'Analytics settings'}).click();
     await Promise.all([page.waitForEvent('load'), page.getByRole('button', {name:'Reject analytics'}).click()]);
     const after = await page.evaluate(() => ({disabled:window['ga-disable-G-E2DHD366MW'],tag:document.querySelector('#mep-app-google-tag')}));

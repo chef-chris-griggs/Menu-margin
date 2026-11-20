@@ -23,6 +23,7 @@ jobs:
       - run: node tests/marketing-homepage.browser.mjs
       - run: node tests/marketing-analytics.browser.mjs
       - run: node tests/app-analytics.browser.mjs
+      - run: node tests/calculator-handoff.browser.mjs
       - run: npm run check:scanner-bundle
       - run: npm run test:unit
       - run: node tests/app-ios.browser.mjs && node tests/app-ios.browser.mjs --webkit

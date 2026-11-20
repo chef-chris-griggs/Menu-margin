@@ -159,13 +159,11 @@
       if (!a) return;
       const url = new URL(a.href, location.href);
       if (url.hostname === 'menu-margin.pages.dev' && url.pathname === '/') {
-        const trialLink = /trial|try mise|try.*app/i.test(a.textContent);
+        const trialLink = url.searchParams.get('intent') === 'trial';
         if (trialLink) {
           // All free-trial CTAs lead to signup-first presentation; sign-in
           // links keep their original destinations. No identity information
           // or recipe values are added to the URL.
-          url.searchParams.set('intent', 'trial');
-          a.href = url.href;
           const location = a.closest('.homepage-hero, .hero') ? 'hero' :
             a.closest('.homepage-demo, .demo-cta') ? 'calculator' : 'other';
           // Record trial intent first, before a navigation can interrupt queued
