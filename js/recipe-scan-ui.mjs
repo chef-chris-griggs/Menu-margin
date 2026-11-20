@@ -1,4 +1,4 @@
-import {parseRecipeText,prepareRecipeImport} from './recipe-scan-parser.mjs';
+import {parseRecipeText,prepareRecipeImport} from './recipe-scan-parser.mjs?v=0.5.1-native-pdf';
 import {suggestRecipePriceMatches,compatibleRecipeProduct,recipeScanCost,recipeScanManualCost} from './recipe-price-suggestions.mjs?v=0.5.0-manual-prices';
 const el=id=>document.getElementById(id);
 let controller=null,parsed=null,scanLines=null,scanUser=null,revision=0,rowSequence=0,sourceUrl=null,rendering=false,renderPrices=null;

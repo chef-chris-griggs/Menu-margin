@@ -61,5 +61,42 @@ try{
  const result=await page.evaluate(async encoded=>MenuMarginScanner.scanRecipeFile(new File([Uint8Array.from(atob(encoded),c=>c.charCodeAt(0))],'two-pages.pdf',{type:'application/pdf'})),Buffer.from(pdf).toString('base64'));
  const parsed=parseRecipeText(result.text);assert.equal(result.pages,2);assert.deepEqual(parsed.ingredients.map(i=>[i.name.toLowerCase(),i.qty,i.qtyUnit]),[['carrots',250,'g'],['stock',500,'ml'],['eggs',2,'each']]);assert.equal(parsed.yield,4);
  console.log('PASS two-page PDF ingredients survive the page boundary');
+
+ // Exercise the entire PDF.js-native-text scanner path, rather than mocking
+ // its coordinates. Two columns with independently positioned name/amount cells.
+ const sourceRows=[
+  ['Vegetable stock','5 litres','Light soy sauce','150 ml'],
+  ['Silken or soft tofu','1.5 kg','Gochugaru Korean chilli flakes','25 g'],
+  ['Fresh ginger finely grated','120 g','Sesame oil','60 ml'],
+  ['Garlic minced','80 g','Rice vinegar','80 ml'],
+  ['Spring onions','250 g','Sugar','30 g'],
+  ['Shiitake mushrooms','600 g','Pak choi','500 g'],
+  ['Carrots julienned','300 g','Sesame seeds','40 g'],
+  ['White miso paste','120 g']
+ ];
+ const draw=(txt,x,y)=>'BT /F1 10 Tf '+x+' '+y+' Td ('+txt+') Tj ET';
+ const commands=[draw('Korean Tofu and Ginger Soup',48,735),draw('Yield: 20 portions',48,714),draw('Ingredients',48,690)];
+ sourceRows.forEach((row,i)=>row.forEach((text,j)=>commands.push(draw(text,[48,235,290,510][j],665-i*24))));
+ commands.push(draw('Method',48,442));
+ const stream2=commands.join('\n');
+ const objects2=[
+  '<< /Type /Catalog /Pages 2 0 R >>',
+  '<< /Type /Pages /Count 1 /Kids [4 0 R] >>',
+  '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>',
+  '<< /Length '+Buffer.byteLength(stream2)+' >>\nstream\n'+stream2+'\nendstream'
+ ];
+ let nativePdf='%PDF-1.4\n',nativeOffsets=[0];
+ objects2.forEach((obj,i)=>{nativeOffsets.push(Buffer.byteLength(nativePdf));nativePdf+=(i+1)+' 0 obj\n'+obj+'\nendobj\n';});
+ const nativeStart=Buffer.byteLength(nativePdf);
+ nativePdf+='xref\n0 6\n0000000000 65535 f \n'+nativeOffsets.slice(1).map(n=>String(n).padStart(10,'0')+' 00000 n \n').join('')+'trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n'+nativeStart+'\n%%EOF';
+ const native=await page.evaluate(async encoded=>MenuMarginScanner.scanRecipeFile(new File([Uint8Array.from(atob(encoded),c=>c.charCodeAt(0))],'two-column.pdf',{type:'application/pdf'})),Buffer.from(nativePdf).toString('base64'));
+ assert.equal(native.source,'pdf-text','Searchable PDF should bypass image OCR');
+ const nativeParsed=parseRecipeText(native.text);
+ assert.equal(nativeParsed.yield,20);
+ assert.equal(nativeParsed.ingredients.length,15,'PDF columns must yield 15 separate entries');
+ assert.deepEqual(nativeParsed.ingredients.map(i=>i.qty),[5,150,1.5,25,120,60,80,80,250,30,600,500,300,40,120]);
+ console.log('PASS real two-column PDF native text reader',nativeParsed.ingredients.length);
+
  assert.deepEqual(errors,[]);
 }finally{await browser.close();server.close();}
