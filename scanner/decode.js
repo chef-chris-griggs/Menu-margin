@@ -252,3 +252,42 @@ export async function* decodeFilePages(file, options = {}) {
   }
 }
 
+
+/**
+ * Prefer the original selectable PDF text for recipes when it has a usable
+ * ingredient section. Camera photos and image-only PDFs still use local OCR.
+ * Invoice scanning is intentionally unchanged.
+ */
+export async function readRecipePdfText(file, options = {}) {
+  const signature=new Uint8Array(await abortable(file.slice(0,5).arrayBuffer(),options.signal));
+  const pdf=file.type==='application/pdf'||/\.pdf$/i.test(file.name||'')||String.fromCharCode(...signature)==='%PDF-';
+  if(!pdf)return null;
+  const pdfjs=await loadPdfLibrary(options);
+  pdfjs.GlobalWorkerOptions.workerSrc=new URL('../pdfjs/pdf.worker.min.js',assetBase(options)).href;
+  const {recipeLinesFromPdfText}=await import('./recipe-pdf-layout.js');
+  const bytes=await abortable(file.arrayBuffer(),options.signal);
+  checkAbort(options.signal);
+  const loading=pdfjs.getDocument({data:new Uint8Array(bytes),isEvalSupported:false});
+  let document;
+  try {
+    document=await abortable(loading.promise,options.signal,{onAbort:()=>{Promise.resolve(loading.destroy()).catch(()=>{});}});
+    if(document.numPages>MAX_PDF_PAGES)throw new Error('Recipe exceeds 12 pages.');
+    const lines=[];
+    for(let i=1;i<=document.numPages;i++){
+      checkAbort(options.signal);
+      progress(options,'Reading original PDF text on page '+i+' of '+document.numPages+'…');
+      const page=await abortable(document.getPage(i),options.signal);
+      const content=await abortable(page.getTextContent(),options.signal);
+      lines.push(...recipeLinesFromPdfText(content.items));
+      page.cleanup();
+    }
+    const text=lines.map(line=>line.text).join('\n');
+    // Never use sparse or garbage PDF text instead of OCR.
+    if(!/\bingredients?\b/i.test(text)||!/\b(?:method|instructions?|directions?|preparation)\b/i.test(text)||
+      (text.match(/\d+(?:[.,]\d+)?\s*(?:kg|g|ml|litres?|grams?|each)\b/gi)||[]).length<2)return null;
+    return {text,lines,pages:document.numPages,warnings:['Read selectable PDF text in its printed page layout. Review all quantities before importing.'],source:'pdf-text'};
+  }finally{
+    if(document)await document.destroy();
+    else await loading.destroy().catch(()=>{});
+  }
+}
