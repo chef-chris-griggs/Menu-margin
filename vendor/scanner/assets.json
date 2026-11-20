@@ -4,8 +4,8 @@
   "assets": [
     {
       "file": "client.js",
-      "bytes": 13719,
-      "sha256": "fd7d8b15b1f4e478a7baa07515271d0102df8525723bc92fd7fef597d8f8fbb1"
+      "bytes": 15864,
+      "sha256": "70f21f1fa72aa9d5c893f2a0dccd8b8e33cf0fa81be4d243e212907434822383"
     },
     {
       "file": "scanner.worker.js",
