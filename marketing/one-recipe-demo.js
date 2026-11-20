@@ -37,3 +37,32 @@ if(copyDemoButton){copyDemoButton.addEventListener('click',async()=>{
     if(status)status.textContent='Copy unavailable in this browser. Please save your recipe details before leaving this page.';
   }
 });}
+
+// Allow chefs to save their demo recipe locally if clipboard support is unavailable.
+// No recipe content is sent to the application, analytics, server or URL.
+const downloadDemoButton=document.getElementById('downloadDemoRecipe');
+if(downloadDemoButton){downloadDemoButton.addEventListener('click',()=>{
+  const status=document.getElementById('downloadDemoStatus');
+  const recipe=document.getElementById('recipeName').value.trim();
+  const portions=document.getElementById('portions').value;
+  const selling=document.getElementById('sellPrice').value;
+  const ingredientLines=[...rows.children].map(row=>{
+    const fields=[...row.querySelectorAll('input,select')].map(el=>el.value.trim());
+    return fields[0]+': '+fields[1]+' '+fields[2]+' used; pack '+fields[3]+' '+fields[4]+' at £'+fields[5];
+  });
+  const content=['Mise en Price recipe calculator','Recipe: '+recipe,'Portions: '+portions,'Selling price per portion ex VAT: £'+selling,'Ingredients:',...ingredientLines,'Batch cost: '+document.getElementById('batchCost').textContent,'Cost per portion: '+document.getElementById('portionCost').textContent,'Food-cost GP: '+document.getElementById('gpPercent').textContent,'','This text is a reference for manual entry. It is not an import file.'].join('\n');
+  try{
+    const blob=new Blob([content],{type:'text/plain;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement('a');
+    link.href=url;
+    link.download='miseenprice-recipe-details.txt';
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    if(status)status.textContent='Recipe details downloaded. You can refer to this file when adding your recipe in the app.';
+  }catch(error){
+    if(status)status.textContent='Download unavailable. Use Copy my recipe details or save your values before leaving this page.';
+  }
+});}
