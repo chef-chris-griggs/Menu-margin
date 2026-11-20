@@ -244,8 +244,8 @@ try {
   ]));
   assert.equal(await page.locator('.scan-row').count(), 2, 'only stock products and unresolved OCR rows appear');
   assert.match(await page.locator('#invoiceToast').innerText(), /Skipped 4 packaging or £0\.00 line/);
-  assert.match(await page.locator('.scan-row').first().innerText(), /Box of Mushrooms/);
-  assert.match(await page.locator('.scan-row').last().innerText(), /Tuna/);
+  assert.match(await page.locator('.scan-row').first().getByLabel('Product name').inputValue(), /Box of Mushrooms/);
+  assert.match(await page.locator('.scan-row').last().getByLabel('Product name').inputValue(), /Tuna/);
   assert.equal(await page.evaluate(() => invoiceCurrentValidation().sumLineTotals), 24, 'paid packaging must remain in invoice subtotal');
   await page.locator('.scan-row').first().locator('.invoice-import-check').check();
   await page.locator('.scan-row').first().locator('.invoice-row-confirm').check();
