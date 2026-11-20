@@ -37,3 +37,38 @@ if(copyDemoButton){copyDemoButton.addEventListener('click',async()=>{
     if(status)status.textContent='Copy unavailable in this browser. Please save your recipe details before leaving this page.';
   }
 });}
+
+const carryDish = document.getElementById('carryDish');
+if (carryDish) {
+  let appTab, draft;
+  const appOrigin = new URL(carryDish.href).origin;
+  const status = document.getElementById('dishTransferStatus');
+  carryDish.addEventListener('click', event => {
+    event.preventDefault();
+    calculate();
+    if (document.getElementById('demoError').textContent) {
+      status.textContent = 'Complete the highlighted costing details before continuing.';
+      document.getElementById('demoError').scrollIntoView({block:'center'});
+      return;
+    }
+    draft = {
+      name: document.getElementById('recipeName').value.trim(),
+      yield: Number(document.getElementById('portions').value),
+      sellingPrice: Number(document.getElementById('sellPrice').value),
+      ingredients: [...rows.children].map(row => {
+        const [name, qty, qtyUnit, pack, packUnit, price] = [...row.querySelectorAll('input,select')].map(field => field.value);
+        return {name, qty:Number(qty), qtyUnit, pack:Number(pack), packUnit, price:Number(price)};
+      })
+    };
+    appTab = window.open(carryDish.href + '&from=calculator', '_blank');
+    status.textContent = appTab ? 'Keep this calculator open until the app receives your dish.' : 'Allow a new tab and try again. Your dish is still here.';
+  });
+  window.addEventListener('message', event => {
+    if (!appTab || event.source !== appTab || event.origin !== appOrigin) return;
+    if (event.data === 'mep-request-calculator-draft' && draft) appTab.postMessage({type:'mep-calculator-draft', draft}, appOrigin);
+    if (event.data === 'mep-calculator-draft-received') {
+      draft = null;
+      status.textContent = 'Your dish is in the app tab. Return to that tab after confirming your email.';
+    }
+  });
+}

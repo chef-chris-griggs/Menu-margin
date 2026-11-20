@@ -359,7 +359,9 @@ async function saveCurrentRecipe(){
     if(!currentRecipeId){data.id=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16)})}
     const index=items.findIndex(r=>r.id===data.id);
     if(index>=0)items[index]=data;else items.push(data);
-    writeLibrary(items);savedOnDevice=true;currentRecipeId=data.id;hasUnsavedChanges=false;refreshLibrary(currentRecipeId);updateRecipeHeader();mmClearRecipeDraft();
+    writeLibrary(items);savedOnDevice=true;
+    window.mmTrackFirstUse?.('first_recipe_saved', mmUser?.id);
+    currentRecipeId=data.id;hasUnsavedChanges=false;refreshLibrary(currentRecipeId);updateRecipeHeader();mmClearRecipeDraft();
     if(!mmUser || !mmCloudReady) { showToast(`Saved “${data.name}” on this device. It will sync when you are online.`); if(mmUser)mmAuthMessage('Saved on this device. Cloud sync will resume when online.'); return; }
     mmAuthMessage('Saving recipe to your cloud account…');
     const res=await mmSyncCloud();

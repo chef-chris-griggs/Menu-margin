@@ -650,6 +650,7 @@ function importInvoiceReview() {
   planned.forEach(({ index, entry }) => { if (index >= 0) { items[index] = entry; updated++; } else { items.push(entry); added++; } });
   try {
     writePriceBook(items);
+    window.mmTrackFirstUse?.('first_invoice_imported', mmUser?.id);
     selected.forEach(state => { state.selected = false; state.elements.selected.checked = false; });
     invoiceReviewStates.forEach(invoiceRenderMatch);
     invoiceUpdateSelectionSummary();

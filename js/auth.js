@@ -455,6 +455,7 @@ function mmEnterApp(user,force=false){
     document.getElementById('mmManageBillingAccount').hidden=!mmBillingEnabled;
     document.getElementById('mmRetryStartup').hidden=true;
     mmLoadCurrentAccountData(result);
+    window.mmRefreshCalculatorDraft?.();
     void mmRefreshOwnerDashboardLink(user.id);
     if(offlineAccess||mmCloudOffline)mmAuthMessage('Offline mode — local changes are safe here and will sync when the connection returns.');
     else mmAuthMessage('Signed in. Cloud sync is working.');
@@ -531,6 +532,7 @@ async function mmSignOut(){
   const {error}=await mmSupabase.auth.signOut({scope:'local'});if(error)throw error;
   // The signed-out callback is suppressed while this operation owns cleanup.
   mmUser=null;mmEntryPromise=null;mmEntryUserId=null;mmClearPrivateUi();
+  window.mmDiscardCalculatorDraft?.();
   if(forget)mmRemoveAccountDeviceCopy(userId);
   const checkbox=document.getElementById('mmForgetDevice');if(checkbox)checkbox.checked=false;
   mmAuthMessage(forget?'Signed out. This account’s device copy was removed.':'Signed out. This account’s data is hidden; a device copy is kept for offline recovery.');
