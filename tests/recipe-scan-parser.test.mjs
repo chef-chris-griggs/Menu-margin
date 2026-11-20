@@ -45,3 +45,35 @@ test('unquantified capitalised ingredients survive and inline method text is exc
  const p=parseRecipeText('Soup\nIngredients\nBLACK PEPPER\n500 g carrots\nMethod: chop and simmer\n200 g water');
  assert.equal(p.ingredients.length,2);assert.equal(p.ingredients[0].name,'BLACK PEPPER');assert.equal(p.ingredients[0].qty,null);
 });
+
+test('two-column Korean soup PDF is split into 15 measured ingredients without cross-column mixing',()=>{
+ const text=[
+  'Korean Tofu & Ginger Soup',
+  'Korean-inspired vegan soup | Yield: 20 portions | Preparation and cooking: approx. 30 minutes',
+  'Ingredients',
+  'Vegetable stock 5 litres Light soy sauce 150 ml',
+  'Silken or soft tofu 1.5 kg Gochugaru (Korean chilli flakes) 25 g',
+  'Fresh ginger, finely grated 120 g Sesame oil 60 ml',
+  'Garlic, minced 80 g Rice vinegar 80 ml',
+  'Spring onions 250 g Sugar 30 g',
+  'Shiitake or chestnut mushrooms 600 g Pak choi 500 g',
+  'Carrots, julienned 300 g Sesame seeds 40 g',
+  'White miso paste 120 g',
+  'Method',
+  '1. Build the base',
+ ].join('\n');
+ const result=parseRecipeText(text);
+ assert.equal(result.yield,20);
+ assert.equal(result.ingredients.length,15);
+ assert.deepEqual(result.ingredients.map(i=>[i.name,i.qty,i.qtyUnit]),[
+  ['Vegetable stock',5,'l'],['Light soy sauce',150,'ml'],
+  ['Silken or soft tofu',1.5,'kg'],['Gochugaru (Korean chilli flakes)',25,'g'],
+  ['Fresh ginger, finely grated',120,'g'],['Sesame oil',60,'ml'],
+  ['Garlic, minced',80,'g'],['Rice vinegar',80,'ml'],
+  ['Spring onions',250,'g'],['Sugar',30,'g'],
+  ['Shiitake or chestnut mushrooms',600,'g'],['Pak choi',500,'g'],
+  ['Carrots, julienned',300,'g'],['Sesame seeds',40,'g'],
+  ['White miso paste',120,'g']
+ ]);
+ assert.ok(result.ingredients.every(i=>!i.needsReview));
+});
