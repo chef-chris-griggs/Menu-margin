@@ -65,6 +65,33 @@ for (const engine of [chromium, webkit]) {
     assert.equal(thirdParty.length, 1, 'No Google calls after withdrawing consent');
     console.log('PASS app consent', engine.name());
     await context.close();
+
+    // The marketing host's consent does not grant consent on this distinct
+    // app hostname. An incoming linker must never bypass the app's choice.
+    const handoff = await browser.newContext();
+    const handoffRequests = [];
+    await handoff.route('**/*', route => {
+      if (route.request().url().startsWith(origin)) return route.continue();
+      handoffRequests.push(route.request().url());
+      return route.fulfill({status:200, body:'', contentType:'text/javascript'});
+    });
+    const landing = await handoff.newPage();
+    await landing.goto(origin + '/?intent=trial&_gl=1~synthetic-linker', {
+      referer:'https://miseenprice.co.uk/'
+    });
+    assert.equal(await landing.getByRole('region', {name:'Optional app analytics'}).isVisible(), true);
+    await landing.evaluate(() => window.mmAnalyticsTrack('trial_started', {trial_type:'cardless_14_day'}));
+    assert.deepEqual(handoffRequests, [], 'Marketing-only consent cannot load Google on the app host');
+    assert.equal(await landing.evaluate(() => typeof window.gtag), 'undefined');
+    await landing.getByRole('button', {name:'Accept analytics'}).click();
+    await landing.waitForFunction(() => document.querySelector('#mep-app-google-tag'));
+    const acceptedCalls = await landing.evaluate(() => window.dataLayer.map(a => Array.from(a)));
+    assert.ok(acceptedCalls.some(a => a[0] === 'set' && a[1] === 'linker'),
+      'Consented app tag configures cross-domain linker');
+    assert.equal(acceptedCalls.filter(a => a[0] === 'event' && a[1] === 'trial_started').length, 0,
+      'Consent must not retroactively manufacture an unconsented trial conversion');
+    assert.equal(handoffRequests.length, 1, 'Only acceptance may load Google on app host');
+    await handoff.close();
   } finally { await browser.close(); }
 }
 server.closeAllConnections();
