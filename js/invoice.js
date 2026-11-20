@@ -118,6 +118,16 @@ function invoiceSetAutoField(id, value) {
   if (!field.value.trim() || field.value.trim() === previous) field.value = value || '';
   field.dataset.autoValue = value || '';
 }
+// Delivery equipment and explicitly free invoice lines are not ingredients.
+// Keep uncertain OCR prices visible for review rather than silently losing stock.
+function invoiceNonStockReason(row) {
+  const description=String(row?.description||'').trim().replace(/\s+/g,' ').toLowerCase();
+  if(/^(?:(?:ff|f\/?f|fresh\s*food)\s+)?(?:box(?:es)?|pallets?|crates?|totes?|packaging|packaging\s+charge|delivery\s+box|plastic\s+box)(?:\s+(?:return|returned|returnable|deposit|charge|exchange|credit|fee|hire|no\.?\s*\d+))?$/.test(description))return 'packaging';
+  const unit=invoiceNumberOrNull(row?.unitPrice);
+  const total=invoiceNumberOrNull(row?.lineTotal);
+  if(unit===0||total===0)return 'zero';
+  return null;
+}
 function invoicePrepareRow(row, index) {
   const basis = ['case', 'unit', 'weight'].includes(row.quantityBasis) ? row.quantityBasis : 'case';
   const pack = row.pack || {};
@@ -150,7 +160,10 @@ function invoicePrepareRow(row, index) {
 }
 function invoiceRenderScanResult(result) {
   invoiceScanResult = result;
-  invoiceReviewStates = (Array.isArray(result.rows) ? result.rows : []).map(invoicePrepareRow);
+  const scannedRows=Array.isArray(result.rows)?result.rows:[];
+  const ignoredRows=scannedRows.filter(row=>invoiceNonStockReason(row));
+  invoiceReviewStates=scannedRows.filter(row=>!invoiceNonStockReason(row)).map(invoicePrepareRow);
+  invoiceScanResult.ignoredNonStockRows=ignoredRows;
   invoiceSetAutoField('invoiceSupplier', result.supplier);
   invoiceSetAutoField('invoiceNumber', result.invoiceNumber);
   invoiceSetAutoField('invoiceOrderNumber', result.orderNumber);
@@ -187,7 +200,8 @@ function invoiceRenderScanResult(result) {
   invoiceSetMobileView('rows');
   invoiceShowPage();
   invoiceUpdateSelectionSummary();
-  if (!invoiceReviewStates.length) invoiceToast('No product rows were found. Check the cleaned photo and download the debug files to inspect what the reader saw.');
+  if(ignoredRows.length)invoiceToast('Skipped '+ignoredRows.length+' packaging or £0.00 line(s). Only paid stock items appear for price-book import.');
+  if(!invoiceReviewStates.length)invoiceToast('No priced stock rows were found. Check the source invoice and verify its item prices.');
 }
 function invoiceRenderTotals() {
   const result = invoiceScanResult || {};
@@ -234,7 +248,10 @@ function invoiceRenderTotals() {
 }
 function invoiceCurrentValidation() {
   const original = invoiceScanResult?.validation || {};
-  const values = invoiceReviewStates.map(state => state.lineTotal);
+  // Retain ignored invoice lines in subtotal reconciliation so paid delivery
+  // packaging never makes a valid document look arithmetically incorrect.
+  const values = [...invoiceReviewStates.map(state=>state.lineTotal),
+    ...(invoiceScanResult?.ignoredNonStockRows||[]).map(row=>invoiceNumberOrNull(row.lineTotal))];
   const pence = values.map(value => Number.isFinite(value) ? Math.round(value * 100) : null);
   const sumPence = pence.reduce((total, value) => total + (value ?? 0), 0);
   const sum = sumPence / 100;
@@ -412,8 +429,8 @@ function invoiceRowIssues(state) {
   const issues = [];
   if (!state.description.trim()) issues.push('Enter the product name.');
   if (!Number.isFinite(invoiceBilledQuantity(state)) || !(invoiceBilledQuantity(state) > 0)) issues.push(state.quantityBasis === 'weight' ? 'Enter the billed weight or volume.' : 'Check the ordered quantity; it was not read.');
-  if (!Number.isFinite(state.unitPrice) || !(state.unitPrice >= 0)) issues.push('Enter the unit price.');
-  if (!Number.isFinite(state.lineTotal) || !(state.lineTotal >= 0)) issues.push('Enter the line total.');
+  if (!Number.isFinite(state.unitPrice) || !(state.unitPrice > 0)) issues.push('Enter a positive unit price.');
+  if (!Number.isFinite(state.lineTotal) || !(state.lineTotal > 0)) issues.push('Enter a positive line total.');
   if (!Number.isInteger(state.caseCount) || !(state.caseCount >= 1) || !(state.eachSize > 0)) issues.push('Complete the priced pack size.');
   if (!['kg', 'g', 'l', 'ml', 'each'].includes(state.packUnit)) issues.push('Choose the pack unit.');
   if (state.quantityBasis === 'unit' && state.caseCount !== 1) issues.push('A loose-item price must be saved against one item.');
@@ -575,17 +592,18 @@ function invoiceDebugJson() {
 function invoiceValidateImport(state) {
   const issues = [];
   if (!state.description.trim()) issues.push('product name');
+  if(invoiceNonStockReason(state))issues.push('stock item (packaging and £0 items cannot be imported)');
   const quantity = invoiceBilledQuantity(state);
   if (!Number.isFinite(quantity) || !(quantity > 0)) issues.push(state.quantityBasis === 'weight' ? 'billed weight' : 'quantity');
-  if (!Number.isFinite(state.unitPrice) || state.unitPrice < 0) issues.push('unit price');
-  if (!Number.isFinite(state.lineTotal) || state.lineTotal < 0) issues.push('line total');
+  if (!Number.isFinite(state.unitPrice) || state.unitPrice <= 0) issues.push('positive unit price');
+  if (!Number.isFinite(state.lineTotal) || state.lineTotal <= 0) issues.push('positive line total');
   if (!['ex_vat', 'inc_vat'].includes(state.priceBasis)) issues.push('VAT basis');
   const arithmetic = invoiceRowArithmetic(state);
   if (arithmetic && !arithmetic.matches) issues.push('quantity × unit price matching the line total');
   if (!Number.isInteger(state.caseCount) || !(state.caseCount >= 1) || !(state.eachSize > 0) || !Number.isFinite(state.eachSize)) issues.push('pack size');
   if (!['kg', 'g', 'l', 'ml', 'each'].includes(state.packUnit)) issues.push('unit');
   const price = invoiceRowPrice(state);
-  if (price === null || !Number.isFinite(price) || price < 0) issues.push('price');
+  if (price === null || !Number.isFinite(price) || price <= 0) issues.push('positive price');
   if (state.quantityBasis === 'unit' && state.caseCount !== 1) issues.push('loose-item pack count');
   if (state.quantityBasis === 'weight' && (!(state.weight > 0) || !['kg', 'g', 'l', 'ml'].includes(state.weightUnit) || state.eachSize !== state.weight || state.packUnit !== state.weightUnit)) issues.push('weighed pack');
   if (!state.confirmed) issues.push('photo check');
