@@ -513,6 +513,7 @@ function mmClearPrivateUi(){
 function mmRemoveAccountDeviceCopy(userId){
  const keys=[mmAccountCacheKey(MM_LIBRARY_KEY,userId),mmAccountCacheKey(MM_PRICEBOOK_KEY,userId),mmPendingKey(userId),mmManifestKey(userId),mmDraftKey(userId),mmAccessKey(userId),MM_BILLING_CONFIG_KEY+'::user:'+userId];
  for(const key of keys)localStorage.removeItem(key);
+ for(const event of ['first_invoice_imported','first_recipe_saved'])localStorage.removeItem('mep-first-use:'+userId+':'+event);
  if(localStorage.getItem(MM_LEGACY_CLAIM_KEY)===userId){
   // Keep the owner marker: another account must never claim old private data.
   for(const key of [MM_LIBRARY_KEY,MM_PRICEBOOK_KEY,'menumargin-recipe'])localStorage.removeItem(key);

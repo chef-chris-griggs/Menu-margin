@@ -39,7 +39,10 @@
     const saved = read();
     if (!saved || !document.body.classList.contains('mm-authenticated') || saved.account !== mmUser?.id || !maybeSaveChanges()) return;
     const dish = saved.dish;
-    loadRecipe({...dish, ingredients:dish.ingredients.map(row => ({...row,priceEntered:true,priceLinkMode:'manual'}))});
+    const ingredients = dish.ingredients.map(({name, qty, qtyUnit, pack, packUnit, price}) => ({
+      name, qty, qtyUnit, pack, packUnit, price, priceEntered:true, priceLinkMode:'manual'
+    }));
+    loadRecipe({name:dish.name, yield:dish.yield, sellingPrice:dish.sellingPrice, ingredients});
     hasUnsavedChanges = true;
     setActiveView('costing');
     updateRecipeHeader();
@@ -52,7 +55,11 @@
       if (event.source !== opener || event.origin !== website || event.data?.type !== 'mep-calculator-draft' || !valid(event.data.draft)) return;
       try {
         sessionStorage.setItem(key, JSON.stringify({at:Date.now(),dish:event.data.draft}));
-      } catch { return; }
+      } catch {
+        opener.postMessage('mep-calculator-draft-unavailable', website);
+        document.getElementById('calculatorDraftNotice').hidden = false;
+        return;
+      }
       opener.postMessage('mep-calculator-draft-received', website);
       window.removeEventListener('message', receive);
       window.mmRefreshCalculatorDraft();

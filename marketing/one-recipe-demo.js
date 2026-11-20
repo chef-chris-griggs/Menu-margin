@@ -66,6 +66,7 @@ if (carryDish) {
   window.addEventListener('message', event => {
     if (!appTab || event.source !== appTab || event.origin !== appOrigin) return;
     if (event.data === 'mep-request-calculator-draft' && draft) appTab.postMessage({type:'mep-calculator-draft', draft}, appOrigin);
+    if (event.data === 'mep-calculator-draft-unavailable') status.textContent = 'The app could not keep the draft on this device. Your entries are still here.';
     if (event.data === 'mep-calculator-draft-received') {
       draft = null;
       status.textContent = 'Your dish is in the app tab. Return to that tab after confirming your email.';

@@ -16,7 +16,7 @@ function createReviewApi() {
     return elements.get(id);
   };
   $('invoiceSupplier').value = 'Bidfood';
-  const api = vm.runInNewContext(source + '\n({invoicePrepareRow,invoiceFindMatches,invoiceRowIssues,invoiceValidateImport,invoiceSetWeight,importInvoiceReview,mmPriceHistoryForUpdate,invoiceCurrentValidation,seed:(result,states)=>{invoiceScanResult=result;invoiceReviewStates=states}})', {
+  const api = vm.runInNewContext(source + '\n({invoiceNonStockReason,invoicePrepareRow,invoiceFindMatches,invoiceRowIssues,invoiceValidateImport,invoiceSetWeight,importInvoiceReview,mmPriceHistoryForUpdate,invoiceCurrentValidation,seed:(result,states)=>{invoiceScanResult=result;invoiceReviewStates=states}})', {
     $, document: { getElementById: $, querySelectorAll() { return []; } }, window: {}, console, URL, Blob, setTimeout, clearTimeout
   });
   return { api, $ };
@@ -126,7 +126,7 @@ test('photo acknowledgement never bypasses required finite quantities, prices, V
   }
   assert.ok(api.invoiceValidateImport({ ...state, priceBasis: 'unknown' }).includes('VAT basis'));
   assert.ok(api.invoiceValidateImport({ ...state, unitPrice: 10, lineTotal: 8 }).some(issue => issue.includes('matching the line total')));
-  assert.equal(api.invoiceValidateImport({ ...state, unitPrice: 0, lineTotal: 0 }).length, 0, 'an explicitly free valid pack is allowed');
+  assert.ok(api.invoiceValidateImport({ ...state, unitPrice: 0, lineTotal: 0 }).includes('positive unit price'), 'free items must not reach the price book');
 });
 
 test('weighed purchases use billed weight and the engine tolerance for a rounded printed weight', () => {
@@ -159,4 +159,21 @@ test('conflicting invoice numbers and duplicate pages block import before any pr
     assert.doesNotThrow(() => api.importInvoiceReview());
     assert.match($('invoiceToast').textContent, /Nothing was imported.*one complete invoice/);
   }
+});
+
+test('packaging, pallets and zero-priced invoice lines are not stock',()=>{
+ const {api}=createReviewApi();
+ for(const name of ['Pallet','PALLETS','FF BOX','F/F Box','FF Box Return','Plastic Box','Delivery Box','Crate']){
+  assert.equal(api.invoiceNonStockReason({...basic(),description:name}), 'packaging',name);
+  assert.ok(api.invoiceValidateImport({...api.invoicePrepareRow({...basic(),description:name},0),confirmed:true,matchChoice:'__new__'}).some(x=>x.startsWith('stock item')),name);
+ }
+ for(const item of [
+  {...basic(),description:'Mushrooms',unitPrice:0,lineTotal:0},
+  {...basic(),description:'Free sample',unitPrice:0,lineTotal:1},
+  {...basic(),description:'Free sample',unitPrice:1,lineTotal:0}
+ ])assert.equal(api.invoiceNonStockReason(item),'zero');
+ for(const name of ['Box of Mushrooms','Boxed Salad','Chicken Box Meal','Boxed Mixed Vegetables']){
+  assert.equal(api.invoiceNonStockReason({...basic(),description:name}),null,name);
+ }
+ assert.equal(api.invoiceNonStockReason({...basic(),unitPrice:null}),null,'uncertain prices must stay visible for checking');
 });

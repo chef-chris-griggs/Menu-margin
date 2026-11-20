@@ -232,6 +232,27 @@ try {
   await page.evaluate(() => window.finishScan({ version: 1, pages: [window.fixturePage], rows: window.fixtureRows, totals: {}, validation: {} }));
   await page.waitForFunction(() => document.getElementById('invoiceProgress').textContent.includes('cancelled'));
   assert.equal(await page.locator('#invoiceReviewArea').isVisible(), false, 'a cancelled result must never appear');
+  // Free pallets and packaging must not be offered for ingredient costing.
+  // Retain paid packaging in subtotal arithmetic without adding it to stock.
+  await page.evaluate(() => renderFixture([
+    { ...fixtureRows[0], id: 'fresh-ingredients', productCode: 'STOCK1', description: 'Box of Mushrooms', unitPrice: 20, lineTotal: 20, pack: { caseCount: 1, eachSize: 3, unit: 'kg' } },
+    { ...fixtureRows[0], id: 'pallet', productCode: 'PAL', description: 'Pallet', unitPrice: 0, lineTotal: 0 },
+    { ...fixtureRows[0], id: 'ffbox', productCode: 'FFB', description: 'FF Box', unitPrice: 0, lineTotal: 0 },
+    { ...fixtureRows[0], id: 'freeline', productCode: 'FREE', description: 'Free sample', unitPrice: 0, lineTotal: 0 },
+    { ...fixtureRows[0], id: 'cratefee', productCode: 'FEE', description: 'Crate', unitPrice: 4, lineTotal: 4 },
+    { ...fixtureRows[0], id: 'unread', productCode: 'UNREAD', description: 'Tuna', unitPrice: null, lineTotal: null }
+  ]));
+  assert.equal(await page.locator('.scan-row').count(), 2, 'only stock products and unresolved OCR rows appear');
+  assert.match(await page.locator('#invoiceToast').innerText(), /Skipped 4 packaging or £0\.00 line/);
+  assert.match(await page.locator('.scan-row').first().getByLabel('Product name').inputValue(), /Box of Mushrooms/);
+  assert.match(await page.locator('.scan-row').last().getByLabel('Product name').inputValue(), /Tuna/);
+  assert.equal(await page.evaluate(() => invoiceCurrentValidation().sumLineTotals), 24, 'paid packaging must remain in invoice subtotal');
+  await page.locator('.scan-row').first().locator('.invoice-import-check').check();
+  await page.locator('.scan-row').first().locator('.invoice-row-confirm').check();
+  await page.evaluate(() => importInvoiceReview());
+  const savedProducts = await page.evaluate(() => testBook.map(item => ({ name:item.name,price:item.price })));
+  assert.ok(savedProducts.some(item => item.name === 'Box of Mushrooms' && item.price === 20), 'priced food saved');
+  for(const forbidden of ['Pallet','FF Box','Free sample','Crate']) assert.ok(!savedProducts.some(item => item.name === forbidden), forbidden+' not saved');
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({ browser: browserName, checks: ['unchecked import blocked', 'only selected row updated', 'case price history', 'loose unit pack', 'weighed amount', 'exact-name matching only', 'different-code protection', 'manual history preservation', 'mandatory quantity', 'mandatory line total', 'mandatory unit price', 'mandatory VAT basis', 'arithmetic blocks import', 'printed weight rounding', 'weight edit synchronization', 'document conflicts block import', 'subtotal acknowledgement', 'missing-page warning', 'mobile source view', 'mobile width', 'debug download', 'clear releases review', 'multi-photo API', 'cancelled result discarded'], passed: true, browserErrors: errors }));
 } catch (error) {
