@@ -3,6 +3,16 @@ const UNIT={g:"g",gram:"g",gramme:"g",grammes:"g",grams:"g",kg:"kg",kilogram:"kg
 const amount=/^(\d+(?:[.,]\d+)?|\d+\/\d+)\s*(kg|kilograms?|g|gram(?:me)?s?|ml|millilit(?:re|er)s?|l|lit(?:re|er)s?|each|ea|pieces?|pcs)\b\s*(?:of\s+)?(.+)$/i;
 const tail=/^(.+?)\s*[:,-]?\s*(\d+(?:[.,]\d+)?|\d+\/\d+)\s*(kg|kilograms?|g|gram(?:me)?s?|ml|millilit(?:re|er)s?|l|lit(?:re|er)s?|each|ea|pieces?|pcs)\s*$/i;
 const section=/^(ingredients?|method|instructions?|directions?|preparation)\s*:?\s*$/i;
+const pairedIngredient=/^(.+?)\s+(\d+(?:[.,]\d+)?|\d+\/\d+)\s*(kg|kilograms?|g|gram(?:me)?s?|ml|millilit(?:re|er)s?|l|lit(?:re|er)s?|each|ea|pieces?|pcs)\b\s+(.+?)\s+(\d+(?:[.,]\d+)?|\d+\/\d+)\s*(kg|kilograms?|g|gram(?:me)?s?|ml|millilit(?:re|er)s?|l|lit(?:re|er)s?|each|ea|pieces?|pcs)\s*$/i;
+// A multi-column PDF can yield two ingredient cells as one OCR row.
+// Split only when BOTH cells have complete quantities. Never guess a missing unit.
+function splitPairedIngredient(line){
+ const m=pairedIngredient.exec(line);
+ if(!m)return [line];
+ if(!/[a-z]/i.test(m[1])||!/[a-z]/i.test(m[4]))return [line];
+ return [m[1]+' '+m[2]+' '+m[3],m[4]+' '+m[5]+' '+m[6]];
+}
+
 const action=/^(step\s*\d+|preheat|heat|cook|mix|stir|bake|simmer|serve|add)\b/i;
 function number(s){const f=/^(\d+)\/(\d+)$/.exec(s);return f?Number(f[1])/Number(f[2]):Number(s.replace(",","."));}
 function ingredient(line){
@@ -10,7 +20,7 @@ function ingredient(line){
  const first=amount.exec(raw),last=first?null:tail.exec(raw),m=first||last;
  if(m){
   const candidateName=(first?m[3]:m[1]).replace(/\s*\(notes?\s+\d+\)\s*/gi,' ').replace(/,\s*(?:sliced|chopped|diced|finely|roughly|cold\b|torn\b|peeled|crushed|grated)\b.*$/i,'').trim();
-  if(/\bor\b|\//i.test(candidateName))return {name:candidateName,qty:null,qtyUnit:null,needsReview:true,source:raw};
+  // Ingredient alternatives such as 'silken or soft tofu' are names, not uncertain quantities.
   if(/\d/.test(candidateName))return {name:raw,qty:null,qtyUnit:null,needsReview:true,source:raw};
   const numeric=first?m[1]:m[2];
   if(/^\d+[,.]\d{3}$/.test(numeric))return {name:raw,qty:null,qtyUnit:null,needsReview:true,source:raw};
@@ -46,7 +56,10 @@ export function parseRecipeText(text){
   if(inIngredients&&/^(?:SAUCE\s+[A-Z ]+|FOR\s+THE\s+[A-Z ]+|TO\s+SERVE)$/.test(line)){warnings.push('Check section heading: '+line);continue;}
   if(!name&&!ingredients.length&&!inIngredients&&!servings&&!amount.test(line)&&!tail.test(line)&&!/^recipe\b/i.test(line)&&!/^[\d•*-]/.test(line)){name=line.slice(0,120);continue;}
   if(servings)continue;
-  if(inIngredients||/^\d/.test(line)||amount.test(line)||tail.test(line)){const item=ingredient(line);if(item){inIngredients=true;ingredients.push(item);if(item.needsReview)warnings.push("Check quantity and unit: "+item.name);}}
+  if(inIngredients||/^\d/.test(line)||amount.test(line)||tail.test(line)){
+   const parts=inIngredients?splitPairedIngredient(line):[line];
+   for(const part of parts){const item=ingredient(part);if(item){inIngredients=true;ingredients.push(item);if(item.needsReview)warnings.push("Check quantity and unit: "+item.name);}}
+  }
  }
  if(!yieldCount)warnings.unshift("Confirm number of portions.");
  if(!ingredients.length)warnings.push("No ingredients identified. Check the source.");
