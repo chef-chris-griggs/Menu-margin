@@ -1,7 +1,7 @@
-import { adminClient, env, json, preflight, requireUser, safeError, stripeClient } from "../_shared/common.ts";
+import { adminClient, appReturnUrl, env, json, preflight, requireUser, safeError, stripeClient } from "../_shared/common.ts";
 
 Deno.serve(async (request) => {
-  if (request.method === "OPTIONS") return preflight();
+  if (request.method === "OPTIONS") return preflight(request);
   if (request.method !== "POST") return json(request, { error: "Method not allowed" }, 405);
   try {
     const user = await requireUser(request);
@@ -73,7 +73,7 @@ Deno.serve(async (request) => {
     // The 14-day free period is issued exclusively by the cardless trial RPC.
     // Paid Checkout must never grant an additional Stripe trial, including after
     // account deletion/recreation or a legacy open Checkout session.
-    const appUrl = new URL(env("APP_URL"));
+    const appUrl = appReturnUrl(request);
     const successUrl = new URL(appUrl);
     successUrl.searchParams.set("billing", "success");
     const cancelUrl = new URL(appUrl);
