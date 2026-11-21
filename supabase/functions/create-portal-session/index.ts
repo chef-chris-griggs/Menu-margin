@@ -1,7 +1,7 @@
-import { adminClient, env, json, preflight, requireUser, safeError, stripeClient } from "../_shared/common.ts";
+import { adminClient, appReturnUrl, json, preflight, requireUser, safeError, stripeClient } from "../_shared/common.ts";
 
 Deno.serve(async (request) => {
-  if (request.method === "OPTIONS") return preflight();
+  if (request.method === "OPTIONS") return preflight(request);
   if (request.method !== "POST") return json(request, { error: "Method not allowed" }, 405);
   try {
     const user = await requireUser(request);
@@ -17,7 +17,7 @@ Deno.serve(async (request) => {
     const stripe = await stripeClient();
     const portal = await stripe.billingPortal.sessions.create({
       customer: mapping.stripe_customer_id,
-      return_url: new URL(env("APP_URL")).toString(),
+      return_url: appReturnUrl(request).toString(),
     });
     return json(request, { url: portal.url });
   } catch (error) {
