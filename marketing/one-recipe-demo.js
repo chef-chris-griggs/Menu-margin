@@ -61,7 +61,14 @@ if (carryDish) {
       })
     };
     appTab = window.open(carryDish.href + '&from=calculator', '_blank');
-    status.textContent = appTab ? 'Keep this calculator open until the app receives your dish.' : 'Allow a new tab and try again. Your dish is still here.';
+    if (appTab) {
+      status.textContent = 'Keep this calculator open until the app receives your dish.';
+    } else {
+      // A blocked pop-up cannot complete the cross-tab handoff. Keep every entry intact.
+      status.textContent = 'The app tab did not open. Your recipe is still here. Use Copy my recipe details to keep a backup, then open the free trial link.';
+      const copyButton = document.getElementById('copyDemoRecipe');
+      if (copyButton) copyButton.focus();
+    }
   });
   window.addEventListener('message', event => {
     if (!appTab || event.source !== appTab || event.origin !== appOrigin) return;
