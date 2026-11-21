@@ -3,7 +3,7 @@ import { adminClient, json, preflight, requireUser, safeError, stripeClient } fr
 const RECENT_SIGN_IN_MS = 15 * 60 * 1000;
 
 Deno.serve(async (request: Request) => {
-  if (request.method === "OPTIONS") return preflight();
+  if (request.method === "OPTIONS") return preflight(request);
   if (request.method !== "POST") return json(request, { error: "Method not allowed" }, 405);
 
   try {

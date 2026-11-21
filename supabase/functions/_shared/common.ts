@@ -40,13 +40,19 @@ export async function requireUser(request: Request) {
   return data.user;
 }
 
-function appOrigin(): string {
-  return new URL(env("APP_URL")).origin;
+export function appReturnUrl(request: Request): URL {
+  const configured = new URL(env("APP_URL"));
+  const productionOrigins = ["https://menu-margin.pages.dev", "https://app.miseenprice.co.uk"];
+  const origin = request.headers.get("Origin");
+  if (productionOrigins.includes(configured.origin) && origin && productionOrigins.includes(origin) && origin !== configured.origin) {
+    return new URL(origin);
+  }
+  return configured;
 }
 
-export function corsHeaders(): HeadersInit {
+export function corsHeaders(request: Request): HeadersInit {
   return {
-    "Access-Control-Allow-Origin": appOrigin(),
+    "Access-Control-Allow-Origin": appReturnUrl(request).origin,
     "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Max-Age": "86400",
@@ -55,13 +61,13 @@ export function corsHeaders(): HeadersInit {
 }
 
 export function json(request: Request, body: unknown, status = 200): Response {
-  const headers = new Headers(corsHeaders());
+  const headers = new Headers(corsHeaders(request));
   headers.set("content-type", "application/json; charset=utf-8");
   return new Response(JSON.stringify(body), { status, headers });
 }
 
-export function preflight(): Response {
-  return new Response(null, { status: 204, headers: corsHeaders() });
+export function preflight(request: Request): Response {
+  return new Response(null, { status: 204, headers: corsHeaders(request) });
 }
 
 export function stripeClient() {
