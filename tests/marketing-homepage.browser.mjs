@@ -51,7 +51,7 @@ async function run(browserType,viewport) {
     check(response.status()===200,'homepage did not return 200');
     check(response.headers()['content-security-policy']?.includes("script-src 'self'"),'Cloudflare CSP does not allow local calculator JavaScript');
     check(await page.title() === 'Recipe Costing Software for UK Chefs | Mise en Price','wrong homepage title');
-    check(await page.locator('img[src="./miseenprice-logo.svg"]').count()>=1,'missing branded logo');
+    check(await page.locator('img[src="/brand-header.webp"]').count()>=1,'missing branded logo');
     check(await page.locator('#hero-title').isVisible(),'missing homepage headline');
     const assetResults=await page.locator('.mep-screen img').evaluateAll(imgs=>imgs.map(i=>({url:i.getAttribute('src'),ok:i.complete&&i.naturalWidth>0,width:i.naturalWidth,height:i.naturalHeight})));
     check(assetResults.length===3 && assetResults.every(x=>x.ok),'real screenshot assets missing: '+JSON.stringify(assetResults));
@@ -142,7 +142,7 @@ async function run(browserType,viewport) {
       check(await seo.locator('h1').count()===1,slug+' needs one H1');
       check(await seo.locator('h1').isVisible(),slug+' H1 not visible');
       check(await seo.locator('link[rel="canonical"]').getAttribute('href')==='https://miseenprice.co.uk/'+slug.replace(/\.html$/,''),slug+' canonical changed');
-      check(await seo.locator('img[src="./miseenprice-logo.svg"]').first().isVisible(),slug+' branded logo missing');
+      check(await seo.locator('img[src="/brand-header.webp"]').first().isVisible(),slug+' branded logo missing');
       check(await seo.locator('link[href="./seo-premium.css"]').count()===1,slug+' premium stylesheet missing');
       if (slug !== 'recipe-scanning-for-chefs.html') {
         const shot=await seo.locator('.premium-visual img').first().evaluate(i=>({ready:i.complete,width:i.naturalWidth,visible:!!i.getClientRects().length}));
@@ -257,7 +257,7 @@ async function run(browserType,viewport) {
     check(templateResponse.status()===200,'template page not found');
     check(await templatePage.locator('h1').count()===1,'template page H1 missing');
     check(await templatePage.locator('link[rel="canonical"]').getAttribute('href')==='https://miseenprice.co.uk/recipe-costing-spreadsheet-template','template canonical wrong');
-    check(await templatePage.locator('img[src="./miseenprice-logo.svg"]').first().isVisible(),'template brand missing');
+    check(await templatePage.locator('img[src="/brand-header.webp"]').first().isVisible(),'template brand missing');
     check(await templatePage.locator('a[href="./recipe-costing-template.csv"]').count()===1,'CSV download link missing');
     const csvResponse=await templatePage.request.get(origin+'/recipe-costing-template.csv');
     check(csvResponse.status()===200,'CSV file not served');
