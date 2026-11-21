@@ -50,7 +50,7 @@
     // Keep campaign attribution when an opted-in visitor opens the app.
     // Both domains must also be configured in GA4 Admin cross-domain settings.
     gtag('set', 'linker', {
-      domains: ['miseenprice.co.uk', 'menu-margin.pages.dev'],
+      domains: ['miseenprice.co.uk', 'app.miseenprice.co.uk', 'menu-margin.pages.dev'],
       accept_incoming: true
     });
     gtag('js', new Date());
@@ -158,7 +158,7 @@
       const a = e.target instanceof Element ? e.target.closest('a[href]') : null;
       if (!a) return;
       const url = new URL(a.href, location.href);
-      if (url.hostname === 'menu-margin.pages.dev' && url.pathname === '/') {
+      if (url.hostname === 'app.miseenprice.co.uk' && url.pathname === '/') {
         const trialLink = url.searchParams.get('intent') === 'trial';
         if (trialLink) {
           // All free-trial CTAs lead to signup-first presentation; sign-in

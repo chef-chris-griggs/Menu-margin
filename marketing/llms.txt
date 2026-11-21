@@ -21,7 +21,7 @@ The public recipe calculator can be tried without creating an account. The full 
 ## Access
 
 - Website: https://miseenprice.co.uk/
-- Full application: https://menu-margin.pages.dev/
+- Full application: https://app.miseenprice.co.uk/
 - Sitemap: https://miseenprice.co.uk/sitemap.xml
 
 This is a descriptive site guide. It does not claim third-party endorsements, customer ratings, or guaranteed AI-search visibility.
