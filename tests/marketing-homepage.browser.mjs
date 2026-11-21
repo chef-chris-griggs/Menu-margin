@@ -114,9 +114,9 @@ async function run(browserType,viewport) {
     await second.locator('select').first().selectOption('kg');
     check((await page.locator('#demoError').textContent())==='','valid units did not recover');
     const trialEntry=await page.getByRole('link',{name:/Start your free 14-day trial/i}).first().getAttribute('href');
-    check(trialEntry==='https://menu-margin.pages.dev/?intent=trial','Hero trial CTA must signal account creation intent');
-    const trialUrls=await page.locator('a[href*="menu-margin.pages.dev"]').evaluateAll(links=>links.map(a=>a.href));
-    check(trialUrls.length>=3&&trialUrls.every(x=>x.startsWith('https://menu-margin.pages.dev/')),'trial/signup links invalid');
+    check(trialEntry==='https://app.miseenprice.co.uk/?intent=trial','Hero trial CTA must signal account creation intent');
+    const trialUrls=await page.locator('a[href*="app.miseenprice.co.uk"]').evaluateAll(links=>links.map(a=>a.href));
+    check(trialUrls.length>=3&&trialUrls.every(x=>x.startsWith('https://app.miseenprice.co.uk/')),'trial/signup links invalid');
     check(await page.locator('#pricing').isVisible(),'pricing section missing');
     check(await page.locator('#faq-title').isVisible(),'FAQ missing');
     check(await page.locator('.mep-proof-panel a[href="/website-privacy"]').count()===1,'privacy link missing');
@@ -230,7 +230,7 @@ async function run(browserType,viewport) {
           check(await seo.locator('a[href="./free-recipe-costing-calculator#try-recipe"]').count()>=1,slug+' free calculator link missing');
         }
       }
-      check(await seo.locator('a[href="https://menu-margin.pages.dev/?intent=trial"]').count()>=1,slug+' app trial link missing');
+      check(await seo.locator('a[href="https://app.miseenprice.co.uk/?intent=trial"]').count()>=1,slug+' app trial link missing');
       const layout=await seo.evaluate(()=>({scroll:document.documentElement.scrollWidth,client:document.documentElement.clientWidth}));
       check(layout.scroll<=layout.client+2,slug+' overflows '+viewport.width+'px: '+JSON.stringify(layout));
       check(issues.length===0,slug+' JavaScript errors '+issues.join('; '));

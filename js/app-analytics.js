@@ -58,7 +58,7 @@
     });
     // Cross-domain linker requires GA4 admin setup for BOTH domains as well.
     gtag('set', 'linker', {
-      domains: ['miseenprice.co.uk', 'menu-margin.pages.dev'], accept_incoming: true
+      domains: ['miseenprice.co.uk', 'app.miseenprice.co.uk', 'menu-margin.pages.dev'], accept_incoming: true
     });
     gtag('js', new Date());
     gtag('config', measurementId, {send_page_view: true});

@@ -3,7 +3,7 @@ import {readFile} from 'node:fs/promises';
 import {chromium,webkit} from 'playwright';
 
 // Use the two production origins with intercepted, local-only resources.
-const website='https://miseenprice.co.uk', app='https://menu-margin.pages.dev';
+const website='https://miseenprice.co.uk', app='https://app.miseenprice.co.uk';
 for (const engine of [chromium,webkit]) {
   const browser=await engine.launch();
   try {
