@@ -6,9 +6,9 @@
   const panel = document.getElementById('calculatorDraftPanel');
   const units = {g:'weight', kg:'weight', l:'volume', ml:'volume', each:'each'};
   function valid(dish) {
-    return dish && typeof dish.name === 'string' && Number.isSafeInteger(dish.yield) && dish.yield > 0 &&
+    return dish && typeof dish.name === 'string' && dish.name.trim().length > 0 && dish.name.length <= 100 && Number.isSafeInteger(dish.yield) && dish.yield > 0 &&
       Number.isFinite(dish.sellingPrice) && dish.sellingPrice > 0 && Array.isArray(dish.ingredients) &&
-      dish.ingredients.length > 0 && dish.ingredients.every(row => row && typeof row.name === 'string' && row.name.trim() &&
+      dish.ingredients.length > 0 && dish.ingredients.every(row => row && typeof row.name === 'string' && row.name.trim() && row.name.length <= 100 &&
         Object.hasOwn(units,row.qtyUnit) && units[row.qtyUnit] === units[row.packUnit] &&
         Number.isFinite(row.qty) && row.qty > 0 && Number.isFinite(row.pack) && row.pack > 0 &&
         Number.isFinite(row.price) && row.price >= 0);
@@ -51,6 +51,19 @@
   };
   if (window.opener && new URLSearchParams(location.search).get('from') === 'calculator') {
     const opener = window.opener;
+    let attempts = 0;
+    let requestTimer;
+    function requestDraft() {
+      if (opener.closed || ++attempts > 20) {
+        clearInterval(requestTimer);
+        const notice = document.getElementById('calculatorDraftNotice');
+        notice.hidden = false;
+        notice.textContent = 'The calculator did not respond. Return to your calculator tab and try again. Your dish has not been saved.';
+        return;
+      }
+      requestDraft();
+    requestTimer = setInterval(requestDraft, 500);
+    }
     function receive(event) {
       if (event.source !== opener || event.origin !== website || event.data?.type !== 'mep-calculator-draft' || !valid(event.data.draft)) return;
       try {
@@ -60,6 +73,7 @@
         document.getElementById('calculatorDraftNotice').hidden = false;
         return;
       }
+      clearInterval(requestTimer);
       opener.postMessage('mep-calculator-draft-received', website);
       window.removeEventListener('message', receive);
       window.mmRefreshCalculatorDraft();
