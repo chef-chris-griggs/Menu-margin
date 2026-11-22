@@ -43,6 +43,13 @@ if (carryDish) {
   let appTab, draft;
   const appOrigin = new URL(carryDish.href).origin;
   const status = document.getElementById('dishTransferStatus');
+  function showTrialFallback(message) {
+    status.textContent = message + ' Copy your recipe details before continuing. ';
+    const link = document.createElement('a');
+    link.href = carryDish.href;
+    link.textContent = 'Start my free trial in this tab';
+    status.append(link);
+  }
   carryDish.addEventListener('click', event => {
     event.preventDefault();
     calculate();
@@ -65,7 +72,7 @@ if (carryDish) {
       status.textContent = 'Keep this calculator open until the app receives your dish.';
     } else {
       // A blocked pop-up cannot complete the cross-tab handoff. Keep every entry intact.
-      status.textContent = 'The app tab did not open. Your recipe is still here. Use Copy my recipe details to keep a backup, then open the free trial link.';
+      showTrialFallback('The app tab did not open. Your recipe is still here.');
       const copyButton = document.getElementById('copyDemoRecipe');
       if (copyButton) copyButton.focus();
     }
@@ -73,7 +80,7 @@ if (carryDish) {
   window.addEventListener('message', event => {
     if (!appTab || event.source !== appTab || event.origin !== appOrigin) return;
     if (event.data === 'mep-request-calculator-draft' && draft) appTab.postMessage({type:'mep-calculator-draft', draft}, appOrigin);
-    if (event.data === 'mep-calculator-draft-unavailable') status.textContent = 'The app could not keep the draft on this device. Your entries are still here.';
+    if (event.data === 'mep-calculator-draft-unavailable') showTrialFallback('The app could not keep the draft on this device. Your entries are still here.');
     if (event.data === 'mep-calculator-draft-received') {
       draft = null;
       status.textContent = 'Your dish is in the app tab. Return to that tab after confirming your email.';
