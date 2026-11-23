@@ -32,9 +32,37 @@ if(copyDemoButton){copyDemoButton.addEventListener('click',async()=>{
   try{
     if(!navigator.clipboard || !navigator.clipboard.writeText)throw new Error('Clipboard unavailable');
     await navigator.clipboard.writeText(content);
+    const oldFallback=document.getElementById('recipeCopyFallback');
+    if(oldFallback)oldFallback.remove();
     if(status)status.textContent='Recipe details copied. Keep them to refer to when adding your recipe in the app.';
   }catch(error){
-    if(status)status.textContent='Copy unavailable in this browser. Please save your recipe details before leaving this page.';
+    if(status){
+      status.textContent='Clipboard copy is unavailable. Select and copy the recipe details below before continuing.';
+      let fallback=document.getElementById('recipeCopyFallback');
+      if(!fallback){
+        fallback=document.createElement('div');
+        fallback.id='recipeCopyFallback';
+        const label=document.createElement('label');
+        label.htmlFor='recipeCopyText';
+        label.textContent='Your recipe details';
+        const textarea=document.createElement('textarea');
+        textarea.id='recipeCopyText';
+        textarea.readOnly=true;
+        textarea.rows=9;
+        textarea.style.width='100%';
+        const selectButton=document.createElement('button');
+        selectButton.type='button';
+        selectButton.className='demo-secondary';
+        selectButton.textContent='Select all recipe details';
+        selectButton.addEventListener('click',()=>{textarea.focus();textarea.select()});
+        fallback.append(label,textarea,selectButton);
+        status.insertAdjacentElement('afterend',fallback);
+      }
+      const textarea=fallback.querySelector('textarea');
+      textarea.value=content;
+      textarea.focus();
+      textarea.select();
+    }
   }
 });}
 
