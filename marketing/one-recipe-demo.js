@@ -40,10 +40,16 @@ if(copyDemoButton){copyDemoButton.addEventListener('click',async()=>{
 
 const carryDish = document.getElementById('carryDish');
 if (carryDish) {
-  let appTab, draft;
+  let appTab, draft, acknowledgmentTimer;
+  const ACKNOWLEDGMENT_TIMEOUT_MS = 12000;
+  function clearAcknowledgmentTimer() {
+    if (acknowledgmentTimer) clearTimeout(acknowledgmentTimer);
+    acknowledgmentTimer = undefined;
+  }
   const appOrigin = new URL(carryDish.href).origin;
   const status = document.getElementById('dishTransferStatus');
   function showTrialFallback(message) {
+    clearAcknowledgmentTimer();
     status.textContent = message + ' Copy your recipe details before continuing. ';
     const link = document.createElement('a');
     link.href = carryDish.href;
@@ -67,9 +73,15 @@ if (carryDish) {
         return {name, qty:Number(qty), qtyUnit, pack:Number(pack), packUnit, price:Number(price)};
       })
     };
+    clearAcknowledgmentTimer();
     appTab = window.open(carryDish.href + '&from=calculator', '_blank');
     if (appTab) {
       status.textContent = 'Keep this calculator open until the app receives your dish.';
+      const pendingTab = appTab;
+      acknowledgmentTimer = setTimeout(() => {
+        if (appTab !== pendingTab || !draft) return;
+        showTrialFallback('The app has not confirmed receipt of your dish. Your recipe is still here.');
+      }, ACKNOWLEDGMENT_TIMEOUT_MS);
     } else {
       // A blocked pop-up cannot complete the cross-tab handoff. Keep every entry intact.
       showTrialFallback('The app tab did not open. Your recipe is still here.');
@@ -81,7 +93,8 @@ if (carryDish) {
     if (!appTab || event.source !== appTab || event.origin !== appOrigin) return;
     if (event.data === 'mep-request-calculator-draft' && draft) appTab.postMessage({type:'mep-calculator-draft', draft}, appOrigin);
     if (event.data === 'mep-calculator-draft-unavailable') showTrialFallback('The app could not keep the draft on this device. Your entries are still here.');
-    if (event.data === 'mep-calculator-draft-received') {
+    if (event.data === 'mep-calculator-draft-received' && draft) {
+      clearAcknowledgmentTimer();
       draft = null;
       status.textContent = 'Your dish is in the app tab. Return to that tab after confirming your email.';
     }
