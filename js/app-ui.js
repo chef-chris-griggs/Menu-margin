@@ -56,7 +56,31 @@
  if(review)new MutationObserver(()=>{if(review.hidden&&!file.value&&document.body.classList.contains('has-recipe-ingredients'))byId('recipeScanPanel').open=false;}).observe(review,{attributes:true,attributeFilter:['hidden']});
  file?.addEventListener('change',()=>{if(fileName)fileName.textContent=file.files?.[0]?.name||'Photo or PDF';});
  document.addEventListener('focusin',event=>{if(event.target.matches('input,textarea,select'))document.body.classList.add('is-editing-field');});
- document.addEventListener('focusout',()=>{requestAnimationFrame(()=>{if(!document.activeElement?.matches('input,textarea,select')||!document.activeElement.getClientRects().length)document.body.classList.remove('is-editing-field');});});
+ // Keep the floating summary hidden until a press that leaves a field finishes.
+ let editingPointer = null;
+ function refreshEditingState() {
+  requestAnimationFrame(() => {
+   if (editingPointer !== null) return;
+   const field = document.activeElement;
+   document.body.classList.toggle('is-editing-field',
+    Boolean(field?.matches('input,textarea,select') && field.getClientRects().length));
+  });
+ }
+ window.addEventListener('pointerdown', event => {
+  if (event.isPrimary && document.body.classList.contains('is-editing-field')) editingPointer = event.pointerId;
+ }, true);
+ function finishEditingPress(event) {
+  if (editingPointer !== event.pointerId) return;
+  editingPointer = null;
+  refreshEditingState();
+ }
+ window.addEventListener('pointerup', finishEditingPress, true);
+ window.addEventListener('pointercancel', finishEditingPress, true);
+ window.addEventListener('blur', () => {
+  editingPointer = null;
+  refreshEditingState();
+ });
+ document.addEventListener('focusout', refreshEditingState);
  const tools=byId('recipeTools');if(tools){tools.open=false;tools.addEventListener('click',event=>{if(event.target.closest('.ios-tool-menu button'))tools.open=false;});}
  byId('mmMenuPrintFlow')?.addEventListener('click',()=>{if(tools)tools.open=true;byId('printBtn').focus();});
  const priceEditor=byId('pricebookEditor');

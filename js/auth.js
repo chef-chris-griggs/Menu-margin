@@ -594,6 +594,7 @@ if (new URLSearchParams(window.location.search).get('intent') === 'trial') {
   const heading = document.getElementById('mmAuthTitle');
   const intro = document.querySelector('#mmAuthGate > p');
   if (signIn && signUp && heading) {
+    document.getElementById('mmSignupSourceField').open = true;
     heading.textContent = 'Start your 14-day free trial';
     if (intro) intro.textContent = 'Enter your email and choose a password, then create your account. No payment card required.';
     signUp.textContent = 'Create account';
@@ -608,7 +609,11 @@ document.getElementById('mmSignUp').addEventListener('click',async()=>{
   // Funnel event is an attempt, not a completed signup. No email or password
   // is included; the analytics helper respects the visitor's consent.
   window.mmAnalyticsTrack?.('signup_start', {method:'email'});
-  mmAuthMessage('Creating your account…');const {data,error}=await mmSupabase.auth.signUp({email,password,options:{emailRedirectTo:MM_AUTH_REDIRECT_URL}});
+  const options = {emailRedirectTo: MM_AUTH_REDIRECT_URL};
+  const source = document.getElementById('mmSignupSource').value;
+  if (source) options.data = {signup_source: source};
+  mmAuthMessage('Creating your account…');
+  const {data,error} = await mmSupabase.auth.signUp({email,password,options});
   if(error)mmAuthMessage(error.message);
   else {
    // Supabase can deliberately return an obfuscated user for an existing
