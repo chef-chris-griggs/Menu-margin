@@ -30,6 +30,8 @@ html {
 }
 
 body {
+  /* Keep the auth gate's top margin inside the body so it cannot shift the root layout. */
+  display: flow-root;
   min-height: 100vh;
   min-height: 100dvh;
   margin: 0;
