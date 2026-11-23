@@ -68,6 +68,9 @@ try{
  });await settle();
  const before=await stored(),beforeB=JSON.stringify(item(before,B)),cloudB=await page.evaluate(id=>JSON.stringify(__db.recipes.find(r=>r.id===id)),B),otherAccount=await page.evaluate(()=>JSON.stringify(__db.recipes.filter(r=>r.user_id==='account-b')));
  assert.deepEqual(await alerts(),[B,A],'Per-portion increases are ranked');
+ // Both fixtures have the same timestamp. Select the recipe this scenario edits.
+ await page.evaluate(id=>openRecipeById(id),A);
+ assert.equal(await page.evaluate(()=>currentRecipeId),A);
  await page.locator('#ingredients .qty').fill('150');await page.locator('#saveRecipe').click();await settle();
  let values=await stored();assert.equal(item(values,A).ingredients[0].price,12);assert.equal(item(values,A).ingredients[0].qty,150);assert.equal(JSON.stringify(item(values,B)),beforeB);assert.deepEqual(await alerts(),[B]);
  assert.equal(await page.evaluate(id=>JSON.stringify(__db.recipes.find(r=>r.id===id)),B),cloudB);assert.ok((await page.evaluate(()=>__cloudWrites)).every(w=>w.table!=='recipes'||w.id!=='20000000-0000-4000-8000-000000000002'));
