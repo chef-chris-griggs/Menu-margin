@@ -66,6 +66,26 @@
   <form id="mmAuthForm">
     <div class="mm-field"><label for="mmEmail">Email address</label><input id="mmEmail" type="email" autocomplete="email" required placeholder="you@example.com"></div>
     <div class="mm-field"><label for="mmPassword">Password</label><input id="mmPassword" type="password" autocomplete="current-password" minlength="8" required placeholder="At least 8 characters"></div>
+    <details id="mmSignupSourceField">
+      <summary>How did you hear about us? (optional for new accounts)</summary>
+      <div class="mm-field">
+        <label for="mmSignupSource">Where did you first hear about Mise en Price?</label>
+        <select id="mmSignupSource">
+          <option value="">Choose a source (optional)</option>
+          <option>Search engine</option>
+          <option>Facebook</option>
+          <option>Instagram</option>
+          <option>LinkedIn</option>
+          <option>TikTok</option>
+          <option>Reddit</option>
+          <option>The Staff Canteen</option>
+          <option>Email from Mise en Price</option>
+          <option>Friend or colleague</option>
+          <option>AI assistant</option>
+          <option>Other</option>
+        </select>
+      </div>
+    </details>
     <div class="mm-actions"><button type="submit" id="mmSignIn">Sign in</button><button type="button" class="secondary" id="mmSignUp">Create account</button><button type="button" class="text-button" id="mmReset">Forgot password?</button></div>
   </form>
   <form id="mmPasswordRecoveryForm" hidden>
@@ -403,7 +423,7 @@
 <script src="./js/auth-recovery.js?v=2.1.2"></script>
 <script src="./js/app-analytics.js?v=2"></script>
 <script src="./js/calculator-draft.js?v=1"></script>
-<script src="./js/auth.js?v=2.1.6-calculator-draft"></script>
+<script src="./js/auth.js?v=2.1.7-signup-source"></script>
 <script src="./js/recipe.js?v=2.2.3-first-save"></script>
 <script src="./js/pricebook.js?v=2.2.0-menu-share"></script>
 <script src="./vendor/scanner/client.js?v=2.0.4-native-recipe-pdf"></script>
