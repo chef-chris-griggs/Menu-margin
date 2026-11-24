@@ -582,12 +582,16 @@ async function mmManageBilling(button=document.getElementById('mmManageBilling')
 }
 
 document.getElementById('mmAuthForm').addEventListener('submit',async event=>{
-  event.preventDefault();if(mmRecoveryMode==='error'){mmRecoveryMode='none';mmRecoveryClearUrl();}const email=document.getElementById('mmEmail').value.trim(),password=document.getElementById('mmPassword').value;
+  event.preventDefault();
+  if(event.submitter?.id==='mmSignUp'){
+    await mmCreateAccount();
+    return;
+  }
+  if(mmRecoveryMode==='error'){mmRecoveryMode='none';mmRecoveryClearUrl();}const email=document.getElementById('mmEmail').value.trim(),password=document.getElementById('mmPassword').value;
   mmAuthMessage('Signing in…');const {error}=await mmSupabase.auth.signInWithPassword({email,password});if(error)mmAuthMessage(error.message);
 });
 // Marketing trial links ask new visitors to create an account first.
-// This changes presentation only. Existing sign-in and signup handlers,
-// account validation, email verification and billing remain untouched.
+// The first submit button is also the browser's default Enter-key action.
 if (new URLSearchParams(window.location.search).get('intent') === 'trial') {
   const signIn = document.getElementById('mmSignIn');
   const signUp = document.getElementById('mmSignUp');
@@ -597,13 +601,15 @@ if (new URLSearchParams(window.location.search).get('intent') === 'trial') {
     document.getElementById('mmSignupSourceField').open = true;
     heading.textContent = 'Start your 14-day free trial';
     if (intro) intro.textContent = 'Enter your email and choose a password, then create your account. No payment card required.';
+    signUp.type = 'submit';
+    document.getElementById('mmPassword').autocomplete = 'new-password';
     signUp.textContent = 'Create account';
     signUp.classList.remove('secondary');
     signIn.classList.add('secondary');
     signUp.parentElement?.insertBefore(signUp, signIn);
   }
 }
-document.getElementById('mmSignUp').addEventListener('click',async()=>{
+async function mmCreateAccount(){
   const email=document.getElementById('mmEmail').value.trim(),password=document.getElementById('mmPassword').value;
   if(!email||password.length<8){mmAuthMessage('Enter your email and a password of at least 8 characters first.');return;}
   // Funnel event is an attempt, not a completed signup. No email or password
@@ -622,7 +628,9 @@ document.getElementById('mmSignUp').addEventListener('click',async()=>{
     window.mmAnalyticsTrack?.('sign_up', {method:'email'});
    if(!data.session)mmAuthMessage('Account created. Check your email for the confirmation link, then return here and sign in.');
   }
-});
+}
+const signupButton=document.getElementById('mmSignUp');
+if(signupButton.type==='button')signupButton.addEventListener('click',mmCreateAccount);
 const MM_RESET_COOLDOWN_KEY='menumargin-reset-email-cooldown-v1';
 let mmResetEmailSending=false,mmResetEmailUntil=0,mmResetEmailTimer=null;
 try{const value=Number(sessionStorage.getItem(MM_RESET_COOLDOWN_KEY));if(Number.isFinite(value)&&value>Date.now()&&value<Date.now()+61000)mmResetEmailUntil=value;}catch{}

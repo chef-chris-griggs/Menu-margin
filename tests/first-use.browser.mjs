@@ -56,6 +56,16 @@ try{
  assert.equal(await page.locator('#mmSignUp').evaluate(el=>el.classList.contains('secondary')),false);
  assert.equal(await page.locator('#mmSignIn').evaluate(el=>el.classList.contains('secondary')),true);
  assert.equal(await page.locator('#mmSignUp').evaluate(el=>el.nextElementSibling?.id),'mmSignIn');
+ await page.evaluate(()=>{
+  window.__authActions=[];
+  __testClient.auth.signUp=async()=>{__authActions.push('signup');return {data:{},error:null};};
+  __testClient.auth.signInWithPassword=async()=>{__authActions.push('signin');return {error:null};};
+ });
+ await page.locator('#mmEmail').fill('chef@example.invalid');
+ await page.locator('#mmPassword').fill('synthetic-password');
+ await page.locator('#mmPassword').press('Enter');
+ await page.locator('#mmSignIn').click();
+ assert.deepEqual(await page.evaluate(()=>__authActions),['signup','signin']);
  assert.equal(await page.locator('#firstUseGuide').isVisible(),false);
  await page.evaluate(()=>{
   // Preserve the existing synthetic record as a returning chef's separate account.
