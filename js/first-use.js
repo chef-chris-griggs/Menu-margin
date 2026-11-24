@@ -45,12 +45,14 @@
   const done=[priced,costed,sale,saved],count=done.filter(Boolean).length,next=done.findIndex(value=>!value);
   if(finishedId&&(finishedId!==recipeId||hasUnsavedChanges||document.body.dataset.activeView!=='costing'))visibleForVisit=false;
   if(saved&&visibleForVisit&&!finishedId){finishedId=recipeId;details.open=false;}
-  current={id,done,count,next,recipeId,saved};
+  const offerScan=next===0&&!lines.length&&!recipeId&&!byId('recipeName').value.trim();
+  current={id,done,count,next,recipeId,saved,offerScan};
   visible(visibleForVisit);panel.classList.toggle('is-complete',saved);panel.dataset.completed=String(count);
   text('firstUseProgress',count+' of 4 done');
-  const content=next<0?['Recipe saved','Find this recipe in Recipes whenever you need it.','Open your recipes']:copy[next];
+  const content=next<0?['Recipe saved','Find this recipe in Recipes whenever you need it.','Open your recipes']:offerScan?['Cost your first dish','Choose a recipe photo or PDF, then check the ingredients and add your pack prices. You can also enter a dish by hand.','Scan a recipe']:copy[next];
   text('firstUseNext',content[0]);text('firstUseHint',content[1]);text('firstUseNextAction',content[2]);
   byId('firstUseManual').hidden=next!==0;
+  text('firstUseManual',offerScan?'Enter recipe by hand':'Use own pack prices');
   for(const item of panel.querySelectorAll('[data-guide-step]')){
    const index=Number(item.dataset.guideStep);item.classList.toggle('is-complete',done[index]);
    if(index===next)item.setAttribute('aria-current','step');else item.removeAttribute('aria-current');
@@ -89,7 +91,11 @@
   const state=refresh();if(!state?.done)return;
   const action=button.dataset.guideAction;
   if(action==='hide'){visibleForVisit=false;pendingStart=false;visible(false);document.querySelector('.nav-tab[aria-selected="true"]')?.focus({preventScroll:true});return;}
-  if(action==='manual'){details.open=false;syncChrome();recipeFocus(true);return;}
+  if(action==='manual'){details.open=false;syncChrome();recipeFocus(!state.offerScan);return;}
+  if(action==='next'&&state.offerScan){
+   details.open=false;syncChrome();
+   document.querySelector('[data-ios-action="scan-recipe"]').click();return;
+  }
   go(action==='next'?state.next:Number(action.slice(5)),state);
  });
  show.addEventListener('click',()=>{
