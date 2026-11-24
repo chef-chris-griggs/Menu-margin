@@ -23,6 +23,9 @@ for (const engine of [chromium,webkit]) {
     });
     const site=await context.newPage();await site.goto(website+'/one-recipe-demo');
     await site.locator('#recipeName').fill('Soup for Friday');
+    await site.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:undefined}));
+    await site.getByRole('button',{name:'Copy my recipe details'}).click();
+    assert.match(await site.locator('#recipeCopyText').inputValue(),/Soup for Friday/);
     const pending=context.waitForEvent('page');await site.locator('#carryDish').click();const opened=await pending;
     await site.getByText(/Your dish is in the app tab/).waitFor();
     assert.ok(!opened.url().includes('Soup'));

@@ -78,6 +78,13 @@ try{
  assert.equal(await page.locator('#view-costing').isVisible(),true);assert.equal(await page.locator('#firstUseGuide').isVisible(),true);
  assert.deepEqual(await page.evaluate(()=>__guideStorageWrites),[]);await page.evaluate(()=>{Storage.prototype.setItem=__originalStorageSet;});
  checks.push('Not now and Recipe guide preserve data and do not create persistent storage');
+ const chooser = page.waitForEvent('filechooser');
+ assert.equal(await page.locator('#firstUseNextAction').textContent(),'Scan a recipe');
+ await page.locator('#firstUseNextAction').click();
+ await (await chooser).setFiles([]);
+ assert.equal(await page.locator('#recipeScanPanel').evaluate(node=>node.open),true);
+ assert.equal(await page.evaluate(()=>readLibrary().length),0);
+ await openGuide();
  await page.locator('#firstUseManual').click();
  await page.locator('#recipeName').fill('TEST olive oil recipe');await page.locator('#yield').fill('2');
  const row=page.locator('#ingredients tr').first();
@@ -124,7 +131,7 @@ try{
  checks.push('An unknown empty offline cache never triggers automatic onboarding; explicit offline help and its dismissal survive reconnect without creating recipes');
  await page.evaluate(()=>mmEnterApp({id:'account-c',email:'another-new-chef@example.invalid'}));await page.locator('#firstUseGuide').waitFor({state:'visible'});await progress(0);
  assert.equal(await page.locator('#recipeName').inputValue(),'');assert.equal(await page.evaluate(()=>readPriceBook().length),0);
- await page.locator('#firstUseNextAction').click();assert.equal(await page.locator('#pricebookEditor').evaluate(node=>node.open),true);assert.equal(await page.locator('#pbName').evaluate(node=>node===document.activeElement),true);
+ await page.locator('.first-use-all>summary').click();await page.locator('[data-guide-action="step-0"]').click();assert.equal(await page.locator('#pricebookEditor').evaluate(node=>node.open),true);assert.equal(await page.locator('#pbName').evaluate(node=>node===document.activeElement),true);
  await page.locator('#pbName').fill('TEST salt');await page.locator('#pbSupplier').fill('TEST supplier C');await page.locator('#pbPack').fill('1');await page.locator('#pbUnit').selectOption('kg');await page.locator('#pbPrice').fill('4');await page.locator('#pbPriceBasis').selectOption('ex_vat');await page.locator('#pbSave').click();await progress(1);
  const product=await page.evaluate(()=>readPriceBook()[0]);assert.ok(product.id);
  await openGuide();await page.locator('#firstUseNextAction').click();await page.locator('#recipeName').fill('TEST unsaved salted dish');const linked=page.locator('#ingredients tr').first();await linked.locator('.ingredient').fill('TEST salt');await linked.locator('.qty').fill('100');await progress(2);
