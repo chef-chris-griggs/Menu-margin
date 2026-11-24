@@ -9,7 +9,7 @@ test('owner dashboard and trial messaging share a fresh PWA revision', () => {
  assert.match(html, /id="mmOwnerDashboardLink" hidden/);
  assert.ok(html.includes('js/auth.js?v=2.1.7-signup-source'));
  assert.ok(sw.includes('js/auth.js?v=2.1.7-signup-source'));
- assert.match(sw, /v2\.0\.(?:5-trial-clarity|6-recipe-scanner|7-pricebook-suggestions|9-scanner-recovery|10-real-recipe-ocr|11-invoice-recovery|12-release-candidate|13-manual-recipe-prices|14-ios-interface|15-official-logo|16-first-use-guide|17-supplier-price-alerts|18-needs-attention|19-recipe-snapshot-isolation|20-calculator-draft|22-signup-source)/);
+ assert.match(sw, /v2\.0\.(?:5-trial-clarity|6-recipe-scanner|7-pricebook-suggestions|9-scanner-recovery|10-real-recipe-ocr|11-invoice-recovery|12-release-candidate|13-manual-recipe-prices|14-ios-interface|15-official-logo|16-first-use-guide|17-supplier-price-alerts|18-needs-attention|19-recipe-snapshot-isolation|20-calculator-draft|22-signup-source|23-root-layout)/);
  assert.ok(auth.includes('mmRefreshOwnerDashboardLink'));
  assert.ok(auth.includes("rpc('menu_margin_owner_signup_metrics')"));
 });
