@@ -28,3 +28,12 @@
 @media(max-width:620px){.template-hero{margin-top:20px}.template-actions>a{width:100%}.template-panel{padding:15px}.template-table{font-size:13px}.template-table th,.template-table td{padding:9px 5px}}
 
 .template-page .closing-inner{margin-inline:auto;padding-inline:22px}
+
+.gp-tool { transform: none; min-width: 0; }
+.gp-tool h2 { margin: 0 0 1rem; color: #244c3a; }
+.gp-tool label { display: block; margin: .8rem 0 .3rem; font-weight: 650; }
+.gp-tool input { width: 100%; box-sizing: border-box; padding: .65rem; border: 1px solid #678475; border-radius: .4rem; font: inherit; }
+.gp-results { margin: 1rem 0; }
+.gp-results div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .35rem 1rem; padding: .55rem 0; border-top: 1px solid var(--line); }
+.gp-results dd { margin: 0; font-weight: 750; overflow-wrap: anywhere; }
+#gp-error:empty { display: none; }
