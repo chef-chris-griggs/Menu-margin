@@ -3,15 +3,16 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Food GP Calculator &amp; Gross Profit Formula for Chefs | Mise en Price</title>
-  <meta name="description" content="Calculate food gross profit percentage and cost per portion with a clear UK chef example. Free recipe calculator, no signup needed.">
+  <meta name="description" content="Enter your selling price excluding VAT and ingredient cost per portion to calculate cash gross profit, GP percentage and food cost percentage. Free, no login.">
   <meta name="robots" content="index, follow"><meta name="theme-color" content="#153e35">
   <link rel="canonical" href="https://miseenprice.co.uk/food-gp-calculator">
   <meta property="og:type" content="article"><meta property="og:title" content="Food GP Calculator &amp; Gross Profit Formula for Chefs | Mise en Price">
-  <meta property="og:description" content="Calculate food gross profit percentage and cost per portion with a clear UK chef example. Free recipe calculator, no signup needed.">
+  <meta property="og:description" content="Enter your selling price excluding VAT and ingredient cost per portion to calculate cash gross profit, GP percentage and food cost percentage. Free, no login.">
   <meta property="og:url" content="https://miseenprice.co.uk/food-gp-calculator">
   <meta property="og:image" content="https://miseenprice.co.uk/social-preview.png?v=2">
 
   <link rel="stylesheet" href="./gp-page-redesign.css">
+  <script src="./food-gp-calculator.js" defer></script>
   <link rel="stylesheet" href="./analytics.css">
   <script src="./analytics.js?v=GTM-WZXW5M6L" defer></script>
 
@@ -32,22 +33,30 @@
   <section class="hero">
     <div class="container hero-grid">
       <div class="hero-copy">
-        <p class="eyebrow"><span class="eyebrow-dot" aria-hidden="true"></span> FREE GP &amp; FOOD COST GUIDE</p>
-        <h1>Food GP calculator for UK chefs.<br><em>Know your margin.</em></h1>
-        <p class="lead">A simple way for UK chefs to understand gross profit, cost per portion and what each dish really earns on ingredients.</p>
-        <p class="support">See exactly how the numbers work, then cost your own recipe with our free calculator. No spreadsheet, login or card required.</p>
-        <div class="hero-actions"><a class="button-primary" href="./free-recipe-costing-calculator#try-recipe">Try the free calculator <span aria-hidden="true">→</span></a><a class="button-outline" href="#worked-example">See the example <span aria-hidden="true">↓</span></a></div>
-        <div class="trust-line"><span>✓ Free one-recipe calculator</span><span>✓ No account needed</span><span>✓ Built for working chefs</span></div>
+        <h1>Food GP calculator for UK chefs</h1>
+        <p class="lead">Enter your ingredient cost per portion and selling price excluding VAT to see how much gross profit each dish earns.</p>
+        <p class="support">Still working out the ingredient cost? <a href="./free-recipe-costing-calculator#try-recipe">Cost a recipe from pack prices and quantities</a>.</p>
+        <a class="button-outline" href="#worked-example">See the GP formula</a>
       </div>
-      <div class="visual" aria-label="Illustrative food gross profit calculation example">
-        <div class="visual-top"><span class="live-dot" aria-hidden="true"></span><strong>Food GP breakdown</strong><small>WORKED EXAMPLE</small></div>
-        <div class="visual-content"><p class="metric-label">Ingredient-based gross profit</p><p class="big-gp">70<span>%</span></p><p class="metric-description">Based on a £12.00 ex-VAT selling price and £3.60 in ingredient costs.</p>
-          <div class="progressbar" role="img" aria-label="70 percent gross profit and 30 percent ingredient cost"><span></span></div>
-          <div class="legend"><div><span class="legend-dot profit"></span><span>Ingredient GP</span><strong>70%</strong></div><div><span class="legend-dot cost"></span><span>Food cost</span><strong>30%</strong></div></div>
-          <div class="visual-bottom"><span>GP per portion</span><strong>£8.40</strong></div>
+      <section class="visual gp-tool" aria-labelledby="gp-tool-title">
+        <h2 id="gp-tool-title">Check your dish</h2>
+        <div id="gp-fields" hidden>
+          <label for="gp-cost">Ingredient cost per portion (£)</label>
+          <input id="gp-cost" type="number" inputmode="decimal" required min="0" step="any" value="3.60">
+          <label for="gp-price">Selling price per portion excluding VAT (£)</label>
+          <input id="gp-price" type="number" inputmode="decimal" required min="0.01" step="0.01" value="12.00">
         </div>
-        <p class="visual-footnote">Illustrative ingredient GP — not net profit.</p>
-      </div>
+        <noscript><p>Example using £3.60 ingredient cost and a £12 selling price excluding VAT. Enable JavaScript to enter your own figures.</p></noscript>
+        <div aria-live="polite" aria-atomic="true">
+          <p id="gp-error"></p>
+          <dl class="gp-results">
+            <div><dt>Gross profit per portion</dt><dd id="gp-cash">£8.40</dd></div>
+            <div><dt>Food GP</dt><dd id="gp-percent">70%</dd></div>
+            <div><dt>Food cost</dt><dd id="gp-food-cost">30%</dd></div>
+          </dl>
+        </div>
+        <p class="visual-footnote">Use ingredient prices on the same VAT basis. Figures exclude labour, overheads and waste.</p>
+      </section>
     </div>
   </section>
   <div class="trust-strip"><div class="container"><span>MADE BY A WORKING CHEF</span><span>REAL RECIPE COSTING</span><span>FREE TOOL, NO SIGN-UP</span><span>14-DAY FULL-APP TRIAL</span></div></div>

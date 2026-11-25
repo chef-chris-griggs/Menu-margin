@@ -236,6 +236,26 @@ async function run(browserType,viewport) {
       check(issues.length===0,slug+' JavaScript errors '+issues.join('; '));
       await seo.close();
     }
+    const gpPage = await browser.newPage({viewport});
+    await gpPage.goto(origin+'/food-gp-calculator.html');
+    const gpPrice = gpPage.locator('#gp-price');
+    const gpCost = gpPage.locator('#gp-cost');
+    const gpPercent = gpPage.locator('#gp-percent');
+    check(await gpCost.isVisible(), 'food GP inputs must be visible');
+    check(await gpPercent.textContent() === '70%', 'default food GP');
+    await gpCost.fill('15');
+    check(await gpPercent.textContent() === '-25%', 'loss-making dish GP');
+    check(await gpPage.locator('#gp-cash').textContent() === '-£3.00', 'loss-making dish cash GP');
+    check(await gpPage.locator('#gp-food-cost').textContent() === '125%', 'loss-making dish food cost');
+    await gpPrice.fill('0');
+    check(await gpPercent.textContent() === '—', 'invalid price must clear previous GP');
+    await gpPrice.fill('20');
+    await gpCost.fill('0');
+    check(await gpPercent.textContent() === '100%', 'zero ingredient cost is valid');
+    await gpCost.fill('');
+    check(await gpPercent.textContent() === '—', 'blank cost must clear previous GP');
+    check(await gpPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2), 'food GP page horizontal overflow');
+    await gpPage.close();
     const legacy = await browser.newPage({viewport,deviceScaleFactor:1});
     await legacy.goto(origin+'/one-recipe-demo', {waitUntil:'networkidle'});
     check(await legacy.locator('link[rel="canonical"]').getAttribute('href')==='https://miseenprice.co.uk/free-recipe-costing-calculator', 'legacy demo canonical must point to the fuller calculator');
