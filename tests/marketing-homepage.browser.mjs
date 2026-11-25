@@ -50,7 +50,7 @@ async function run(browserType,viewport) {
     const response=await page.goto(origin+'/',{waitUntil:'networkidle'});
     check(response.status()===200,'homepage did not return 200');
     check(response.headers()['content-security-policy']?.includes("script-src 'self'"),'Cloudflare CSP does not allow local calculator JavaScript');
-    check(await page.title() === 'Recipe Costing Software for UK Chefs | Mise en Price','wrong homepage title');
+    check(await page.title() === 'Food & Recipe Costing Software for UK Chefs | Mise en Price','wrong homepage title');
     check(await page.locator('img[src="/brand-header.webp"]').count()>=1,'missing branded logo');
     check(await page.locator('#hero-title').isVisible(),'missing homepage headline');
     const assetResults=await page.locator('.mep-screen img').evaluateAll(imgs=>imgs.map(i=>({url:i.getAttribute('src'),ok:i.complete&&i.naturalWidth>0,width:i.naturalWidth,height:i.naturalHeight})));
