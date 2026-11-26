@@ -50,7 +50,7 @@ async function run(browserType,viewport) {
     const response=await page.goto(origin+'/',{waitUntil:'networkidle'});
     check(response.status()===200,'homepage did not return 200');
     check(response.headers()['content-security-policy']?.includes("script-src 'self'"),'Cloudflare CSP does not allow local calculator JavaScript');
-    check(await page.title() === 'Recipe Costing Software for UK Chefs | Mise en Price','wrong homepage title');
+    check(await page.title() === 'Food & Recipe Costing Software for UK Chefs | Mise en Price','wrong homepage title');
     check(await page.locator('img[src="/brand-header.webp"]').count()>=1,'missing branded logo');
     check(await page.locator('#hero-title').isVisible(),'missing homepage headline');
     const assetResults=await page.locator('.mep-screen img').evaluateAll(imgs=>imgs.map(i=>({url:i.getAttribute('src'),ok:i.complete&&i.naturalWidth>0,width:i.naturalWidth,height:i.naturalHeight})));
@@ -236,6 +236,26 @@ async function run(browserType,viewport) {
       check(issues.length===0,slug+' JavaScript errors '+issues.join('; '));
       await seo.close();
     }
+    const gpPage = await browser.newPage({viewport});
+    await gpPage.goto(origin+'/food-gp-calculator.html');
+    const gpPrice = gpPage.locator('#gp-price');
+    const gpCost = gpPage.locator('#gp-cost');
+    const gpPercent = gpPage.locator('#gp-percent');
+    check(await gpCost.isVisible(), 'food GP inputs must be visible');
+    check(await gpPercent.textContent() === '70%', 'default food GP');
+    await gpCost.fill('15');
+    check(await gpPercent.textContent() === '-25%', 'loss-making dish GP');
+    check(await gpPage.locator('#gp-cash').textContent() === '-£3.00', 'loss-making dish cash GP');
+    check(await gpPage.locator('#gp-food-cost').textContent() === '125%', 'loss-making dish food cost');
+    await gpPrice.fill('0');
+    check(await gpPercent.textContent() === '—', 'invalid price must clear previous GP');
+    await gpPrice.fill('20');
+    await gpCost.fill('0');
+    check(await gpPercent.textContent() === '100%', 'zero ingredient cost is valid');
+    await gpCost.fill('');
+    check(await gpPercent.textContent() === '—', 'blank cost must clear previous GP');
+    check(await gpPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2), 'food GP page horizontal overflow');
+    await gpPage.close();
     const legacy = await browser.newPage({viewport,deviceScaleFactor:1});
     await legacy.goto(origin+'/one-recipe-demo', {waitUntil:'networkidle'});
     check(await legacy.locator('link[rel="canonical"]').getAttribute('href')==='https://miseenprice.co.uk/free-recipe-costing-calculator', 'legacy demo canonical must point to the fuller calculator');
@@ -262,7 +282,7 @@ async function run(browserType,viewport) {
     const csvResponse=await templatePage.request.get(origin+'/recipe-costing-template.csv');
     check(csvResponse.status()===200,'CSV file not served');
     const csvBody=await csvResponse.text();
-    check(csvBody.includes('Ingredient cost GBP') && csvBody.includes('IF(COUNT(C2:E2)<>3') && csvBody.includes('COUNT(F2:F5)<>4') && csvBody.includes('I2<=0'), 'CSV guarded costing formulas or headers missing');
+    check(csvBody.includes('Ingredient cost GBP') && csvBody.includes('COUNT(C41:E41)<>3') && csvBody.includes('SUM(F2:F41)/G2') && csvBody.includes('COUNTIF(F2:F41') && csvBody.includes('I2<=0'), 'CSV guarded costing formulas or headers missing');
     const templateWidth=await templatePage.evaluate(()=>({scroll:document.documentElement.scrollWidth,client:document.documentElement.clientWidth}));
     check(templateWidth.scroll<=templateWidth.client+2,'template mobile overflow '+viewport.width+': '+JSON.stringify(templateWidth));
     check(await templatePage.locator('.template-hero').evaluate(e=>parseFloat(getComputedStyle(e).borderRadius))===22,'template stylesheet blocked or missing');
