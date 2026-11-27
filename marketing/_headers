@@ -10,3 +10,6 @@
 
 /analytics.js
   Cache-Control: public, max-age=0, must-revalidate
+
+/one-recipe-demo.js
+  Cache-Control: public, max-age=0, must-revalidate
